@@ -1,0 +1,12 @@
+#include "DummyAssetType.h"
+
+#include <Reflection/type_info_registra.h>
+
+SE_REFLECTION_BEGIN(Game::DummyResType)
+.SE_REFLECTION_ADD_PROPERTY(Number)
+.SE_REFLECTION_END
+
+SE_REFLECTION_BEGIN(Game::DummyAssetType)
+.SE_REFLECTION_ADD_PROPERTY(PartA)
+.SE_REFLECTION_ADD_REFERENCE(PartB)
+.SE_REFLECTION_END
