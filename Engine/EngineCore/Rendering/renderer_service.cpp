@@ -13,15 +13,6 @@
 #include <glm/mat4x4.hpp>
 #include <SDL3/SDL_gpu.h>
 
-#define GLCallLite(routine) ClearGLErrors();\
-	routine;\
-	return CheckGLError(#routine, __FILE__, __LINE__)
-
-#define GLCall(routine) ClearGLErrors();\
-	routine;\
-	if (!CheckGLError(#routine, __FILE__, __LINE__))\
-		goto OnError
-
 
 using namespace Engine;
 using namespace Engine::Core;
@@ -29,81 +20,17 @@ using namespace Engine::Core;
 
 static const char s_ChannelName[] = "RendererService";
 
-
-static void ClearGLErrors()
-{
-	while (glGetError() != GL_NO_ERROR);
-}
-
-static unsigned int TranslateShaderType(Rendering::ShaderType type)
-{
-	switch (type)
-	{
-	case Rendering::ShaderType::FRAGMENT_SHADER:
-		return GL_FRAGMENT_SHADER;
-	case Rendering::ShaderType::VERTEX_SHADER:
-		return GL_VERTEX_SHADER;
-	default:
-		SE_THROW_NOT_IMPLEMENTED;
-	}
-}
-
-
-static const char* PrintShaderType(Rendering::ShaderType type)
-{
-	static const char s_ShaderTypeFrag[] = "FRAGMENT";
-	static const char s_ShaderTypeVert[] = "VERTEX";
-
-	switch (type)
-	{
-	case Rendering::ShaderType::FRAGMENT_SHADER:
-		return s_ShaderTypeFrag;
-	case Rendering::ShaderType::VERTEX_SHADER:
-		return s_ShaderTypeVert;
-	default:
-		SE_THROW_NOT_IMPLEMENTED;
-	}
-}
-
-
-static unsigned int GetGpuDataSize(Rendering::GpuDataType type)
-{
-	switch (type)
-	{
-	case Rendering::GpuDataType::INT32:
-		return sizeof(GLint);
-	case Rendering::GpuDataType::UINT32:
-		return sizeof(GLuint);
-	case Rendering::GpuDataType::FLOAT:
-		return sizeof(GLfloat);
-	case Rendering::GpuDataType::DOUBLE:
-		return sizeof(GLdouble);
-	case Rendering::GpuDataType::BYTE:
-		return sizeof(GLbyte);
-	default:
-		return 0;
-	}
-}
-
-
-static unsigned int GetStride(const Rendering::VertexLayout& layout)
-{
-	unsigned int stride = 0;
-	for (unsigned int i = 0; i < layout.Length; i++)
-	{
-		stride += layout.Elements[i].Count * GetGpuDataSize(layout.Elements[i].Type);
-	}
-	return stride;
-}
-
-
 bool Rendering::RendererService::CheckGLError(const char* function, const char* file, int line)
 {
 	return false;
 }
 
+bool Engine::Core::Rendering::RendererService::CompileShader(const std::string &code, ShaderType type, RendererShader &outID)
+{
+    return false;
+}
 
-bool Engine::Core::Rendering::RendererService::DeleteShader(RendererShader& shader)
+bool Engine::Core::Rendering::RendererService::DeleteShader(RendererShader &shader)
 {
 	return false;
 }

@@ -81,8 +81,8 @@ private:
 	bool ApplyDynamicShaderParameter(const Rendering::DynamicShaderParameter* shaderParam, Rendering::RendererMaterial* material);
 
 public:
-	RendererService();
-	~RendererService();
+	RendererService() = default;
+	~RendererService() = default;
 
 public:
 	bool CompileShader(const std::string& code, ShaderType type, RendererShader& outID);
