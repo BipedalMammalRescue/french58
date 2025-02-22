@@ -1,8 +1,8 @@
 add_library(EngineCore STATIC
 	AssetManagement/asset_manager.cpp
 	AssetManagement/byte_stream.cpp
-	EntityComponentSystem/component_base.cpp 
-	EntityComponentSystem/component_controller.cpp
+	# EntityComponentSystem/component_base.cpp 
+	# EntityComponentSystem/component_controller.cpp
 	Hosting/engine_host.cpp
 	Logging/logger_service.cpp
 	Memory/high_integrity_allocator.cpp
@@ -14,3 +14,4 @@ add_library(EngineCore STATIC
 	Rendering/renderer_service.cpp)
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(EngineCore PRIVATE cxx_std_17)

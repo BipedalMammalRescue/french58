@@ -12,15 +12,14 @@ class RendererModule;
 
 namespace Assets {
 
-class Material
+struct Material
 {
-private:
-	friend class Extension::RendererModule::RendererModule;
-	Engine::Core::Rendering::RendererMaterial m_RendererID;
+	Engine::Core::Reflection::Ref<VertexShader> VertShader;
+	Engine::Core::Reflection::Ref<FragmentShader> FragShader;
 
-public:
-	Engine::Core::Reflection::Ref<VertexShader> VertexShader;
-	Engine::Core::Reflection::Ref<FragmentShader> FragmentShader;
+	// not a clean solution but the reflection system is designed with simple layouts in mind for simplciity, 
+	// compelx objects like materials that require post-deserialization initialization needs to just declare the members as fields like this
+	Engine::Core::Rendering::RendererMaterial RendererID;
 
 	static void Initialize(Engine::Core::DependencyInjection::ServiceProvider* services, void* asset);
 	static void Dispose(Engine::Core::DependencyInjection::ServiceProvider* services, void* asset);

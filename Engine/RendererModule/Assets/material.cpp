@@ -11,7 +11,7 @@ using namespace Extension::RendererModule;
 void Assets::Material::Initialize(Core::DependencyInjection::ServiceProvider* services, void* asset)
 {
 	Assets::Material* material = (Assets::Material*)asset;
-	if (!services->GetRenderer()->CreateMaterial(material->VertexShader.Data->RendererID, material->FragmentShader.Data->RendererID, material->m_RendererID))
+	if (!services->GetRenderer()->CreateMaterial(material->VertShader.Data->RendererID, material->FragShader.Data->RendererID, material->RendererID))
 	{
 		SE_THROW_GRAPHICS_EXCEPTION;
 	}
@@ -21,13 +21,13 @@ void Assets::Material::Initialize(Core::DependencyInjection::ServiceProvider* se
 void Assets::Material::Dispose(Core::DependencyInjection::ServiceProvider* services, void* asset)
 {
 	Assets::Material* material = (Assets::Material*)asset;
-	services->GetRenderer()->DeleteMaterial(material->m_RendererID);
+	services->GetRenderer()->DeleteMaterial(material->RendererID);
 }
 
 
 SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::Material)
-.SE_REFLECTION_ADD_REFERENCE(VertexShader)
-.SE_REFLECTION_ADD_REFERENCE(FragmentShader)
+.SE_REFLECTION_ADD_REFERENCE(VertShader)
+.SE_REFLECTION_ADD_REFERENCE(FragShader)
 .SE_REFLECTION_DELETE_SERIALIZER()
 .SE_REFLECTION_OVERRIDE_INITIALIZER(Assets::Material::Initialize)
 .SE_REFLECTION_OVERRIDE_DISPOSER(Assets::Material::Dispose)

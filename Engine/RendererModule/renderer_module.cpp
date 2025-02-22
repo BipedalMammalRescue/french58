@@ -42,7 +42,7 @@ void Extension::RendererModule::RendererModule::Update(void* moduleInstance, Eng
     Rendering::DynamicShaderParameter newParams{ s_HardCodeUniformName, &mvp, Rendering::ShaderParamType::MAT4 };
 
     // submit value to the renderer
-    services->GetRenderer()->QueueRender(&instance->m_Mesh->m_RendererCopy, &instance->m_Material->m_RendererID, &newParams, 1);
+    services->GetRenderer()->QueueRender(&instance->m_Mesh->m_RendererCopy, &instance->m_Material->RendererID, &newParams, 1);
 }
 
 void Extension::RendererModule::RendererModule::Finalize(void* moduleInstance, Engine::Core::DependencyInjection::ServiceProvider* services)

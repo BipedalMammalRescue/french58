@@ -1,5 +1,5 @@
 #pragma once
-#include <ctime>
+#include <time.h>
 #include <iostream>
 
 namespace Engine
@@ -15,11 +15,10 @@ private:
 	template <typename... TArgs>
 	void Log(const char* level, const char* channel, const char* message, TArgs... args)
 	{
-		time_t timeNow = time(0);
-		tm now;
-		localtime_s(&now, &timeNow);
+		time_t timeNow = time(nullptr);
+		tm* now = localtime(&timeNow);
 
-		printf("[%d:%d:%d][%s][%s] ", now.tm_hour, now.tm_min, now.tm_sec, level, channel);
+		printf("[%d:%d:%d][%s][%s] ", now->tm_hour, now->tm_min, now->tm_sec, level, channel);
 		printf(message, args...);
 		printf("\n");
 	}
