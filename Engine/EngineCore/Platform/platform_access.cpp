@@ -1,5 +1,6 @@
 #include "platform_access.h"
 #include "Configuration/compile_time_flags.h"
+#include "Logging/logger_service.h"
 
 #include <SDL3/SDL.h>
 #include <stdexcept>

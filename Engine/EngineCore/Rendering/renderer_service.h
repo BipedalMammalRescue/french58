@@ -1,13 +1,16 @@
 #pragma once
 
-#include "Utils/non_essential_macros.h"
 #include "Logging/logger_service.h"
+#include "Platform/platform_access.h"
+#include "SDL3/SDL_gpu.h"
 #include "renderer_data.h"
 
 #include <string>
-#include <vector>
 #include <unordered_map>
 
+
+struct SDL_GPUBuffer;
+struct SDL_GPUShader;
 
 namespace Engine {
 namespace Core {
@@ -18,7 +21,7 @@ class RendererShader
 {
 private:
 	friend class RendererService;
-	unsigned int m_ShaderID = 0;
+	SDL_GPUShader* m_ShaderID = nullptr;
 };
 
 
@@ -39,53 +42,31 @@ class RendererMesh
 {
 private:
 	friend class RendererService;
-
-	// these are buffers
-	unsigned int m_VertexBuffer = 0;
-	unsigned int m_IndexBuffer = 0;
-
-	// metadata
-	unsigned int m_IndexCount = 0;
-
-	// this is not a buffer
-	unsigned int m_VertexArray = 0;
-
-	bool Bail();
+	SDL_GPUBuffer* m_VertexBuffer;
+	SDL_GPUBuffer* m_IndexBuffer;
 };
 
 
-/// <summary>
-/// This iteration only uses small boxes;
-/// Each has two integers for its dimensions and two integers for its position, and another three integers for its color.
-/// TODO: add a render texture in here (texture loading requires a separate asset loading service)
-/// </summary>
+// Renderer service owns another set of SDL api outside of PlatformAccess as the ultimate endpoint for any rendering behavior.
+// TODO: add render texture
 class RendererService
 {
 private:
-	// TODO: if we are not running multi-threaded rendering there's no need for a queue; if it is multithreaded we'll use a concurrent queue for that
-	//// generic form command that client code submit to the queue; all data is owned by the client and the queue doesn't check for validity
-	//struct RenderCommand
-	//{
-	//	const RendererMesh* Mesh; 
-	//	const RendererMaterial* Material;
-	//	const DynamicShaderParameter* ShaderParams;
-	//	unsigned int ShaderParamCount;
-	//};
-	//std::vector<RenderCommand> m_RenderCommandQueue;
-
-private:
 	Logging::LoggerService* m_Logger = Logging::GetLogger();
+	Platform::PlatformAccess* m_Platform = nullptr;
 
 private:
-	bool CheckGLError(const char* function, const char* file, int line);
 	bool ApplyDynamicShaderParameter(const Rendering::DynamicShaderParameter* shaderParam, Rendering::RendererMaterial* material);
 
 public:
-	RendererService() = default;
+	RendererService(Platform::PlatformAccess* platform)
+		: m_Platform(platform)
+	{}
+	
 	~RendererService() = default;
 
 public:
-	bool CompileShader(const std::string& code, ShaderType type, RendererShader& outID);
+	bool CompileShader(const std::string &code, ShaderType type, unsigned int numSamplers, unsigned int numUniformBuffers, unsigned int numStorageBuffers, unsigned int numSotrageTextures, RendererShader &outID);
 	bool DeleteShader(RendererShader& shader);
 
 	bool CreateMaterial(const RendererShader& vertexShader, const RendererShader& fragmentShader, RendererMaterial& outID);

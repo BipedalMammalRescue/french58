@@ -28,7 +28,7 @@ public:
 	inline Rendering::RendererService* GetRenderer() { return &m_RendererService; }
 
 
-	ServiceProvider() : m_GlobalAllocator(16), m_Configurations(), m_PlatformAccess(&m_Configurations), m_AssetManager(this, &m_GlobalAllocator), m_RendererService() {}
+	ServiceProvider() : m_GlobalAllocator(16), m_Configurations(), m_PlatformAccess(&m_Configurations), m_AssetManager(this, &m_GlobalAllocator), m_RendererService(&m_PlatformAccess) {}
 	~ServiceProvider() = default;
 };
 

@@ -31,19 +31,30 @@ struct VertexBufferLayoutElement
 struct VertexCollection
 {
 	const void* Vertices;
-	unsigned int Length;
+	unsigned int Size;
 };
 
+// TODO: somehow use layouts to index into a pipeline cache?
 struct VertexLayout
 {
 	VertexBufferLayoutElement* Elements;
-	unsigned int Length;
+	unsigned int Count;
+
+	unsigned int GetSize() const
+	{
+		return sizeof(VertexBufferLayoutElement) * Count;
+	}
 };
 
 struct IndexCollection
 {
 	const unsigned int* Indices;
-	unsigned int Length;
+	unsigned int Count;
+
+	unsigned int GetSize() const
+	{
+		return sizeof(unsigned int) * Count;
+	}
 };
 
 

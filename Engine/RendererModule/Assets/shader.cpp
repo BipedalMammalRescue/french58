@@ -19,7 +19,7 @@ static void* DeserializeVertexShader(Core::DependencyInjection::ServiceProvider*
 
 	// submit shader code to the rendering service
 	Core::Rendering::RendererShader rendererID;
-	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::VERTEX_SHADER, rendererID))
+	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::VERTEX_SHADER, 0, 0, 0, 0, rendererID))
 	{
 		return nullptr;
 	}
@@ -53,7 +53,7 @@ static void* DeserializeFragmentShader(Core::DependencyInjection::ServiceProvide
 
 	// TODO: submit this to the rendering engine
 	Core::Rendering::RendererShader rendererID;
-	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::FRAGMENT_SHADER, rendererID))
+	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::FRAGMENT_SHADER, 0, 0, 0, 0, rendererID))
 	{
 		// TODO: this will crash the game on scene load, might not be the best solution?
 		SE_THROW_GRAPHICS_EXCEPTION;
