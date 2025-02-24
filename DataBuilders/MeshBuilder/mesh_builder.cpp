@@ -118,7 +118,7 @@ int main()
 	}
 
 	// write them out
-	std::ofstream outputFile("");
+	std::ofstream outputFile("", std::ios::binary);
 	
 	unsigned int vertexCount = (unsigned int)outputVertices.size();
 	unsigned int indexCount = (unsigned int)outputIndices.size();

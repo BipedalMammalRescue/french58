@@ -105,19 +105,21 @@ bool Engine::Core::Rendering::RendererService::CreateMaterial(const RendererShad
 		0
 	};
 
+	SDL_GPUVertexInputState vertexInputState 
+	{
+		// TODO: CONSTRUCT AN ARRAY OF VERTEX BUFFER DESCRIPTIONS
+		&vertexBufferDescripion,
+		1,
+		vertexAttributes.get(),
+		attributeCount
+	};
+
 	// TODO: left out a bunch of settings, revisit if it turns out I do need them
 	SDL_GPUGraphicsPipelineCreateInfo pipelineCreateInfo 
 	{
 		vertexShader.m_ShaderID,
 		fragmentShader.m_ShaderID,
-		(SDL_GPUVertexInputState) 
-		{
-			// TODO: CONSTRUCT AN ARRAY OF VERTEX BUFFER DESCRIPTIONS
-			&vertexBufferDescripion,
-			1,
-			vertexAttributes.get(),
-			attributeCount
-		},
+		vertexInputState,
 		SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,	
 	};
 
@@ -155,8 +157,8 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 	// create buffers for the upload operation
 	SDL_GPUBufferCreateInfo vertBufferCreateInfo 
 	{
-		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
-		.size = vertices.Size
+		SDL_GPU_BUFFERUSAGE_VERTEX,
+		vertices.Size
 	};
 
 	SDL_GPUBuffer* vertexBuffer = SDL_CreateGPUBuffer(
@@ -166,8 +168,8 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 
 	SDL_GPUBufferCreateInfo indexBufferCreateInfo
 	{
-		.usage = SDL_GPU_BUFFERUSAGE_INDEX,
-		.size = indices.GetSize()
+		SDL_GPU_BUFFERUSAGE_INDEX,
+		indices.GetSize()
 	};
 
 	SDL_GPUBuffer* indexBuffer = SDL_CreateGPUBuffer(
@@ -177,8 +179,8 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 
 	SDL_GPUTransferBufferCreateInfo transBufferCreateInfo 
 	{
-		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.size = vertBufferCreateInfo.size + indexBufferCreateInfo.size
+		SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		vertBufferCreateInfo.size + indexBufferCreateInfo.size
 	};
 
 	SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(
@@ -201,16 +203,16 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 	
 	SDL_GPUTransferBufferLocation transBufLocation 
 	{
-		.transfer_buffer = transferBuffer,
-		.offset = 0
+		transferBuffer,
+		0
 	};
 
 	// upload vertex buffer
 	SDL_GPUBufferRegion vertexBufferRegion
 	{
-		.buffer = vertexBuffer,
-		.offset = 0,
-		.size = vertices.Size
+		vertexBuffer,
+		0,
+		vertices.Size
 	};
 
 	SDL_UploadToGPUBuffer(
@@ -225,9 +227,9 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 	// upload index buffer
 	SDL_GPUBufferRegion indexBufferRegion 
 	{
-		.buffer = indexBuffer,
-		.offset = 0,
-		.size = indices.GetSize()
+		indexBuffer,
+		0,
+		indices.GetSize()
 	};
 
 	SDL_UploadToGPUBuffer(
@@ -285,7 +287,7 @@ bool Engine::Core::Rendering::RendererService::QueueRender(RendererMesh* mesh, R
 	// create render pass
 	SDL_GPUColorTargetInfo colorTargetInfo = { 0 };
 	colorTargetInfo.texture = swapchainTexture;
-	colorTargetInfo.clear_color = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
+	colorTargetInfo.clear_color = SDL_FColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
 	colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 

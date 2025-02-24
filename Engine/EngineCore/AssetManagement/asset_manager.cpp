@@ -66,7 +66,7 @@ void* AssetManager::LoadAssetCore(const Reflection::ScriptableType* typeKey, con
     // actually load a new piece of data
     // TODO: replace this when changing serialization system
     Logging::GetLogger()->Verbose(s_ChannelName, "Loading asset: %s", id.c_str());
-    std::ifstream fileStream("Assets/" + id);
+    std::ifstream fileStream("Assets/" + id, std::ios::binary);
 
     if (!fileStream.is_open())
     {
