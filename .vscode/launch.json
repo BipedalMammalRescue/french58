@@ -32,7 +32,8 @@
 			"request": "launch",
 			"target": "${command:cmake.launchTargetPath}",
 			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}/Game"
+			"cwd": "${workspaceFolder}/Game",
+			"preLaunchTask": "CMake: build"
 		}
 	]
 }

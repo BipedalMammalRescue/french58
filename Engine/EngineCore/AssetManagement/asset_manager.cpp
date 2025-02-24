@@ -2,7 +2,6 @@
 #include "Logging/logger_service.h"
 #include "Configuration/compile_time_flags.h"
 #include "Reflection/data_type.h"
-#include "Reflection/type_info_registra.h"
 #include "asset_reference.h"
 
 #include <nlohmann/json.hpp>

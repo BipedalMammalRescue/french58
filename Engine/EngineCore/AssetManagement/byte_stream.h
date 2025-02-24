@@ -19,10 +19,12 @@ class ByteStream
 protected:
 	bool m_CanRead = false;
 	bool m_CanWrite = false;
+	bool m_CanCount = false;
 
 public:
 	inline bool CanRead() const { return m_CanRead; }
 	inline bool CanWrite() const { return m_CanWrite; }
+	inline bool CanCount() const { return m_CanCount; }
 
 	virtual long long Read(char* buffer, long long count)
 	{
@@ -30,6 +32,11 @@ public:
 	}
 
 	virtual void Write(char* buffer, long long count)
+	{
+		SE_THROW_NOT_IMPLEMENTED;
+	}
+
+	virtual long long Count() const 
 	{
 		SE_THROW_NOT_IMPLEMENTED;
 	}
@@ -71,10 +78,12 @@ class InFileStream : ByteStream
 {
 private:
 	std::ifstream& m_Backend;
+	long long m_Count;
 
 public:
 	InFileStream(std::ifstream& backend);
 	long long Read(char* buffer, long long count) override;
+	long long Count() const override;
 };
 
 

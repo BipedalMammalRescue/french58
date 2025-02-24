@@ -1,10 +1,11 @@
 #include "renderer_service.h"
-#include "ErrorHandling/exceptions.h"
+#include "Logging/logger_service.h"
+#include "Rendering/renderer_data.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
+#include <memory>
 #include <stdio.h>
-#include <string>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -20,11 +21,10 @@ using namespace Engine::Core;
 
 // TODO: how the fuck do I handle errors from SDL?
 
-
 static const char s_ChannelName[] = "RendererService";
 
 
-bool Engine::Core::Rendering::RendererService::CompileShader(const std::string &code, ShaderType type, unsigned int numSamplers, unsigned int numUniformBuffers, unsigned int numStorageBuffers, unsigned int numStorageTextures, RendererShader &outID)
+bool Engine::Core::Rendering::RendererService::CompileShader(const unsigned char* code, size_t codeLength, ShaderType type, unsigned int numSamplers, unsigned int numUniformBuffers, unsigned int numStorageBuffers, unsigned int numStorageTextures, RendererShader &outID)
 {
 	SDL_GPUShaderStage shaderStage;
 	switch (type) 
@@ -38,8 +38,8 @@ bool Engine::Core::Rendering::RendererService::CompileShader(const std::string &
 	}
 
 	SDL_GPUShaderCreateInfo shaderInfo = {
-		code.size(),
-		(unsigned char*)code.data(),
+		codeLength,
+		code,
 		"main",
 		SDL_GPU_SHADERFORMAT_SPIRV,
 		shaderStage,
@@ -62,25 +62,93 @@ bool Engine::Core::Rendering::RendererService::CompileShader(const std::string &
 
 bool Engine::Core::Rendering::RendererService::DeleteShader(RendererShader &shader)
 {
+	SDL_ReleaseGPUShader(m_Platform->m_GpuDevice, shader.m_ShaderID);
 	return false;
 }
 
 
-bool Engine::Core::Rendering::RendererService::CreateMaterial(const RendererShader& vertexShader, const RendererShader& fragmentShader, RendererMaterial& outID)
+// it's really "CreatePipeline" amirite
+// here comes our big problem: we can't fully decouple vertex layout from the material now, since vertex layout becomes part of the pipeline
+// because data is owned by extensions, this method should take a genric representation of the layout
+// do I really want to still virtualize layout elements?
+bool Engine::Core::Rendering::RendererService::CreateMaterial(const RendererShader& vertexShader, const RendererShader& fragmentShader, VertexAttribute* attributes, unsigned int attributeCount, RendererMaterial& outID)
 {
-	return false;
+	unsigned int stride = 0;
+	std::unique_ptr<SDL_GPUVertexAttribute> vertexAttributes(new SDL_GPUVertexAttribute[attributeCount]);
+	for (int i = 0; i < attributeCount; i++) 
+	{
+		SDL_GPUVertexAttribute& current = vertexAttributes.get()[i];
+		current.location = i;
+		current.buffer_slot = 0;
+		current.offset = stride;
+		switch (attributes[i].Type) 
+		{
+		case GpuDataType::INT32:
+			stride += 4 * attributes[i].Count;
+			current.format = (SDL_GPUVertexElementFormat)((unsigned int)SDL_GPU_VERTEXELEMENTFORMAT_INT + attributes[i].Count - 1);
+			break;
+		case GpuDataType::UINT32:
+			stride += 4 * attributes[i].Count;
+			current.format = (SDL_GPUVertexElementFormat)((unsigned int)SDL_GPU_VERTEXELEMENTFORMAT_UINT + attributes[i].Count - 1);
+			break;
+		case GpuDataType::FLOAT:
+			stride += 4 * attributes[i].Count;
+			current.format = (SDL_GPUVertexElementFormat)((unsigned int)SDL_GPU_VERTEXELEMENTFORMAT_FLOAT + attributes[i].Count - 1);
+			break;
+		}
+	}
+
+	SDL_GPUVertexBufferDescription vertexBufferDescripion {
+		0,
+		stride,
+		SDL_GPUVertexInputRate::SDL_GPU_VERTEXINPUTRATE_VERTEX,
+		0
+	};
+
+	// TODO: left out a bunch of settings, revisit if it turns out I do need them
+	SDL_GPUGraphicsPipelineCreateInfo pipelineCreateInfo 
+	{
+		vertexShader.m_ShaderID,
+		fragmentShader.m_ShaderID,
+		(SDL_GPUVertexInputState) 
+		{
+			// TODO: CONSTRUCT AN ARRAY OF VERTEX BUFFER DESCRIPTIONS
+			&vertexBufferDescripion,
+			1,
+			vertexAttributes.get(),
+			attributeCount
+		},
+		SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,	
+	};
+
+	pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+
+	SDL_GPUColorTargetDescription colorTarget 
+	{
+		SDL_GetGPUSwapchainTextureFormat(m_Platform->m_GpuDevice, m_Platform->m_Window)
+	};
+
+	pipelineCreateInfo.target_info = {
+		&colorTarget,
+		1
+	};
+
+	SDL_GPUGraphicsPipeline* newPipeline = SDL_CreateGPUGraphicsPipeline(m_Platform->m_GpuDevice, &pipelineCreateInfo);
+
+	outID.m_ProgramID = newPipeline;
+	return newPipeline != nullptr;
 }
 
 
 bool Engine::Core::Rendering::RendererService::DeleteMaterial(RendererMaterial& material)
 {
-	return false;
+	SDL_ReleaseGPUGraphicsPipeline(m_Platform->m_GpuDevice, material.m_ProgramID);
+	return true;
 }
 
 
 bool Engine::Core::Rendering::RendererService::RegisterMesh(
-	const VertexCollection& vertices, 
-	const VertexLayout& vertexLayout, 
+	const VertexCollection& vertices,
 	const IndexCollection& indices, 
 	RendererMesh& outID)
 {
@@ -174,6 +242,9 @@ bool Engine::Core::Rendering::RendererService::RegisterMesh(
 	SDL_SubmitGPUCommandBuffer(uploadCmdBuffer);
 	SDL_ReleaseGPUTransferBuffer(m_Platform->m_GpuDevice, transferBuffer);
 
+	outID.m_IndexBuffer = indexBuffer;
+	outID.m_IndexCount = indices.Count;
+	outID.m_VertexBuffer = vertexBuffer;
 	return true;
 }
 
@@ -186,14 +257,56 @@ bool Engine::Core::Rendering::RendererService::DeleteMesh(RendererMesh& inID)
 }
 
 
-// TODO: what do we do about this?
-bool Rendering::RendererService::ApplyDynamicShaderParameter(const Rendering::DynamicShaderParameter* shaderParam, Rendering::RendererMaterial* material)
+// TODO: how does this work?
+bool Engine::Core::Rendering::RendererService::QueueRender(RendererMesh* mesh, RendererMaterial* material, const glm::mat4& mvp) 
 {
-	return false;
-}
+	// create command buffer
+	SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(m_Platform->m_GpuDevice);
+    if (cmdbuf == NULL)
+    {
+        m_Logger->Error(s_ChannelName, "AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+        return false;
+    }
 
+	// get a target texture
+	SDL_GPUTexture* swapchainTexture = nullptr;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, m_Platform->m_Window, &swapchainTexture, nullptr, nullptr)) 
+	{
+        m_Logger->Error(s_ChannelName, "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+        return false;
+    }
 
-bool Rendering::RendererService::QueueRender(RendererMesh* mesh, RendererMaterial* material, const Rendering::DynamicShaderParameter* shaderParams, unsigned int shaderParamCount)
-{
-	return false;
+	if (swapchainTexture == nullptr)
+	{
+		SDL_SubmitGPUCommandBuffer(cmdbuf);
+		return true;
+	}
+
+	// create render pass
+	SDL_GPUColorTargetInfo colorTargetInfo = { 0 };
+	colorTargetInfo.texture = swapchainTexture;
+	colorTargetInfo.clear_color = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
+	colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+	colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmdbuf, &colorTargetInfo, 1, NULL);
+
+	// bind pipeline
+	SDL_BindGPUGraphicsPipeline(renderPass, material->m_ProgramID);
+
+	// bind mesh (VB and IB)
+	SDL_GPUBufferBinding vboBinding { mesh->m_VertexBuffer, 0 };
+	SDL_BindGPUVertexBuffers(renderPass, 0, &vboBinding, 1);
+	SDL_GPUBufferBinding iboBinding { mesh->m_IndexBuffer, 0 };
+	SDL_BindGPUIndexBuffer(renderPass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+	// set the mvp
+	SDL_PushGPUVertexUniformData(cmdbuf, 0, &mvp, sizeof(mvp));
+
+	// draw call
+	SDL_DrawGPUIndexedPrimitives(renderPass, mesh->m_IndexCount, 1, 0, 0, 0);
+	SDL_EndGPURenderPass(renderPass);
+	SDL_SubmitGPUCommandBuffer(cmdbuf);
+
+	return true;
 }

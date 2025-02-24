@@ -4,25 +4,19 @@
 using namespace Engine;
 using namespace Extension::RendererModule;
 
+// using SDL3 with vulkan, this function now loads a binary format SPIR-V code and uploads that to renderer service
 static void* DeserializeVertexShader(Core::DependencyInjection::ServiceProvider* services, Core::AssetManagement::ByteStream* source)
 {
-	// load the entire string in
-	char readBuffer[Core::Configuration::STRING_LOAD_BUFFER_SIZE];
-	std::string rawData;
-	rawData.reserve(Core::Configuration::STRING_LOAD_BUFFER_SIZE);
-	long long newReads = 0;
-	while ((newReads = source->Read(readBuffer, Core::Configuration::STRING_LOAD_BUFFER_SIZE - 1)) > 0)
-	{
-		readBuffer[newReads] = 0;
-		rawData.append(readBuffer);
-	}
+	// load the entire file in
+	unsigned char* rawData = new unsigned char[source->Count()];
+	source->FillBuffer(rawData, source->Count());
 
 	// submit shader code to the rendering service
 	Core::Rendering::RendererShader rendererID;
-	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::VERTEX_SHADER, 0, 0, 0, 0, rendererID))
-	{
+	if (!services->GetRenderer()->CompileShader(rawData, source->Count(), Core::Rendering::ShaderType::VERTEX_SHADER, 0, 1, 0, 0, rendererID))
 		return nullptr;
-	}
+
+	delete[] rawData;
 
 	// allocate new shader data structure and return it
 	return services->GetGlobalAllocator()->New<Assets::VertexShader>({ rendererID });
@@ -47,17 +41,15 @@ SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::VertexShader)
 static void* DeserializeFragmentShader(Core::DependencyInjection::ServiceProvider* services, Core::AssetManagement::ByteStream* source)
 {
 	// load the entire string in
-	std::string rawData;
-	rawData.reserve(Core::Configuration::STRING_LOAD_BUFFER_SIZE);
-	source->ReadAllAsString(rawData);
+	unsigned char* rawData = new unsigned char[source->Count()];
+	source->FillBuffer(rawData, source->Count());
 
-	// TODO: submit this to the rendering engine
+	// submit this to the rendering engine
 	Core::Rendering::RendererShader rendererID;
-	if (!services->GetRenderer()->CompileShader(rawData, Core::Rendering::ShaderType::FRAGMENT_SHADER, 0, 0, 0, 0, rendererID))
-	{
-		// TODO: this will crash the game on scene load, might not be the best solution?
-		SE_THROW_GRAPHICS_EXCEPTION;
-	}
+	if (!services->GetRenderer()->CompileShader(rawData, source->Count(), Core::Rendering::ShaderType::FRAGMENT_SHADER, 0, 0, 0, 0, rendererID))
+		return nullptr;
+
+	delete[] rawData;
 
 	// allocate new shader data structure and return it
 	return services->GetGlobalAllocator()->New<Assets::FragmentShader>({ rendererID });

@@ -10,6 +10,6 @@ int main()
 {
 	Hosting::EngineHost engineHost;
 	engineHost.AddSinkModule<Extension::RendererModule::RendererModule>();
-	//engineHost.AddSinkModule<DummySinkModule>();
+	// engineHost.AddSinkModule<DummySinkModule>();
 	return engineHost.Run();
 }

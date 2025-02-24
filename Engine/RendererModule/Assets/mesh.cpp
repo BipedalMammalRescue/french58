@@ -7,17 +7,6 @@ using namespace Engine;
 using namespace Extension::RendererModule;
 
 
-// TODO: is it a good idea to hard code vertex layout?
-static Core::Rendering::VertexBufferLayoutElement s_VertexLayoutHardCode[] = {
-    {Core::Rendering::GpuDataType::FLOAT, 3, false}, // position
-    {Core::Rendering::GpuDataType::FLOAT, 3, false}, // normal
-    {Core::Rendering::GpuDataType::FLOAT, 2, false}  // uv
-    // TODO: add the material triple
-};
-
-constexpr size_t s_VertexLayoutLength = sizeof(s_VertexLayoutHardCode) / sizeof(Core::Rendering::VertexBufferLayoutElement);
-
-
 void* Assets::Mesh::LoadMesh(Core::DependencyInjection::ServiceProvider* services, Core::AssetManagement::ByteStream* source)
 {
     // load all vertices
@@ -39,7 +28,7 @@ void* Assets::Mesh::LoadMesh(Core::DependencyInjection::ServiceProvider* service
     Mesh* newMesh = services->GetGlobalAllocator()->New<Mesh>();
 
     // submit everything to server
-    if (!services->GetRenderer()->RegisterMesh({ allVertices.get(), (unsigned int)sizeof(Vertex) * vertexCount }, {s_VertexLayoutHardCode, s_VertexLayoutLength}, {allIndices.get(), indexCount}, newMesh->m_RendererCopy))
+    if (!services->GetRenderer()->RegisterMesh({ allVertices.get(), (unsigned int)sizeof(Vertex) * vertexCount }, {allIndices.get(), indexCount}, newMesh->m_RendererCopy))
     {
         services->GetGlobalAllocator()->Free(newMesh);
         return nullptr;

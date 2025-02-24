@@ -1,3 +1,4 @@
+#include "ErrorHandling/exceptions.h"
 #include "pch.h"
 #include "renderer_module.h"
 #include "Assets/mesh.h"
@@ -31,18 +32,18 @@ void Extension::RendererModule::RendererModule::Update(void* moduleInstance, Eng
 {
     RendererModule* instance = (RendererModule*)moduleInstance;
 
-    instance->m_ProjectionMatrix = glm::perspective(glm::radians<float>(75), 960.0f / 720.0f, 0.1f, 10000.0f);
+    instance->m_ProjectionMatrix = glm::perspective(glm::radians<float>(75), 960.0f / 720.0f, 0.1f, 10000000.0f);
     instance->m_View = glm::translate(glm::mat4(1.0f), glm::vec3(100, 100, -500));
-    instance->m_Model = glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(100, 100, 100)), glm::radians<float>(45), glm::vec3(0, 1, 0));
+    instance->m_Model = glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(100, 100, 100)), glm::radians<float>(90), glm::vec3(0, 1, 0));
 
     // calculate MVP
     glm::mat4 mvp = instance->m_ProjectionMatrix * instance->m_View * instance->m_Model;
-
-    // temp: create parameters locally
-    Rendering::DynamicShaderParameter newParams{ s_HardCodeUniformName, &mvp, Rendering::ShaderParamType::MAT4 };
-
+    
     // submit value to the renderer
-    services->GetRenderer()->QueueRender(&instance->m_Mesh->m_RendererCopy, &instance->m_Material->RendererID, &newParams, 1);
+    if (!services->GetRenderer()->QueueRender(&instance->m_Mesh->m_RendererCopy, &instance->m_Material->RendererID,mvp))
+    {
+        SE_THROW_GRAPHICS_EXCEPTION;
+    }
 }
 
 void Extension::RendererModule::RendererModule::Finalize(void* moduleInstance, Engine::Core::DependencyInjection::ServiceProvider* services)

@@ -13,6 +13,8 @@
 #include <Configuration/compile_time_flags.h>
 #include <DependencyInjection/service_provider.h>
 #include <ErrorHandling/exceptions.h>
+
 #include <string>
+#include <vector>
 
 #endif //PCH_H
