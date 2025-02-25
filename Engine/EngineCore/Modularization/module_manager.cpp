@@ -1,7 +1,8 @@
 #include "module_manager.h"
-#include "Utils/non_essential_macros.h"
 
 using namespace Engine::Core;
+
+static const char s_ChannelName[] = "ModuleManager";
 
 void Modularization::ModuleManager::InitializeModules(DependencyInjection::ServiceProvider* services)
 {
@@ -16,12 +17,13 @@ void Modularization::ModuleManager::InitializeModules(DependencyInjection::Servi
 	}
 }
 
+
 void Engine::Core::Modularization::ModuleManager::Update(DependencyInjection::ServiceProvider* services)
 {
 	// condition check
 	if (!IsInitialized())
 	{
-		Logging::GetLogger()->Error("ModuleManager", "Module update before initialization!");
+		Logging::GetLogger()->Error(s_ChannelName, "Module update before initialization!");
 		return;
 	}
 
@@ -34,17 +36,17 @@ void Engine::Core::Modularization::ModuleManager::Update(DependencyInjection::Se
 	}
 }
 
+
 void Modularization::ModuleManager::Finalize(DependencyInjection::ServiceProvider* services)
 {
 	// condition check
 	if (!IsInitialized())
 	{
-		Logging::GetLogger()->Error("ModuleManager", "Module finalization before initialization!");
+		Logging::GetLogger()->Error(s_ChannelName, "Module finalization before initialization!");
 		return;
 	}
 
 	// sink modules
-
 	size_t sinkModuleCount = m_SinkModuleDescriptors.size();
 	for (size_t i = 0; i < sinkModuleCount; i++)
 	{

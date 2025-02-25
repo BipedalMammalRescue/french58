@@ -1,5 +1,7 @@
 # Delivered
 
+Load data using asset manager with reflection.
+
 Rendering a simple, flat cube.
 
 Porting codebase to SDL3 GPU.
@@ -15,6 +17,8 @@ Phong shading for a singular light source (using a temp method to directly speci
 # P2
 
 Finish ECS data pipeline (transform, entity manager, component manager).
+
+Think memory management strategy through: whether there is a need for custom allocator? whether to mix use of custom allocator with STL?
 
 # P3
 

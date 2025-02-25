@@ -1,8 +1,7 @@
 add_library(EngineCore STATIC
 	AssetManagement/asset_manager.cpp
 	AssetManagement/byte_stream.cpp
-	# EntityComponentSystem/component_base.cpp 
-	# EntityComponentSystem/component_controller.cpp
+	EntityModel/entity_manager.cpp
 	Hosting/engine_host.cpp
 	Logging/logger_service.cpp
 	Memory/high_integrity_allocator.cpp

@@ -1,7 +1,6 @@
 #include "high_integrity_allocator.h"
 #include "homogeneous_storage.h"
 #include "Utils/shorthand_functions.h"
-#include <memory>
 
 using namespace Engine::Core::Memory;
 using namespace Engine::Core::Utils;

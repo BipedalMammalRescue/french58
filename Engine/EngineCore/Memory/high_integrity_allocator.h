@@ -17,7 +17,6 @@ private:
 
     void* AllocateCore(size_t size);
 
-
 public:
     HighIntegrityAllocator(unsigned int initialCount);
     ~HighIntegrityAllocator();
@@ -49,7 +48,6 @@ public:
         void* newPayload = AllocateCore(sizeof(T));
         return new (newPayload) T(std::forward<TArgs>(args)...);
     }
-
 
 
     /// <summary>
