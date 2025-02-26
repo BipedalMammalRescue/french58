@@ -2,10 +2,12 @@ add_library(EngineCore STATIC
 	AssetManagement/asset_manager.cpp
 	AssetManagement/byte_stream.cpp
 	EntityModel/entity_manager.cpp
+	EntityModel/component_tree.cpp
 	Hosting/engine_host.cpp
 	Logging/logger_service.cpp
 	Memory/high_integrity_allocator.cpp
 	Memory/homogeneous_storage.cpp
+	Memory/bp_tree.cpp
 	Modularization/module_manager.cpp
 	Platform/platform_access.cpp
 	Reflection/data_type.cpp

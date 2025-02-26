@@ -22,3 +22,7 @@ add_library(Engine STATIC engine_placeholder.cpp)
 set_target_properties(Engine PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(Engine PUBLIC EngineCore)
 target_link_libraries(Engine PUBLIC RendererModule)
+
+# tests
+add_executable(EngineTests Tests/app.cpp)
+target_link_libraries(EngineTests PUBLIC Engine)
