@@ -1,6 +1,6 @@
 #pragma once
 #include "Utils/shorthand_functions.h"
-#include <memory>
+#include <cstddef>
 
 namespace Engine {
 namespace Core {

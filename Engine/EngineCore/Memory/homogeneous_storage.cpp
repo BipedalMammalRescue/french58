@@ -1,4 +1,5 @@
 #include "homogeneous_storage.h"
+#include <algorithm>
 
 // creates a chain segment data structure, and a buffer immediately after it
 
@@ -89,7 +90,7 @@ void* HomogeneousStorage::Take()
 
 void Engine::Core::Memory::HomogeneousStorage::Put(void* pointer)
 {
-    FreeNode* header = Engine::Core::Utils::GetHeader<FreeNode>(pointer);
+    FreeNode* header = (FreeNode*)pointer;
     header->Next = m_headNode;
     m_headNode = header;
 }
