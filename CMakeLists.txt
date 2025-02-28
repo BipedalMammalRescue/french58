@@ -22,3 +22,6 @@ target_link_libraries(Game PUBLIC Engine)
 # builders, they should be depending only on extension modules
 add_subdirectory(DataBuilders)
 target_link_libraries(MeshBuilder PUBLIC RendererModule)
+
+# prototyping
+add_subdirectory(Playground)

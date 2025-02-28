@@ -7,7 +7,7 @@ using namespace Engine::Core::Utils;
 
 // implement H.I.A data structure
 
-struct OwnerPrependedPayload
+struct OwnerPointerHeader
 {
     HomogeneousStorage* Owner;
 };
@@ -28,9 +28,9 @@ void* HighIntegrityAllocator::AllocateCore(size_t size)
         m_BufferTable.insert(std::make_pair(size, targetStore));
     }
 
-    OwnerPrependedPayload* paddedResult = (OwnerPrependedPayload*) targetStore->Take();
+    OwnerPointerHeader* paddedResult = (OwnerPointerHeader*) targetStore->Take();
     paddedResult->Owner = targetStore;
-    return Utils::SkipHeader<OwnerPrependedPayload>(paddedResult);
+    return Utils::SkipHeader<OwnerPointerHeader>(paddedResult);
 }
 
 
@@ -51,6 +51,6 @@ Engine::Core::Memory::HighIntegrityAllocator::~HighIntegrityAllocator()
 
 void Engine::Core::Memory::HighIntegrityAllocator::Free(void* pointer)
 {
-    OwnerPrependedPayload* header = GetHeader<OwnerPrependedPayload>(pointer);
+    OwnerPointerHeader* header = GetHeader<OwnerPointerHeader>(pointer);
     header->Owner->Put(header);
 }
