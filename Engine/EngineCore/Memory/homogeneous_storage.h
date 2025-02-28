@@ -10,35 +10,24 @@ namespace Memory {
 class HomogeneousStorage
 {
 private:
-    /// <summary>
-    /// Standard metadata header for each block in a buffer chain.
-    /// </summary>
-    struct Node
-    {
-        Node* NextFree = nullptr;
 
-        // get the pointer to a payload
-        void* GetPayload() { return ((char*)this) + sizeof(Node); }
+    // Meatadata header that shares its memory usage with the payload, since it's only active after the payload had been freed
+    struct FreeNode
+    {
+        FreeNode* Next = nullptr;
     };
 
-    /// <summary>
-    /// A segment of a chain of buffers.
-    /// </summary>
+    // A segment of a chain of buffers.
     struct Segment
     {
         Segment* NextSegment = nullptr;
         unsigned int Count = 0;
+
+        FreeNode* GetFirstNode() const 
+        {
+            return (FreeNode*)Utils::SkipHeader<Segment>(this);
+        }
     };
-
-    static Node* GetFirstHeaderFromSegment(Segment* segment)
-    {
-        return (Node*)Utils::SkipHeader<Segment>(segment);
-    }
-
-    static char* GetBufferFromHeader(Node* header)
-    {
-        return (char*)Utils::SkipHeader<Node>(header);
-    }
 
     // creates a chain segment data structure, and a buffer immediately after it
     Segment* CreateNewSegment(unsigned int count, size_t payloadSize);
@@ -48,7 +37,7 @@ private:
     Segment* m_headSegment = nullptr;
     Segment* m_tailSegment = nullptr;
 
-    Node* m_headNode = nullptr;
+    FreeNode* m_headNode = nullptr;
 
     size_t m_payloadSize = 0;
     unsigned int m_initialCount = 0;

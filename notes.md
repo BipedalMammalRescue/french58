@@ -8,6 +8,11 @@ Porting codebase to SDL3 GPU.
 
 # P1
 
+Working implementation of Entity-Component-System
+    B+ Tree for indexing components
+    ranged B+ tree operations for Entity queries
+    re-design allocator to support low-per-element overhead
+
 Dynamic camera struct (how does glm's code produce its perspective matrix?).
 
 Add texture sampler to pipeline; supply filler texture if texture isn't included (magenta?).
