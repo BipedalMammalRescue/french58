@@ -14,7 +14,7 @@ inline THeader* GetHeader(void* original)
 }
 
 template <typename THeader>
-inline void* SkipHeader(THeader* node)
+inline void* SkipHeader(const THeader* node)
 {
     return (void*)(((char*)node) + sizeof(THeader));
 }

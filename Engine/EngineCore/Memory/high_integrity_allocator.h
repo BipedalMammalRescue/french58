@@ -1,7 +1,9 @@
 #pragma once
 
-#include <utility>
+#include "Configuration/compile_time_flags.h"
+#include <cassert>
 #include <unordered_map>
+#include <utility>
 
 namespace Engine {
 namespace Core {
@@ -9,29 +11,30 @@ namespace Memory {
 
 class HomogeneousStorage;
 
+constexpr unsigned int SE_ALLOCATOR_MAX_PAYLOAD_SIZE = 2 << (Configuration::ALLOCATOR_SIZE_HINT_WIDTH * 8);
+
 class HighIntegrityAllocator
 {
-private:
+  private:
     unsigned int m_InitialBufferItemCount;
-    std::unordered_map<size_t, HomogeneousStorage*> m_BufferTable;
+    std::unordered_map<size_t, HomogeneousStorage *> m_BufferTable;
 
-    void* AllocateCore(size_t size);
+    void *AllocateCore(size_t size);
 
-public:
+  public:
     HighIntegrityAllocator(unsigned int initialCount);
     ~HighIntegrityAllocator();
-    
-    template <typename T>
-    T* New(const T&& copy)
+
+    template <typename T> T *New(const T &&copy)
     {
-        void* newPayload = AllocateCore(sizeof(T));
+        static_assert(sizeof(T) >= Configuration::ALLOCATOR_FREE_LIST_POINTER_WIDTH);
+        void *newPayload = AllocateCore(sizeof(T));
         return new (newPayload) T(copy);
     }
-    
-    template <typename T>
-    T* New(const T& copy)
+
+    template <typename T> T *New(const T &copy)
     {
-        void* newPayload = AllocateCore(sizeof(T));
+        void *newPayload = AllocateCore(sizeof(T));
         return new (newPayload) T(copy);
     }
 
@@ -42,18 +45,16 @@ public:
     /// <typeparam name="...TArgs">variable length argument list forwarded to new() constructor</typeparam>
     /// <param name="...args">variable length argument list forwarded to new() constructor</param>
     /// <returns>Pointer of a buffer with available size at least sizeof(T).</returns>
-    template <typename T, typename ...TArgs>
-    T* New(TArgs... args)
+    template <typename T, typename... TArgs> T *New(TArgs... args)
     {
-        void* newPayload = AllocateCore(sizeof(T));
+        void *newPayload = AllocateCore(sizeof(T));
         return new (newPayload) T(std::forward<TArgs>(args)...);
     }
 
     // incredibly dangerous operation, always make sure:
     // 1. T is a custom type that actually corresponds to the requested type
     // 2. in case of inheritance the destructor is virtualized properly
-    template <typename T>
-    void Delete(T* pointer)
+    template <typename T> void Delete(T *pointer)
     {
         pointer->~T();
         Free(pointer);
@@ -64,8 +65,9 @@ public:
     /// </summary>
     /// <param name="size"></param>
     /// <returns></returns>
-    void* Malloc(size_t size)
+    void *Malloc(size_t size)
     {
+        assert(size <= SE_ALLOCATOR_MAX_PAYLOAD_SIZE);
         return AllocateCore(size);
     }
 
@@ -73,9 +75,9 @@ public:
     /// Free the buffer previously allocated by the allocator.
     /// </summary>
     /// <param name="pointer">the ticket of the returned object</param>
-    void Free(void* pointer);
+    void Free(void *pointer);
 };
 
-}
-}
-}
+} // namespace Memory
+} // namespace Core
+} // namespace Engine

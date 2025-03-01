@@ -46,35 +46,38 @@ void ResetColor()
 
 bool BpTreeTest() 
 {
-    Engine::Core::Memory::HighIntegrityAllocator allocator(128);
-    Engine::Core::Memory::BpTree tree(&allocator);
+    Engine::Core::Memory::HighIntegrityAllocator allocator(16);
 
-    constexpr int ELEMENT_COUNT = 5000;
-
-    int data[ELEMENT_COUNT];
-    
-    for (int i = 0; i < ELEMENT_COUNT; i++)
     {
-        data[i] = i * 155;
-        tree.Insert(i, &data[i]);
+        Engine::Core::Memory::BpTree tree(&allocator);
+
+        constexpr int ELEMENT_COUNT = 5000;
+
+        int data[ELEMENT_COUNT];
+        
+        for (int i = 0; i < ELEMENT_COUNT; i++)
+        {
+            data[i] = i * 155;
+            tree.Insert(i, &data[i]);
+        }
+
+        // print out the tree
+        std::string outString;
+        tree.Print(outString);
+        std::cout << outString << std::endl;
+
+        // test the values
+        for (int i = 0; i < ELEMENT_COUNT; i++)
+        {
+            void* ptr;
+            assert(tree.TryGet(i, ptr));
+            assert(*((int*)ptr) == i * 155);
+        }
+
+        // test deletion
+
+        return true;
     }
-
-    // print out the tree
-    std::string outString;
-    tree.Print(outString);
-    std::cout << outString;
-
-    // test the values
-    for (int i = 0; i < ELEMENT_COUNT; i++)
-    {
-        void* ptr;
-        assert(tree.TryGet(i, ptr));
-        assert(*((int*)ptr) == i * 155);
-    }
-
-    // test deletion
-
-    return true;
 }
 
 int main()
