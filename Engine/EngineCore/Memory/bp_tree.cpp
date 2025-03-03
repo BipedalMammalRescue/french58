@@ -28,8 +28,7 @@ enum class UnderflowResolution
     NO_UNDERFLOW,
     NO_DELETION,
     UNRESOLVED_LEAF,
-    UNRESOLVED_INTERNAL,
-    TOTAL
+    UNRESOLVED_INTERNAL
 };
 
 // reports underflow resolution back to the calling parent
@@ -38,7 +37,7 @@ struct Underflow
     // pointer related to the resolution: for MERGE this is the node that's merged into, for REDISTRIBUTE this is the
     // node that redistributed with
     void *Pointer = nullptr;
-    UnderflowResolution Resolution = UnderflowResolution::TOTAL;
+    UnderflowResolution Resolution = UnderflowResolution::NO_DELETION;
 };
 
 class IBpNode
@@ -49,41 +48,44 @@ class IBpNode
     friend class LeafNode;
     uint64_t m_Keys[Configuration::B_PLUS_TREE_K_ARY - 1];
     void *m_Pointers[Configuration::B_PLUS_TREE_K_ARY];
-    HighIntegrityAllocator *m_Allocator;
     int m_Fill = 0;
 
   public:
-    IBpNode(HighIntegrityAllocator *allocator) : m_Allocator(allocator)
+    IBpNode()
     {
         // zero out memory since we use nullptr for some status indicator
         memset(m_Keys, 0, (Configuration::B_PLUS_TREE_K_ARY - 1) * sizeof(int));
         memset(m_Pointers, 0, Configuration::B_PLUS_TREE_K_ARY * sizeof(void *));
     }
 
-    virtual Overflow TryInsert(uint64_t key, void *value) = 0;
+    virtual Overflow TryInsert(uint64_t key, void *value, HighIntegrityAllocator *allocator) = 0;
     virtual bool TryGet(uint64_t key, void *&outValue) const = 0;
-    virtual Underflow TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling) = 0;
-    virtual ~IBpNode() = default;
+    virtual Underflow TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling,
+                                HighIntegrityAllocator *allocator) = 0;
+    virtual void Dispose(HighIntegrityAllocator *allocator)
+    {
+    }
     virtual void Print(std::stringstream &stream) const = 0;
 };
 
 class InternalNode : public IBpNode
 {
+  private:
+    Underflow HandleUnderflow(InternalNode *leftSibling, InternalNode *rightSibling, HighIntegrityAllocator *allocator);
+
   public:
-    Overflow TryInsert(uint64_t key, void *value) override;
+    Overflow TryInsert(uint64_t key, void *value, HighIntegrityAllocator *allocator) override;
     bool TryGet(uint64_t key, void *&value) const override;
-    Underflow TryRemove(uint64_t key, void *&value, IBpNode *leftSibling, IBpNode *rightSibling) override;
+    Underflow TryRemove(uint64_t key, void *&value, IBpNode *leftSibling, IBpNode *rightSibling,
+                        HighIntegrityAllocator *allocator) override;
 
-    InternalNode(HighIntegrityAllocator *allocator) : IBpNode(allocator)
-    {
-    }
-
-    ~InternalNode()
+    void Dispose(HighIntegrityAllocator *allocator) override
     {
         for (int i = 0; i <= m_Fill; i++)
         {
             IBpNode *pointer = (IBpNode *)m_Pointers[i];
-            m_Allocator->Delete(pointer);
+            pointer->Dispose(allocator);
+            allocator->Free(pointer);
         }
     }
 
@@ -93,20 +95,15 @@ class InternalNode : public IBpNode
 class LeafNode : public IBpNode
 {
   public:
-    Overflow TryInsert(uint64_t key, void *value) override;
+    Overflow TryInsert(uint64_t key, void *value, HighIntegrityAllocator *allocator) override;
     bool TryGet(uint64_t key, void *&outValue) const override;
-    Underflow TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling) override;
+    Underflow TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling,
+                        HighIntegrityAllocator *allocator) override;
 
     inline void Link(LeafNode *rightSibling)
     {
         m_Pointers[m_Fill] = rightSibling;
     }
-
-    LeafNode(HighIntegrityAllocator *allocator) : IBpNode(allocator)
-    {
-    }
-
-    ~LeafNode() = default;
 
     void Print(std::stringstream &stream) const override;
 };
@@ -126,11 +123,12 @@ BpTree::~BpTree()
 {
     if (m_Root != nullptr)
     {
-        m_Allocator->Delete(m_Root);
+        m_Root->Dispose(m_Allocator);
+        m_Allocator->Free(m_Root);
     }
 }
 
-Overflow InternalNode::TryInsert(uint64_t key, void *value)
+Overflow InternalNode::TryInsert(uint64_t key, void *value, HighIntegrityAllocator *allocator)
 {
     // internal nodes don't directly add shit
     int targetPointer = 0;
@@ -143,7 +141,7 @@ Overflow InternalNode::TryInsert(uint64_t key, void *value)
 
     // pass the insertion down
     IBpNode *nextNode = (IBpNode *)m_Pointers[targetPointer];
-    Overflow childOverflow = nextNode->TryInsert(key, value);
+    Overflow childOverflow = nextNode->TryInsert(key, value, allocator);
 
     // skip if the child node doesn't request an overflow
     if (!childOverflow.Valid)
@@ -185,7 +183,7 @@ Overflow InternalNode::TryInsert(uint64_t key, void *value)
                (Configuration::B_PLUS_TREE_K_ARY - targetPointer - 1) * sizeof(void *));
 
         // initialize a new sibling
-        InternalNode *newSibling = m_Allocator->New<InternalNode>(m_Allocator);
+        InternalNode *newSibling = allocator->New<InternalNode>();
 
         // split the overflow buffer
         memcpy(m_Keys, overflowKeys, branchLength * sizeof(uint64_t));
@@ -204,7 +202,7 @@ Overflow InternalNode::TryInsert(uint64_t key, void *value)
     }
 }
 
-Overflow LeafNode::TryInsert(uint64_t key, void *value)
+Overflow LeafNode::TryInsert(uint64_t key, void *value, HighIntegrityAllocator *allocator)
 {
     // seek internally
     int targetPointer = 0;
@@ -256,7 +254,7 @@ Overflow LeafNode::TryInsert(uint64_t key, void *value)
                (Configuration::B_PLUS_TREE_K_ARY - targetPointer - 1) * sizeof(void *));
 
         // initialize a new sibling
-        LeafNode *newSibling = m_Allocator->New<LeafNode>(m_Allocator);
+        LeafNode *newSibling = allocator->New<LeafNode>();
 
         // split the overflow buffer
         memcpy(m_Keys, overflowKeys, (branchLength + 1) * sizeof(uint64_t));
@@ -309,7 +307,85 @@ bool LeafNode::TryGet(uint64_t key, void *&outValue) const
     return false;
 }
 
-Underflow InternalNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling)
+Underflow InternalNode::HandleUnderflow(InternalNode *leftSibling, InternalNode *rightSibling,
+                                        HighIntegrityAllocator *allocator)
+{
+    // detect underflow by checking if there are keys
+    if (m_Fill > 0)
+        return Underflow{nullptr, UnderflowResolution::NO_UNDERFLOW};
+
+    // try to merge with sibling
+    if (leftSibling != nullptr && leftSibling->m_Fill < Configuration::B_PLUS_TREE_K_ARY - 1)
+    {
+        // we know the first slot is still valid, extract an extra key from the frist child
+        uint64_t newKey = static_cast<IBpNode *>(m_Pointers[0])->m_Keys[0];
+        void *newPointer = m_Pointers[0];
+
+        // basically insert this new key into the left sibling -> we already know this key is bigger than everything in
+        // left sibling so there's no need to calculate slots and such
+        leftSibling->m_Pointers[m_Fill + 1] = leftSibling->m_Pointers[m_Fill];
+        leftSibling->m_Pointers[m_Fill] = newPointer;
+        leftSibling->m_Keys[m_Fill] = newKey;
+        leftSibling->m_Fill++;
+
+        return Underflow{leftSibling, UnderflowResolution::MERGE};
+    }
+    else if (rightSibling != nullptr && rightSibling->m_Fill < Configuration::B_PLUS_TREE_K_ARY - 1)
+    {
+        // merge right sibling into current node
+        // first reserve a slot in current node
+        uint64_t newKey = static_cast<IBpNode *>(rightSibling->m_Pointers[0])->m_Keys[0];
+        m_Keys[0] = newKey;
+
+        // copy everything from right sibling into current node
+        memcpy(m_Keys + 1, rightSibling->m_Keys, rightSibling->m_Fill * sizeof(uint64_t));
+        memcpy(m_Pointers + 1, rightSibling->m_Pointers, (rightSibling->m_Fill + 1) * sizeof(void *));
+        m_Fill = rightSibling->m_Fill + 1;
+        rightSibling->m_Fill = 0;
+
+        return Underflow{rightSibling, UnderflowResolution::MERGE};
+    }
+    else if (leftSibling != nullptr)
+    {
+        // redistribute with left sibling
+        SE_THROW_NOT_IMPLEMENTED;
+    }
+    else if (rightSibling != nullptr)
+    {
+        unsigned int branchLength = Configuration::B_PLUS_TREE_K_ARY / 2;
+
+        // redistribute with right sibling
+        // reserve a slot for the head of right sibling
+        uint64_t newKey = static_cast<IBpNode *>(rightSibling->m_Pointers[0])->m_Keys[0];
+        m_Keys[0] = newKey;
+
+        // copy over branchLength - 1 items from the right pointer
+        // carry over one extra key to self, this is used by parent node for the new key between this and right sibling
+        memcpy(m_Keys + 1, rightSibling->m_Keys, (branchLength) * sizeof(uint64_t));
+        memcpy(m_Pointers + 1, rightSibling->m_Pointers, (branchLength) * sizeof(void *));
+        m_Fill = branchLength;
+
+        // extact the center item in right sibling
+        uint64_t centerKey = rightSibling->m_Keys[branchLength - 1];
+
+        // rearrange right sibling by moving everything forward by branchLength
+        memcpy(rightSibling->m_Keys, rightSibling->m_Keys + branchLength,
+               (Configuration::B_PLUS_TREE_K_ARY - branchLength - 1) * sizeof(uint64_t));
+        memcpy(rightSibling->m_Pointers, rightSibling->m_Pointers + branchLength,
+               (Configuration::B_PLUS_TREE_K_ARY - branchLength) * sizeof(void *));
+        rightSibling->m_Fill = Configuration::B_PLUS_TREE_K_ARY - branchLength - 1;
+
+        // report
+        return Underflow{rightSibling, UnderflowResolution::REDISTRIBUTE};
+    }
+    else
+    {
+        return Underflow{nullptr, UnderflowResolution::UNRESOLVED_INTERNAL};
+    }
+}
+
+Underflow InternalNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling,
+                                  HighIntegrityAllocator *allocator)
 {
     // seek the entry
     int targetPointer = 0;
@@ -323,16 +399,77 @@ Underflow InternalNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSi
     IBpNode *targetChild = (IBpNode *)m_Pointers[targetPointer];
     IBpNode *leftChildSibling = targetPointer == 0 ? nullptr : (IBpNode *)m_Pointers[targetPointer - 1];
     IBpNode *rightChildSibling = targetPointer == m_Fill ? nullptr : (IBpNode *)m_Pointers[targetPointer + 1];
-    Underflow childUnderflow = targetChild->TryRemove(key, outValue, leftChildSibling, rightChildSibling);
-    if (childUnderflow.Resolution == UnderflowResolution::NO_DELETION)
+    Underflow childUnderflow = targetChild->TryRemove(key, outValue, leftChildSibling, rightChildSibling, allocator);
+
+    // report nothing happening if child either rejected the deletion or didn't have underflow
+    switch (childUnderflow.Resolution)
+    {
+    case UnderflowResolution::NO_UNDERFLOW:
+    case UnderflowResolution::NO_DELETION:
         return childUnderflow;
+    case UnderflowResolution::UNRESOLVED_INTERNAL:
+    case UnderflowResolution::UNRESOLVED_LEAF:
+        // for a non-root node to throw unresolved is algorithmically impoossible because they must have at least one
+        // sibling
+        SE_THROW_ALGORITHMIC_EXCEPTION;
+    case UnderflowResolution::MERGE:
+        // TODO: the middle child node is removed, delete the key and pointer based on which sibling it merged with
+        if (childUnderflow.Pointer == leftChildSibling)
+        {
+            // delete the pointer and key for target child, with the target child itself
+            targetChild->Dispose(allocator);
+            allocator->Free(targetChild);
+
+            // move everything forward by one slot
+            for (int i = targetPointer; i < m_Fill - 1; i++)
+            {
+                m_Keys[i] = m_Keys[i + 1];
+                m_Pointers[i] = m_Pointers[i + 1];
+            }
+            m_Pointers[m_Fill - 1] = m_Pointers[m_Fill];
+            m_Pointers[m_Fill] = nullptr;
+            m_Fill--;
+
+            return HandleUnderflow(static_cast<InternalNode *>(leftSibling), static_cast<InternalNode *>(rightSibling),
+                                   allocator);
+        }
+        else if (childUnderflow.Pointer == rightChildSibling)
+        {
+            // delete the right sibling instead
+            rightChildSibling->Dispose(allocator);
+            allocator->Free(rightChildSibling);
+
+            // move everything forward by one slot
+            for (int i = targetPointer + 1; i < m_Fill - 1; i++)
+            {
+                m_Keys[i] = m_Keys[i + 1];
+                m_Pointers[i] = m_Pointers[i + 1];
+            }
+            m_Pointers[m_Fill - 1] = m_Pointers[m_Fill];
+            m_Pointers[m_Fill] = nullptr;
+            m_Fill--;
+
+            return HandleUnderflow(static_cast<InternalNode *>(leftSibling), static_cast<InternalNode *>(rightSibling),
+                                   allocator);
+        }
+        else
+        {
+            // child deletion shouldn't report merge with an unknown pointer
+            SE_THROW_ALGORITHMIC_EXCEPTION;
+        }
+    case UnderflowResolution::REDISTRIBUTE:
+        // TODO:: the middle child received new content, change key value based on which sibling it redistributed with
+        // note: in this case self should never underflow
+        SE_THROW_NOT_IMPLEMENTED;
+    }
 
     SE_THROW_NOT_IMPLEMENTED;
 }
 
-Underflow LeafNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling)
+Underflow LeafNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSibling, IBpNode *rightSibling,
+                              HighIntegrityAllocator *allocator)
 {
-    // TODO: first thing: remove an entry and move everything towards left
+    // first thing: remove an entry and move everything towards left
     // seek the entry
     int targetPointer = 0;
     for (; targetPointer < m_Fill; targetPointer++)
@@ -364,23 +501,23 @@ Underflow LeafNode::TryRemove(uint64_t key, void *&outValue, IBpNode *leftSiblin
     LeafNode *rightSiblingReal = static_cast<LeafNode *>(rightSibling);
 
     // try to merge into a sibling, if both are full then redistribute with one of them
-    // TODO:
     if (leftSibling != nullptr && leftSibling->m_Fill < Configuration::B_PLUS_TREE_K_ARY - 1)
     {
         // in case of vacate sibling, insert the content of the remining key to that node; return value can be safely
         // discarded because we know the sibling is a leaf node AND that it can never overflow
-        leftSiblingReal->TryInsert(m_Keys[0], m_Pointers[0]);
+        leftSiblingReal->TryInsert(m_Keys[0], m_Pointers[0], allocator);
         leftSiblingReal->Link(rightSiblingReal);
         return Underflow{leftSiblingReal, UnderflowResolution::MERGE};
     }
     else if (rightSibling != nullptr && rightSibling->m_Fill < Configuration::B_PLUS_TREE_K_ARY - 1)
     {
-        // same procedure as above, except this time check whether the left sibling is valid
-        rightSiblingReal->TryInsert(m_Keys[0], m_Pointers[0]);
-        if (leftSibling != nullptr)
-        {
-            leftSiblingReal->Link(rightSiblingReal);
-        }
+        // change this part to copy into the middle child instead of copy into the right child
+        memcpy(m_Keys + 1, rightSiblingReal->m_Keys, rightSiblingReal->m_Fill * sizeof(uint64_t));
+        // this should also make self inherit the tail pointer from right sibling
+        memcpy(m_Pointers + 1, rightSiblingReal->m_Pointers, rightSiblingReal->m_Fill + 1);
+        m_Fill = rightSiblingReal->m_Fill + 1;
+        rightSiblingReal->m_Fill = 0;
+
         return Underflow{rightSiblingReal, UnderflowResolution::MERGE};
     }
     else
@@ -430,14 +567,14 @@ void Engine::Core::Memory::BpTree::Insert(uint64_t key, void *value)
 {
     if (m_Root == nullptr)
     {
-        m_Root = m_Allocator->New<LeafNode>(m_Allocator);
+        m_Root = m_Allocator->New<LeafNode>();
     }
 
-    Overflow rootOverflow = m_Root->TryInsert(key, value);
+    Overflow rootOverflow = m_Root->TryInsert(key, value, m_Allocator);
     if (!rootOverflow.Valid)
         return;
 
-    InternalNode *newRoot = m_Allocator->New<InternalNode>(m_Allocator);
+    InternalNode *newRoot = m_Allocator->New<InternalNode>();
     newRoot->m_Keys[0] = rootOverflow.Key;
     newRoot->m_Pointers[0] = m_Root;
     newRoot->m_Pointers[1] = rootOverflow.Right;
@@ -447,7 +584,7 @@ void Engine::Core::Memory::BpTree::Insert(uint64_t key, void *value)
 
 bool Engine::Core::Memory::BpTree::Remove(uint64_t key, void *&outValue)
 {
-    Underflow underflow = m_Root->TryRemove(key, outValue, nullptr, nullptr);
+    Underflow underflow = m_Root->TryRemove(key, outValue, nullptr, nullptr, m_Allocator);
     switch (underflow.Resolution)
     {
     case UnderflowResolution::NO_DELETION:
@@ -463,7 +600,7 @@ bool Engine::Core::Memory::BpTree::Remove(uint64_t key, void *&outValue)
     }
     default:
         // TODO: what to do with an unexpected result?
-        SE_THROW_NOT_IMPLEMENTED;
+        SE_THROW_ALGORITHMIC_EXCEPTION;
     }
 }
 

@@ -51,15 +51,6 @@ class HighIntegrityAllocator
         return new (newPayload) T(std::forward<TArgs>(args)...);
     }
 
-    // incredibly dangerous operation, always make sure:
-    // 1. T is a custom type that actually corresponds to the requested type
-    // 2. in case of inheritance the destructor is virtualized properly
-    template <typename T> void Delete(T *pointer)
-    {
-        pointer->~T();
-        Free(pointer);
-    }
-
     /// <summary>
     /// Allocate an empty space in memory with a set size.
     /// </summary>
