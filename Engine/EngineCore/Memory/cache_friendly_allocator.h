@@ -103,8 +103,19 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
         }
     };
 
-    BudgetBlock *m_Head = (BudgetBlock *)malloc(sizeof(BudgetBlock));
-    BudgetBlock *m_Tail = m_Head;
+    inline BudgetBlock *&GetHead()
+    {
+        return m_Blocks[0];
+    }
+
+    inline BudgetBlock *&GetTail()
+    {
+        return m_Blocks[m_BlockCount - 1];
+    }
+
+    BudgetBlock **m_Blocks =
+        (BudgetBlock **)malloc(Configuration::ALLOCATOR_BLOCK_LIST_INITIAL_CAPACITY * sizeof(void *));
+    Configuration::AllocatorIndexType m_BlockCapacity = Configuration::ALLOCATOR_BLOCK_LIST_INITIAL_CAPACITY;
     Configuration::AllocatorIndexType m_BlockCount = 1;
     Configuration::AllocatorIndexType m_FreeHead = 0;
 
@@ -114,17 +125,19 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
         static_assert(sizeof(BudgetBlock::BudgetBlockHeader) != sizeof(CacheUnit),
                       "Number of items per block exceeds cache line size limit!");
 
-        m_Head[0].Header.Data.NextBlock = nullptr;
-        m_Head[0].Header.Data.Bitmask = 0;
+        GetHead() = (BudgetBlock *)malloc(sizeof(BudgetBlock));
+
+        GetHead()->Header.Data.NextBlock = nullptr;
+        GetHead()->Header.Data.Bitmask = 0;
 
         // initialize free block
-        m_Head[0].Reset(0);
+        GetHead()->Reset(0);
     }
 
     ~CacheFriendlyAllocator()
     {
         BudgetBlock *nextBlock = nullptr;
-        BudgetBlock *currentBlock = m_Head;
+        BudgetBlock *currentBlock = GetHead();
         Configuration::AllocatorBitmaskType currentBitmask = 0;
 
         while (currentBlock != nullptr)
@@ -138,7 +151,7 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
     void Reset()
     {
         BudgetBlock *nextBlock = nullptr;
-        BudgetBlock *currentBlock = m_Head;
+        BudgetBlock *currentBlock = GetHead();
         Configuration::AllocatorIndexType offset = 0;
         while (currentBlock != nullptr)
         {
@@ -151,18 +164,29 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
 
     TItem *Malloc()
     {
-        BudgetBlock *targetBlock = m_Head;
+        BudgetBlock *targetBlock = GetHead();
         BudgetBlock *nextBlock = nullptr;
 
         if (m_FreeHead == Configuration::INVALID_ALLOCATOR_INDEX)
         {
+            // grow the block list if it's needed
+            if (m_BlockCount == m_BlockCapacity)
+            {
+                realloc(m_Blocks, m_BlockCapacity * 2);
+                m_BlockCapacity *= 2;
+            }
+
             // add a new block
             BudgetBlock *newBlock = (BudgetBlock *)malloc(sizeof(BudgetBlock));
-            m_Tail->Header.Data.NextBlock = newBlock;
-            newBlock->ResetAndPrepend(m_BlockCount * TItemsPerBlock, Configuration::INVALID_ALLOCATOR_INDEX);
-            BudgetBlock::SetValidity(newBlock->Header.Data.Bitmask, m_BlockCount * TItemsPerBlock);
-            m_Tail = newBlock;
+            GetTail()->Header.Data.NextBlock = newBlock;
+
+            // append the new block
             m_BlockCount++;
+            GetTail() = newBlock;
+
+            // initialize new block
+            newBlock->ResetAndPrepend((m_BlockCount - 1) * TItemsPerBlock, Configuration::INVALID_ALLOCATOR_INDEX);
+            BudgetBlock::SetValidity(newBlock->Header.Data.Bitmask, m_BlockCount * TItemsPerBlock);
 
             // get the new item from newBlock directly
             FreeListItem *result = &newBlock->Units[0].Data[0];
@@ -188,14 +212,14 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
         return &targetItem->Item;
     }
 
-    void Free(TItem *item)
+    void Free(Configuration::AllocatorIndexType item)
     {
     }
 
     template <typename TFunc> void IterateAll(TFunc &&function)
     {
         BudgetBlock *nextBlock = nullptr;
-        BudgetBlock *currentBlock = m_Head;
+        BudgetBlock *currentBlock = GetHead();
         Configuration::AllocatorBitmaskType currentBitmask = 0;
 
         // for each block
@@ -229,7 +253,7 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
     template <typename TFunc> void IterateAll(TFunc &&function) const
     {
         BudgetBlock *nextBlock = nullptr;
-        BudgetBlock *currentBlock = m_Head;
+        BudgetBlock *currentBlock = GetHead();
         Configuration::AllocatorBitmaskType currentBitmask = 0;
 
         // for each block

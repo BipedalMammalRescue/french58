@@ -18,11 +18,23 @@ constexpr unsigned int ALLOCATOR_SIZE_HINT_WIDTH = 2;
 // this buffer is
 constexpr unsigned int ALLOCATOR_FREE_LIST_POINTER_WIDTH = sizeof(void *);
 
+// change this if your CPU has a non-standard cache line
 constexpr size_t ALLOCATOR_CACHELINE_SIZE = 64;
+
+// width of the bitmask, limited by how big an integer type is
 constexpr uint64_t ALLOCATOR_BITMASK_WIDTH = 64;
+
+// type of bitmask needs to be a numeric type with size of ALLOCATOR_BITMASK_WIDTH
 using AllocatorBitmaskType = uint64_t;
+
+// type used to index into CacheFriendlyAllocator (will also become things like component ID if needed)
 using AllocatorIndexType = int64_t;
+
+// special value used to indicate the free list is exhausted
 constexpr AllocatorIndexType INVALID_ALLOCATOR_INDEX = -1;
+
+// initial capacity of the block list in CacheFriendlyAllocator
+constexpr AllocatorIndexType ALLOCATOR_BLOCK_LIST_INITIAL_CAPACITY = 16;
 
 } // namespace Configuration
 } // namespace Core
