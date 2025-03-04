@@ -1,5 +1,5 @@
 #include "Memory/bp_tree.h"
-#include "Memory/budget_allocator.h"
+#include "Memory/cache_friendly_allocator.h"
 #include "Memory/high_integrity_allocator.h"
 #include <exception>
 #include <iostream>
@@ -86,8 +86,8 @@ bool BudgetAllocatorTest()
         int b = 0;
     };
 
-    Engine::Core::Memory::BudgetAllocator<Data, 64> allocator;
-    std::cout << sizeof(Engine::Core::Memory::BudgetAllocator<Data, 64>) << std::endl;
+    Engine::Core::Memory::CacheFriendlyAllocator<Data, 64> allocator;
+    std::cout << sizeof(Engine::Core::Memory::CacheFriendlyAllocator<Data, 64>) << std::endl;
 
     Data *value1 = allocator.Malloc();
     Data *value2 = allocator.Malloc();

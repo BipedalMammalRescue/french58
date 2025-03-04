@@ -12,7 +12,7 @@ struct CacheUnit
     unsigned char Buffer[Configuration::ALLOCATOR_CACHELINE_SIZE];
 };
 
-template <typename TItem, size_t TItemsPerBlock> class BudgetAllocator
+template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
 {
   private:
     static constexpr size_t GetItemsPerUnit()
@@ -109,7 +109,7 @@ template <typename TItem, size_t TItemsPerBlock> class BudgetAllocator
     Configuration::AllocatorIndexType m_FreeHead = 0;
 
   public:
-    BudgetAllocator()
+    CacheFriendlyAllocator()
     {
         static_assert(sizeof(BudgetBlock::BudgetBlockHeader) != sizeof(CacheUnit),
                       "Number of items per block exceeds cache line size limit!");
@@ -121,7 +121,7 @@ template <typename TItem, size_t TItemsPerBlock> class BudgetAllocator
         m_Head[0].Reset(0);
     }
 
-    ~BudgetAllocator()
+    ~CacheFriendlyAllocator()
     {
         BudgetBlock *nextBlock = nullptr;
         BudgetBlock *currentBlock = m_Head;
@@ -186,6 +186,10 @@ template <typename TItem, size_t TItemsPerBlock> class BudgetAllocator
             &targetBlock->Units[blockOffset / GetItemsPerUnit()].Data[blockOffset % GetItemsPerUnit()];
         m_FreeHead = targetItem->NextFree;
         return &targetItem->Item;
+    }
+
+    void Free(TItem *item)
+    {
     }
 
     template <typename TFunc> void IterateAll(TFunc &&function)
