@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 namespace Engine {
 namespace Core {
 namespace Configuration {
@@ -16,6 +17,12 @@ constexpr unsigned int ALLOCATOR_SIZE_HINT_WIDTH = 2;
 // homogeneous allocator buffers (backend of allocator) embeds a pointer inside its allocated buffers;
 // this buffer is
 constexpr unsigned int ALLOCATOR_FREE_LIST_POINTER_WIDTH = sizeof(void *);
+
+constexpr size_t ALLOCATOR_CACHELINE_SIZE = 64;
+constexpr uint64_t ALLOCATOR_BITMASK_WIDTH = 64;
+using AllocatorBitmaskType = uint64_t;
+using AllocatorIndexType = int64_t;
+constexpr AllocatorIndexType INVALID_ALLOCATOR_INDEX = -1;
 
 } // namespace Configuration
 } // namespace Core
