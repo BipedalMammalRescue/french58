@@ -12,7 +12,7 @@ struct CacheUnit
     unsigned char Buffer[Configuration::ALLOCATOR_CACHELINE_SIZE];
 };
 
-template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
+template <typename TItem, size_t TItemsPerBlock> class CacheLineAllocator
 {
   private:
     static constexpr size_t GetItemsPerUnit()
@@ -120,7 +120,7 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
     Configuration::AllocatorIndexType m_FreeHead = 0;
 
   public:
-    CacheFriendlyAllocator()
+    CacheLineAllocator()
     {
         static_assert(sizeof(BudgetBlock::BudgetBlockHeader) != sizeof(CacheUnit),
                       "Number of items per block exceeds cache line size limit!");
@@ -134,7 +134,7 @@ template <typename TItem, size_t TItemsPerBlock> class CacheFriendlyAllocator
         GetHead()->Reset(0);
     }
 
-    ~CacheFriendlyAllocator()
+    ~CacheLineAllocator()
     {
         BudgetBlock *nextBlock = nullptr;
         BudgetBlock *currentBlock = GetHead();

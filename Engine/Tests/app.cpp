@@ -1,6 +1,8 @@
 #include "Memory/bp_tree.h"
-#include "Memory/cache_friendly_allocator.h"
+#include "Memory/bucket_allocator.h"
+#include "Memory/cache_line_allocator.h"
 #include "Memory/high_integrity_allocator.h"
+#include <cassert>
 #include <exception>
 #include <iostream>
 
@@ -78,7 +80,7 @@ bool BpTreeTest()
     }
 }
 
-bool BudgetAllocatorTest()
+bool CacheLineAllocatorTest()
 {
     struct Data
     {
@@ -86,8 +88,8 @@ bool BudgetAllocatorTest()
         int b = 0;
     };
 
-    Engine::Core::Memory::CacheFriendlyAllocator<Data, 64> allocator;
-    std::cout << sizeof(Engine::Core::Memory::CacheFriendlyAllocator<Data, 64>) << std::endl;
+    Engine::Core::Memory::CacheLineAllocator<Data, 64> allocator;
+    std::cout << sizeof(Engine::Core::Memory::CacheLineAllocator<Data, 64>) << std::endl;
 
     Data *value1 = allocator.Malloc();
     Data *value2 = allocator.Malloc();
@@ -105,10 +107,44 @@ bool BudgetAllocatorTest()
     return true;
 }
 
+bool BucketAllocatorTest()
+{
+    struct Data
+    {
+        int a = 0;
+        int b = 0;
+    };
+
+    std::cout << "sizeof(BucketAllocator) = " << sizeof(Engine::Core::Memory::BucketAllocator<Data>) << std::endl;
+
+    Engine::Core::Memory::BucketAllocator<Data> allocator;
+
+    size_t id1 = allocator.New({100, 0});
+    size_t id2 = allocator.New({100, 0});
+    size_t id3 = allocator.New({100, 0});
+
+    int total = 0;
+
+    allocator.IterateAll([&total](const Data *cursor) { total += cursor->a; });
+
+    assert(total == 300);
+
+    allocator.Free(id1);
+    allocator.Free(id2);
+    allocator.Free(id3);
+
+    total = 0;
+    allocator.IterateAll([&total](const Data *cursor) { total += cursor->a; });
+    assert(total == 0);
+
+    return true;
+}
+
 int main()
 {
-    // SE_TEST_RUNTEST(BpTreeTest);
-    SE_TEST_RUNTEST(BudgetAllocatorTest);
-    std::cout << "done" << std::endl;
+    SE_TEST_RUNTEST(BpTreeTest);
+    SE_TEST_RUNTEST(CacheLineAllocatorTest);
+    SE_TEST_RUNTEST(BucketAllocatorTest);
+    std::cout << "DONE" << std::endl;
     return 0;
 }
