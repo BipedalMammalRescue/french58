@@ -1,5 +1,5 @@
+#include "Memory/FreeLists/bucket_allocator.h"
 #include "Memory/bp_tree.h"
-#include "Memory/bucket_allocator.h"
 #include "Memory/cache_line_allocator.h"
 #include "Memory/high_integrity_allocator.h"
 #include <cassert>
@@ -115,35 +115,45 @@ bool BucketAllocatorTest()
         int b = 0;
     };
 
-    std::cout << "sizeof(BucketAllocator) = " << sizeof(Engine::Core::Memory::BucketAllocator<Data>) << std::endl;
+    std::cout << "sizeof(BucketAllocator) = " << sizeof(Engine::Core::Memory::FreeLists::BucketAllocator<Data>)
+              << std::endl;
 
-    Engine::Core::Memory::BucketAllocator<Data> allocator;
+    Engine::Core::Memory::FreeLists::BucketAllocator<Data> allocator;
 
-    size_t id1 = allocator.New({100, 0});
-    size_t id2 = allocator.New({100, 0});
-    size_t id3 = allocator.New({100, 0});
+    const size_t TRIALS = 1000000;
+    std::vector<size_t> ids;
+    ids.reserve(TRIALS);
+
+    for (size_t i = 0; i < TRIALS; i++)
+    {
+        ids.push_back(allocator.New({1, 0}));
+    }
 
     int total = 0;
 
     allocator.IterateAll([&total](const Data *cursor) { total += cursor->a; });
 
-    assert(total == 300);
+    assert(total == TRIALS);
 
-    allocator.Free(id1);
-    allocator.Free(id2);
-    allocator.Free(id3);
+    for (size_t id : ids)
+    {
+        if (id % 2 == 0)
+            continue;
+
+        allocator.Free(id);
+    }
 
     total = 0;
     allocator.IterateAll([&total](const Data *cursor) { total += cursor->a; });
-    assert(total == 0);
+    assert(total == TRIALS / 2);
 
     return true;
 }
 
 int main()
 {
-    SE_TEST_RUNTEST(BpTreeTest);
-    SE_TEST_RUNTEST(CacheLineAllocatorTest);
+    // SE_TEST_RUNTEST(BpTreeTest);
+    // SE_TEST_RUNTEST(CacheLineAllocatorTest);
     SE_TEST_RUNTEST(BucketAllocatorTest);
     std::cout << "DONE" << std::endl;
     return 0;

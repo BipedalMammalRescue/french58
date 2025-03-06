@@ -1,3 +1,5 @@
+#include "Memory/programmable_configs.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -5,8 +7,9 @@
 namespace Engine {
 namespace Core {
 namespace Memory {
+namespace FreeLists {
 
-template <typename T, size_t TBucketsPerBlock = 64, size_t TBlocksPerAllocation = 1, size_t TInitialBlocks = 1>
+template <typename T, size_t TBucketsPerBlock = 64, size_t TInitialBlocks = 1, typename TGrowthFactor = LinearGrowth<>>
 class BucketAllocator
 {
   private:
@@ -71,75 +74,54 @@ class BucketAllocator
         }
     };
 
-    size_t m_FreeListHead = -1;
+    size_t m_FreeListHead = 1;
     Block **m_Blocks = nullptr;
     size_t m_BlockCapacity = 0;
 
-    Block *AllocateNewBatch()
-    {
-        return malloc(sizeof(Block) * TBlocksPerAllocation);
-    }
-
     void EnsureAllocationAvailable()
     {
-        if (TBlocksPerAllocation == 0 || m_FreeListHead >= 0)
+        size_t nextAllocation = m_BlockCapacity > 0 ? TGrowthFactor::NextAllocationSize(m_BlockCapacity) : TInitialBlocks;
+        if (nextAllocation == 0 || m_FreeListHead < m_BlockCapacity * TBucketsPerBlock)
             return;
 
         // extend the block table
-        m_Blocks = (Block **)realloc(m_Blocks, sizeof(Block *) * (m_BlockCapacity + TBlocksPerAllocation));
+        m_Blocks = (Block **)realloc(m_Blocks, sizeof(Block *) * (m_BlockCapacity + nextAllocation));
+        assert(m_Blocks != nullptr);
 
         // register the new blocks
-        Block *newBlocks = (Block *)malloc(sizeof(Block) * TBlocksPerAllocation);
-        for (int i = m_BlockCapacity; i < m_BlockCapacity + TBlocksPerAllocation; i++)
+        Block *newBlocks = (Block *)malloc(sizeof(Block) * nextAllocation);
+        assert(newBlocks != nullptr);
+        for (size_t i = 0; i < nextAllocation; i++)
         {
-            m_Blocks[i] = newBlocks + i;
+            m_Blocks[i + m_BlockCapacity] = newBlocks + i;
         }
 
         // initialize new blocks
-        for (size_t i = m_BlockCapacity; i < m_BlockCapacity + TBlocksPerAllocation - 1; i++)
+        for (size_t i = m_BlockCapacity; i < m_BlockCapacity + nextAllocation - 1; i++)
         {
             newBlocks[i - m_BlockCapacity].Reset(i * TBucketsPerBlock, (i + 1) * TBucketsPerBlock);
         }
-        m_Blocks[m_BlockCapacity + TBlocksPerAllocation - 1]->Reset(
-            (m_BlockCapacity + TBlocksPerAllocation - 1) * TBucketsPerBlock, -1);
+        m_Blocks[m_BlockCapacity + nextAllocation - 1]->Reset((m_BlockCapacity + nextAllocation - 1) * TBucketsPerBlock,
+            (m_BlockCapacity + nextAllocation) * TBucketsPerBlock);
 
         // seal the deal by incrementing block capacity and free list
         m_FreeListHead = m_BlockCapacity * TBucketsPerBlock;
-        m_BlockCapacity += TBlocksPerAllocation;
+        m_BlockCapacity += nextAllocation;
     }
 
   public:
     BucketAllocator()
     {
-        // allocate block table
-        m_Blocks = (Block **)malloc(sizeof(Block *) * TInitialBlocks);
-        m_BlockCapacity = TInitialBlocks;
-
-        // allocate starting blocks
-        Block *initialBlocks = (Block *)malloc(sizeof(Block) * TInitialBlocks);
-        for (size_t i = 0; i < m_BlockCapacity; i++)
-        {
-            m_Blocks[i] = initialBlocks + i;
-        }
-
-        // initialize blocks
-        for (size_t i = 0; i < m_BlockCapacity - 1; i++)
-        {
-            m_Blocks[i]->Reset(i * TBucketsPerBlock, (i + 1) * TBucketsPerBlock);
-        }
-
-        // initialize the last block
-        m_Blocks[m_BlockCapacity - 1]->Reset((m_BlockCapacity - 1) * TBucketsPerBlock, -1);
-
-        // initialize free list
-        m_FreeListHead = 0;
+        EnsureAllocationAvailable();
     }
 
     ~BucketAllocator()
     {
         free(m_Blocks[0]);
-        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += TBlocksPerAllocation)
+        size_t currentAllocationSize = TInitialBlocks;
+        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += currentAllocationSize)
         {
+            currentAllocationSize = TGrowthFactor::NextAllocationSize(currentAllocationSize);
             free(m_Blocks[i]);
         }
         free(m_Blocks);
@@ -149,14 +131,10 @@ class BucketAllocator
     {
         EnsureAllocationAvailable();
 
-        // soft throw if allocator can't grow further (e.g. user turns off extra allocation past initial blocks)
-        if (m_FreeListHead < 0)
-            return -1;
-
         // take, mark bitmask, and update the free list
         size_t targetIndex = m_FreeListHead;
         m_Blocks[targetIndex / TBucketsPerBlock]->Head.Bitmask |= (uint64_t)1 << targetIndex % TBucketsPerBlock;
-        Bucket *allocationTarget = m_Blocks[targetIndex / TBucketsPerBlock]->Buckets[targetIndex % TBucketsPerBlock];
+        Bucket *allocationTarget = &m_Blocks[targetIndex / TBucketsPerBlock]->Buckets[targetIndex % TBucketsPerBlock];
         m_FreeListHead = allocationTarget->NextFree;
 
         allocationTarget->Data = value;
@@ -206,11 +184,13 @@ class BucketAllocator
         }
 
         // iterate through the later batches
-        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += TBlocksPerAllocation)
+        size_t currentAllocationSize = TInitialBlocks;
+        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += currentAllocationSize)
         {
+            currentAllocationSize = TGrowthFactor::NextAllocationSize(currentAllocationSize);
             currentBlock = m_Blocks[i];
 
-            for (size_t j = 0; j < TBlocksPerAllocation; j++)
+            for (size_t j = 0; j < currentAllocationSize; j++)
             {
                 Block *targetBlock = currentBlock + j;
                 targetBlock->Iterate(lambda);
@@ -219,6 +199,7 @@ class BucketAllocator
     }
 };
 
+} // namespace FreeLists
 } // namespace Memory
 } // namespace Core
 } // namespace Engine
