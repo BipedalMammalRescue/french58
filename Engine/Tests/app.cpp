@@ -1,10 +1,10 @@
 #include "Memory/FreeLists/bucket_allocator.h"
 #include "Memory/bp_tree.h"
-#include "Memory/cache_line_allocator.h"
 #include "Memory/high_integrity_allocator.h"
 #include <cassert>
 #include <exception>
 #include <iostream>
+#include <vector>
 
 #define SE_TEST_RUNTEST(testName)                                                                                      \
     try                                                                                                                \
@@ -78,33 +78,6 @@ bool BpTreeTest()
 
         return true;
     }
-}
-
-bool CacheLineAllocatorTest()
-{
-    struct Data
-    {
-        int a = 0;
-        int b = 0;
-    };
-
-    Engine::Core::Memory::CacheLineAllocator<Data, 64> allocator;
-    std::cout << sizeof(Engine::Core::Memory::CacheLineAllocator<Data, 64>) << std::endl;
-
-    Data *value1 = allocator.Malloc();
-    Data *value2 = allocator.Malloc();
-    Data *value3 = allocator.Malloc();
-    value1->a = 100;
-    value2->a = 100;
-    value3->a = 100;
-
-    int total = 0;
-
-    allocator.IterateAll([&total](const Data *cursor) { total += cursor->a; });
-
-    assert(total == 300);
-
-    return true;
 }
 
 bool BucketAllocatorTest()

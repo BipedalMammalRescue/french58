@@ -9,7 +9,7 @@ namespace Core {
 namespace Memory {
 namespace FreeLists {
 
-template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = LinearGrowth<16, 16>> class BucketAllocator
+template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = LinearGrowth<1, 1>> class BucketAllocator
 {
   private:
     static constexpr size_t GetBucketSize()
@@ -79,7 +79,7 @@ template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = Lin
 
     void EnsureAllocationAvailable()
     {
-        size_t nextAllocation = TGrowthFactor::NextAllocationSize(m_BlockCapacity) - m_BlockCapacity;
+        size_t nextAllocation = TGrowthFactor::NextAllocationSize(m_BlockCapacity);
         if (nextAllocation == 0 || m_FreeListHead < m_BlockCapacity * TBucketsPerBlock)
             return;
 
@@ -127,7 +127,7 @@ template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = Lin
         size_t currentAllocationSize = 0;
         for (size_t i = 0; i < m_BlockCapacity; i += currentAllocationSize)
         {
-            currentAllocationSize = TGrowthFactor::NextAllocationSize(i) - i;
+            currentAllocationSize = TGrowthFactor::NextAllocationSize(i);
             free(m_Blocks[i]);
         }
         free(m_Blocks);
@@ -183,7 +183,7 @@ template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = Lin
 
         for (size_t i = 0; i < m_BlockCapacity; i += clusterSize)
         {
-            clusterSize = TGrowthFactor::NextAllocationSize(i) - i;
+            clusterSize = TGrowthFactor::NextAllocationSize(i);
             BucketAllocator::IterateBlockCluster(clusterSize, m_Blocks[i], lambda);
         }
     }

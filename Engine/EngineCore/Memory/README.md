@@ -14,9 +14,10 @@ This implementation is largely based on prof. John Cho's lecture on database man
 
 ## NOTES
 
-TODO: regarding the new allocator, user probably CANNOT access the values in the allocator using pointers, but they must use ID to access them.
-TODO: how to implement data relation in this case? it won't make as much sense to build an index tree into this kind of allocator. (maybe there's a map data structure that works by burning through its nodes instead of jumping between them?)
+How to implement a good and simple solution to the delta problem?
+The template strategy class should be responsible for deciding what happens first 
+Problem: derivatives aren't defined on 0.
 
-TODO: need to change leaf-node deletion algorithm, when merging with right sibling it should copy right sibling into the target for a cleaner code path;
-TODO: probably should change how bp_tree destructs itself? having a reference to the allocator on every node is quite wasting; the internal data structures can have a dispose method for freeing memory; this also helps with the not-so-safe delete method on allocator.
+KX + B 
 
+the function returns the *next* allocation total to go from there;
