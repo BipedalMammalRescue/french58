@@ -9,15 +9,14 @@ namespace Core {
 namespace Memory {
 namespace FreeLists {
 
-template <typename T, size_t TBucketsPerBlock = 64, size_t TInitialBlocks = 1, typename TGrowthFactor = LinearGrowth<>>
-class BucketAllocator
+template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = LinearGrowth<16, 16>> class BucketAllocator
 {
   private:
     static constexpr size_t GetBucketSize()
     {
         // some static checks
         static_assert(sizeof(T) >= 8 && sizeof(T) <= 64,
-                      "BucketAllocator client type size out of range (8~128 bytes)! (Note: sub-word objects should "
+                      "BucketAllocator client type size out of range (8~64 bytes)! (Note: sub-word objects should "
                       "probably use a circular buffer)");
 
         if (sizeof(T) <= 8)
@@ -80,7 +79,7 @@ class BucketAllocator
 
     void EnsureAllocationAvailable()
     {
-        size_t nextAllocation = m_BlockCapacity > 0 ? TGrowthFactor::NextAllocationSize(m_BlockCapacity) : TInitialBlocks;
+        size_t nextAllocation = TGrowthFactor::NextAllocationSize(m_BlockCapacity) - m_BlockCapacity;
         if (nextAllocation == 0 || m_FreeListHead < m_BlockCapacity * TBucketsPerBlock)
             return;
 
@@ -102,11 +101,19 @@ class BucketAllocator
             newBlocks[i - m_BlockCapacity].Reset(i * TBucketsPerBlock, (i + 1) * TBucketsPerBlock);
         }
         m_Blocks[m_BlockCapacity + nextAllocation - 1]->Reset((m_BlockCapacity + nextAllocation - 1) * TBucketsPerBlock,
-            (m_BlockCapacity + nextAllocation) * TBucketsPerBlock);
+                                                              (m_BlockCapacity + nextAllocation) * TBucketsPerBlock);
 
         // seal the deal by incrementing block capacity and free list
         m_FreeListHead = m_BlockCapacity * TBucketsPerBlock;
         m_BlockCapacity += nextAllocation;
+    }
+
+    template <typename TFunc> static void IterateBlockCluster(size_t clusterSize, Block *blocks, TFunc &&lambda)
+    {
+        for (size_t i = 0; i < clusterSize; i++)
+        {
+            blocks[i].Iterate(lambda);
+        }
     }
 
   public:
@@ -117,11 +124,10 @@ class BucketAllocator
 
     ~BucketAllocator()
     {
-        free(m_Blocks[0]);
-        size_t currentAllocationSize = TInitialBlocks;
-        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += currentAllocationSize)
+        size_t currentAllocationSize = 0;
+        for (size_t i = 0; i < m_BlockCapacity; i += currentAllocationSize)
         {
-            currentAllocationSize = TGrowthFactor::NextAllocationSize(currentAllocationSize);
+            currentAllocationSize = TGrowthFactor::NextAllocationSize(i) - i;
             free(m_Blocks[i]);
         }
         free(m_Blocks);
@@ -173,28 +179,12 @@ class BucketAllocator
 
     template <typename TFunc> void IterateAll(TFunc &&lambda)
     {
-        // take advantage of the batch allocations
-        // iterate through the initial batch
-        Block *currentBlock = m_Blocks[0];
-        uint64_t currentMask = 0;
-        for (size_t i = 0; i < TInitialBlocks; i++)
-        {
-            Block *targetBlock = currentBlock + i;
-            targetBlock->Iterate(lambda);
-        }
+        size_t clusterSize;
 
-        // iterate through the later batches
-        size_t currentAllocationSize = TInitialBlocks;
-        for (size_t i = TInitialBlocks; i < m_BlockCapacity; i += currentAllocationSize)
+        for (size_t i = 0; i < m_BlockCapacity; i += clusterSize)
         {
-            currentAllocationSize = TGrowthFactor::NextAllocationSize(currentAllocationSize);
-            currentBlock = m_Blocks[i];
-
-            for (size_t j = 0; j < currentAllocationSize; j++)
-            {
-                Block *targetBlock = currentBlock + j;
-                targetBlock->Iterate(lambda);
-            }
+            clusterSize = TGrowthFactor::NextAllocationSize(i) - i;
+            BucketAllocator::IterateBlockCluster(clusterSize, m_Blocks[i], lambda);
         }
     }
 };
