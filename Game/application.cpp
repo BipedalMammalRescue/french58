@@ -6,7 +6,7 @@ using namespace Engine::Core;
 int main()
 {
     Hosting::EngineHost engineHost;
-    engineHost.AddSinkModule<Extension::RendererModule::RendererModule>();
+    engineHost.AddModule<Extension::RendererModule::RendererModule>();
     // engineHost.AddSinkModule<DummySinkModule>();
     return engineHost.Run();
 }

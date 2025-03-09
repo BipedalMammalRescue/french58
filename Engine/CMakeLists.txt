@@ -18,11 +18,11 @@ add_subdirectory(RendererModule)
 target_link_libraries(RendererModule PUBLIC EngineCore)
 
 # quick and dirty trick to bundle together everything defined thus far:
-add_library(Engine STATIC engine_placeholder.cpp)
+add_library(Engine STATIC engine_assembly.cpp)
 set_target_properties(Engine PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(Engine PUBLIC EngineCore)
 target_link_libraries(Engine PUBLIC RendererModule)
 
 # tests
 add_executable(EngineTests Tests/app.cpp)
-target_link_libraries(EngineTests PUBLIC Engine)
+target_link_libraries(EngineTests PUBLIC EngineCore)
