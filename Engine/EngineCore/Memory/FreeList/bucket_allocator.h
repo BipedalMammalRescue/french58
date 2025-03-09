@@ -7,7 +7,7 @@
 namespace Engine {
 namespace Core {
 namespace Memory {
-namespace FreeLists {
+namespace FreeList {
 
 template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = LinearGrowth<1, 1>> class BucketAllocator
 {
@@ -189,7 +189,7 @@ template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = Lin
     }
 };
 
-} // namespace FreeLists
+} // namespace FreeList
 } // namespace Memory
 } // namespace Core
 } // namespace Engine
