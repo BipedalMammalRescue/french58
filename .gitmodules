@@ -10,3 +10,6 @@
 [submodule "DataBuilders/lib/tinyobjloader"]
 	path = DataBuilders/lib/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader
+[submodule "Engine/lib/komihash"]
+	path = Engine/lib/komihash
+	url = https://github.com/avaneev/komihash.git
