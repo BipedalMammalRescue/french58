@@ -8,7 +8,7 @@ namespace Engine {
 namespace Core {
 namespace DependencyInjection {
 
-class ServiceProvider
+class RuntimeServices
 {
   private:
     ConfigurationProvider m_Configurations;
@@ -31,10 +31,10 @@ class ServiceProvider
         return &m_RendererService;
     }
 
-    ServiceProvider() : m_Configurations(), m_PlatformAccess(&m_Configurations), m_RendererService(&m_PlatformAccess)
+    RuntimeServices() : m_Configurations(), m_PlatformAccess(&m_Configurations), m_RendererService(&m_PlatformAccess)
     {
     }
-    ~ServiceProvider() = default;
+    ~RuntimeServices() = default;
 };
 
 } // namespace DependencyInjection

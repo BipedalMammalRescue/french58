@@ -12,7 +12,7 @@ using namespace Extension::RendererModule::Assets;
 
 std::string RendererModule::Name("RendererModule");
 
-void *Extension::RendererModule::RendererModule::Create(Engine::Core::DependencyInjection::ServiceProvider *services)
+void *Extension::RendererModule::RendererModule::Create(Engine::Core::DependencyInjection::RuntimeServices *services)
 {
     // // temp: load a mesh and a material
     // RendererModule* newModule = services->GetGlobalAllocator()->New<RendererModule>();
@@ -25,7 +25,7 @@ void *Extension::RendererModule::RendererModule::Create(Engine::Core::Dependency
 }
 
 void Extension::RendererModule::RendererModule::Update(void *moduleInstance,
-                                                       Engine::Core::DependencyInjection::ServiceProvider *services)
+                                                       Engine::Core::DependencyInjection::RuntimeServices *services)
 {
     RendererModule *instance = (RendererModule *)moduleInstance;
 
@@ -46,7 +46,7 @@ void Extension::RendererModule::RendererModule::Update(void *moduleInstance,
 }
 
 void Extension::RendererModule::RendererModule::Finalize(void *moduleInstance,
-                                                         Engine::Core::DependencyInjection::ServiceProvider *services)
+                                                         Engine::Core::DependencyInjection::RuntimeServices *services)
 {
     // no need to delete the assets, they are managed currently by the asset manager
 }

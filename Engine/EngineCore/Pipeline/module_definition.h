@@ -1,3 +1,5 @@
+#pragma once
+
 #include "component_pipeline.h"
 
 namespace Engine {
@@ -7,9 +9,10 @@ namespace Pipeline {
 // includes everything defined in a module
 struct ModuleDefinition
 {
-    const char *Name;
-    ComponentPipeline *Pipelines;
-    size_t PipelineCount;
+    // static definitions
+    const char *Name = nullptr;
+    ComponentPipeline *Components = nullptr;
+    size_t ComponentCount = 0;
 };
 
 } // namespace Pipeline

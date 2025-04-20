@@ -1,16 +1,16 @@
-#include "pch.h"
 #include "mesh.h"
+#include "pch.h"
 
 #include <memory>
 
 using namespace Engine;
 using namespace Extension::RendererModule;
 
-
-void* Assets::Mesh::LoadMesh(Core::DependencyInjection::ServiceProvider* services, Core::AssetManagement::ByteStream* source)
+void *Assets::Mesh::LoadMesh(Core::DependencyInjection::RuntimeServices *services,
+                             Core::AssetManagement::ByteStream *source)
 {
     // load all vertices
-     unsigned int vertexCount = 0;
+    unsigned int vertexCount = 0;
     if (!source->FillStruct(&vertexCount))
         return nullptr;
     std::unique_ptr<Vertex[]> allVertices(new Vertex[vertexCount]);
@@ -25,10 +25,11 @@ void* Assets::Mesh::LoadMesh(Core::DependencyInjection::ServiceProvider* service
     if (!source->FillArray(allIndices.get(), indexCount))
         return nullptr;
 
-    Mesh* newMesh = services->GetGlobalAllocator()->New<Mesh>();
+    Mesh *newMesh = services->GetGlobalAllocator()->New<Mesh>();
 
     // submit everything to server
-    if (!services->GetRenderer()->RegisterMesh({ allVertices.get(), (unsigned int)sizeof(Vertex) * vertexCount }, {allIndices.get(), indexCount}, newMesh->m_RendererCopy))
+    if (!services->GetRenderer()->RegisterMesh({allVertices.get(), (unsigned int)sizeof(Vertex) * vertexCount},
+                                               {allIndices.get(), indexCount}, newMesh->m_RendererCopy))
     {
         services->GetGlobalAllocator()->Free(newMesh);
         return nullptr;
@@ -37,18 +38,15 @@ void* Assets::Mesh::LoadMesh(Core::DependencyInjection::ServiceProvider* service
     return newMesh;
 }
 
-
-void Assets::Mesh::DisposeMesh(Core::DependencyInjection::ServiceProvider* services, void* data)
+void Assets::Mesh::DisposeMesh(Core::DependencyInjection::RuntimeServices *services, void *data)
 {
-    Mesh* mesh = (Mesh*)data;
+    Mesh *mesh = (Mesh *)data;
     services->GetRenderer()->DeleteMesh(mesh->m_RendererCopy);
     services->GetGlobalAllocator()->Free(mesh);
 }
 
-
 SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::Mesh)
-.SE_REFLECTION_OVERRIDE_DESERIALIZER(Extension::RendererModule::Assets::Mesh::LoadMesh)
-.SE_REFLECTION_OVERRIDE_DISPOSER(Extension::RendererModule::Assets::Mesh::DisposeMesh)
-.SE_REFLECTION_DELETE_SERIALIZER()
-.SE_REFLECTION_END
-
+    .SE_REFLECTION_OVERRIDE_DESERIALIZER(Extension::RendererModule::Assets::Mesh::LoadMesh)
+    .SE_REFLECTION_OVERRIDE_DISPOSER(Extension::RendererModule::Assets::Mesh::DisposeMesh)
+    .SE_REFLECTION_DELETE_SERIALIZER()
+    .SE_REFLECTION_END

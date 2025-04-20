@@ -1,3 +1,5 @@
+#pragma once
+
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 
@@ -6,6 +8,7 @@ namespace Core {
 namespace Pipeline {
 namespace Scripting {
 
+// one of the ugliest ways to achieve runtime polymorphism
 enum class DataType
 {
     BYTE,
