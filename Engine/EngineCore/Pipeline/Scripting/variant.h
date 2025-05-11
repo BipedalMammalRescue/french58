@@ -9,6 +9,7 @@ namespace Pipeline {
 namespace Scripting {
 
 // one of the ugliest ways to achieve runtime polymorphism
+// maybe not I've literally been using type codes at work too
 enum class DataType
 {
     BYTE,
