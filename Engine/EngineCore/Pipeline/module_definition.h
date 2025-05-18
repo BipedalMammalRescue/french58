@@ -2,9 +2,7 @@
 
 #include "component_pipeline.h"
 
-namespace Engine {
-namespace Core {
-namespace Pipeline {
+namespace Engine::Core::Pipeline {
 
 // includes everything defined in a module
 struct ModuleDefinition
@@ -15,6 +13,4 @@ struct ModuleDefinition
     size_t ComponentCount = 0;
 };
 
-} // namespace Pipeline
-} // namespace Core
-} // namespace Engine
+} // namespace Engine::Core::Pipeline
