@@ -4,10 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace Engine {
-namespace Core {
-namespace Memory {
-namespace FreeLists {
+namespace Engine::Utils::Memory::FreeList {
 
 // Compact allocator allocates everything in comapct (no padding between allocated elements).
 // Due to the simpler logic, the only size limitation is 8bytes lower bound (again, sub-word allocation should not use
@@ -37,7 +34,4 @@ template <typename T, size_t TItemsPerBlock = 64, typename TGrowthFactor = Linea
     }
 };
 
-} // namespace FreeLists
-} // namespace Memory
-} // namespace Core
-} // namespace Engine
+} // namespace Engine::Utils::Memory::FreeList

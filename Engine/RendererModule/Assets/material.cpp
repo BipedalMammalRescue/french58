@@ -1,8 +1,6 @@
 #include "material.h"
-#include "pch.h"
 
 #include <DependencyInjection/service_provider.h>
-#include <Reflection/type_info_registra.h>
 
 using namespace Engine;
 using namespace Extension::RendererModule;
@@ -36,10 +34,10 @@ void Assets::Material::Dispose(Core::DependencyInjection::RuntimeServices *servi
     services->GetRenderer()->DeleteMaterial(material->RendererID);
 }
 
-SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::Material)
-    .SE_REFLECTION_ADD_REFERENCE(VertShader)
-    .SE_REFLECTION_ADD_REFERENCE(FragShader)
-    .SE_REFLECTION_DELETE_SERIALIZER()
-    .SE_REFLECTION_OVERRIDE_INITIALIZER(Assets::Material::Initialize)
-    .SE_REFLECTION_OVERRIDE_DISPOSER(Assets::Material::Dispose)
-    .SE_REFLECTION_END
+// SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::Material)
+//     .SE_REFLECTION_ADD_REFERENCE(VertShader)
+//     .SE_REFLECTION_ADD_REFERENCE(FragShader)
+//     .SE_REFLECTION_DELETE_SERIALIZER()
+//     .SE_REFLECTION_OVERRIDE_INITIALIZER(Assets::Material::Initialize)
+//     .SE_REFLECTION_OVERRIDE_DISPOSER(Assets::Material::Dispose)
+//     .SE_REFLECTION_END

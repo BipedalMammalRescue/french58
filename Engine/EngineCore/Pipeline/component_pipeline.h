@@ -1,34 +1,17 @@
 #pragma once
 
-#include "DependencyInjection/buildtime_services.h"
-#include "Pipeline/Scripting/variant.h"
-#include <iostream>
+#include "Scripting/named_property.h"
+#include "Scripting/variant.h"
+#include <DependencyInjection/buildtime_services.h>
 #include <ostream>
 
-namespace Engine {
-namespace Core {
-namespace Pipeline {
-
-// when client code uses this type, they should just define their data in static function variables
-struct ComponentProperty
-{
-    const char *Name;
-    Scripting::DataType Type;
-};
+namespace Engine::Core::Pipeline {
 
 // list of name-type pairs representing values to be edited and constructed at edit time
 struct ComponentDefinition
 {
-    // full name should take advantage of each module's namespace, need to be an UUID
-    // TODO: in editor implementation this can be converted into a numeric identifier
-    const char *FullName = nullptr;
-
-    // display name is used in editor for human eyes to parse
-    const char *DisplayName = nullptr;
-
-    // properties are basic values that can be processed by an editor
-    // TODO: during building this property list can be used to validate input structure
-    ComponentProperty *Properties = nullptr;
+    const char *Name = nullptr;
+    Scripting::NamedProperty *Properties = nullptr;
     size_t PropertyCount = 0;
 };
 
@@ -46,6 +29,4 @@ struct ComponentPipeline
     ComponentBuilder Builder;
 };
 
-} // namespace Pipeline
-} // namespace Core
-} // namespace Engine
+} // namespace Engine::Core::Pipeline

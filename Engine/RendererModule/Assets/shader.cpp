@@ -1,70 +1,82 @@
 #include "shader.h"
-#include "pch.h"
+#include <fstream>
 
 using namespace Engine;
-using namespace Extension::RendererModule;
+using namespace Engine::Extension::RendererModule;
 
-// using SDL3 with vulkan, this function now loads a binary format SPIR-V code and uploads that to renderer service
-static void *DeserializeVertexShader(Core::DependencyInjection::RuntimeServices *services,
-                                     Core::AssetManagement::ByteStream *source)
+// static void *DeserializeFragmentShader(Core::DependencyInjection::ServiceProvider *services,
+//                                        Core::AssetManagement::ByteStream *source)
+// {
+//     // load the entire string in
+//     unsigned char *rawData = new unsigned char[source->Count()];
+//     source->FillBuffer(rawData, source->Count());
+
+//     // submit this to the rendering engine
+//     Core::Rendering::RendererShader rendererID;
+//     if (!services->GetRenderer()->CompileShader(rawData, source->Count(),
+//     Core::Rendering::ShaderType::FRAGMENT_SHADER,
+//                                                 0, 0, 0, 0, rendererID))
+//         return nullptr;
+
+//     delete[] rawData;
+
+//     // allocate new shader data structure and return it
+//     return services->GetGlobalAllocator()->New<Assets::FragmentShader>({rendererID});
+// }
+
+// static void DisposeFragmentShader(Core::DependencyInjection::RuntimeServices *services, void *data)
+// {
+//     Assets::FragmentShader *shader = (Assets::FragmentShader *)data;
+//     services->GetRenderer()->DeleteShader(shader->RendererID);
+//     services->GetGlobalAllocator()->Free(data);
+// }
+
+Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::VertexShader::GetDefinition()
 {
-    // load the entire file in
-    unsigned char *rawData = new unsigned char[source->Count()];
-    source->FillBuffer(rawData, source->Count());
+    static const char name[] = "Engine::Extension::RendererModule::Assets::VertexShader";
+    static const char propType[] = "Source";
 
+    static const Core::Pipeline::Scripting::NamedProperty properties[] = {
+        {propType, Core::Pipeline::Scripting::DataType::PATH}};
+
+    static Core::Pipeline::AssetDefinition def = {
+        name, properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
+
+    return def;
+}
+
+void Engine::Extension::RendererModule::Assets::VertexShader::Build(
+    const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
+    Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
+{
+    // safety is not my concern
+    const char *sourceShader = services->GetFileAccessService()->GetPath(fieldv[0].Data.Path);
+
+    // read the file and dump it into the output stream
+    std::ofstream sourceFile;
+    sourceFile.open(sourceShader, std::ios::binary);
+    output << sourceFile.rdbuf();
+    sourceFile.close();
+}
+
+Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::VertexShader::Load(
+    const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+    Core::DependencyInjection::RuntimeServices *services)
+{
     // submit shader code to the rendering service
     Core::Rendering::RendererShader rendererID;
-    if (!services->GetRenderer()->CompileShader(rawData, source->Count(), Core::Rendering::ShaderType::VERTEX_SHADER, 0,
+    if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::VERTEX_SHADER, 0,
                                                 1, 0, 0, rendererID))
-        return nullptr;
-
-    delete[] rawData;
+        return {nullptr, 0};
 
     // allocate new shader data structure and return it
-    return services->GetGlobalAllocator()->New<Assets::VertexShader>({rendererID});
+    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
+    *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
+    return newAsset;
 }
 
-static void DisposeVertexShader(Core::DependencyInjection::RuntimeServices *services, void *data)
+void Engine::Extension::RendererModule::Assets::VertexShader::Dispose(
+    Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
 {
-    Assets::VertexShader *shader = (Assets::VertexShader *)data;
-    services->GetRenderer()->DeleteShader(shader->RendererID);
-    services->GetGlobalAllocator()->Free(data);
+    services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
 }
-
-SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::VertexShader)
-    .SE_REFLECTION_OVERRIDE_DESERIALIZER(DeserializeVertexShader)
-    .SE_REFLECTION_DELETE_SERIALIZER()
-    .SE_REFLECTION_OVERRIDE_DISPOSER(DisposeVertexShader)
-    .SE_REFLECTION_END
-
-    static void *DeserializeFragmentShader(Core::DependencyInjection::ServiceProvider *services,
-                                           Core::AssetManagement::ByteStream *source)
-{
-    // load the entire string in
-    unsigned char *rawData = new unsigned char[source->Count()];
-    source->FillBuffer(rawData, source->Count());
-
-    // submit this to the rendering engine
-    Core::Rendering::RendererShader rendererID;
-    if (!services->GetRenderer()->CompileShader(rawData, source->Count(), Core::Rendering::ShaderType::FRAGMENT_SHADER,
-                                                0, 0, 0, 0, rendererID))
-        return nullptr;
-
-    delete[] rawData;
-
-    // allocate new shader data structure and return it
-    return services->GetGlobalAllocator()->New<Assets::FragmentShader>({rendererID});
-}
-
-static void DisposeFragmentShader(Core::DependencyInjection::RuntimeServices *services, void *data)
-{
-    Assets::FragmentShader *shader = (Assets::FragmentShader *)data;
-    services->GetRenderer()->DeleteShader(shader->RendererID);
-    services->GetGlobalAllocator()->Free(data);
-}
-
-SE_REFLECTION_BEGIN(Extension::RendererModule::Assets::FragmentShader)
-    .SE_REFLECTION_OVERRIDE_DESERIALIZER(DeserializeFragmentShader)
-    .SE_REFLECTION_DELETE_SERIALIZER()
-    .SE_REFLECTION_OVERRIDE_DISPOSER(DisposeFragmentShader)
-    .SE_REFLECTION_END

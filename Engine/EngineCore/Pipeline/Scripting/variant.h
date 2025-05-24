@@ -23,7 +23,8 @@ enum class DataType
     VEC4,
     MAT2,
     MAT3,
-    MAT4
+    MAT4,
+    PATH
 };
 
 // inspired by godot's scripting layer but mine only slows down the editor
@@ -44,6 +45,7 @@ struct Variant
         glm::mat2 Mat2;
         glm::mat3 Mat3;
         glm::mat4 Mat4;
+        uint64_t Path;
     } Data;
 };
 

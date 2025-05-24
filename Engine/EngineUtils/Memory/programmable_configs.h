@@ -1,8 +1,8 @@
+#pragma once
+
 #include <cstddef>
 
-namespace Engine {
-namespace Core {
-namespace Memory {
+namespace Engine::Utils::Memory {
 
 template <size_t K = 1, size_t B = 1> class LinearGrowth
 {
@@ -13,6 +13,4 @@ template <size_t K = 1, size_t B = 1> class LinearGrowth
     }
 };
 
-} // namespace Memory
-} // namespace Core
-} // namespace Engine
+}

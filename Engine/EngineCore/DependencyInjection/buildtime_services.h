@@ -1,23 +1,19 @@
 #pragma once
 
-#include "Pipeline/unified_id_service.h"
+#include <Pipeline/file_access_service.h>
 
-namespace Engine {
-namespace Core {
-namespace DependencyInjection {
+namespace Engine::Core::DependencyInjection {
 
 class BuildtimeServies
 {
   private:
-    Pipeline::UnifiedIdService m_UnifiedIdService;
+    Pipeline::FileAccessService m_FileAccessService;
 
   public:
-    inline Pipeline::UnifiedIdService *GetUnifiedIdService()
+    inline Pipeline::FileAccessService *GetFileAccessService()
     {
-        return &m_UnifiedIdService;
+        return &m_FileAccessService;
     }
 };
 
-} // namespace DependencyInjection
-} // namespace Core
-} // namespace Engine
+} // namespace Engine::Core::DependencyInjection

@@ -2,7 +2,6 @@
 
 #include "shader.h"
 
-#include <Reflection/reference_type.h>
 #include <Rendering/renderer_data.h>
 
 namespace Extension {
@@ -14,9 +13,6 @@ namespace Assets {
 
 struct Material
 {
-    Engine::Core::Reflection::Ref<VertexShader> VertShader;
-    Engine::Core::Reflection::Ref<FragmentShader> FragShader;
-
     // not a clean solution but the reflection system is designed with simple layouts in mind for simplciity,
     // compelx objects like materials that require post-deserialization initialization needs to just declare the members
     // as fields like this
