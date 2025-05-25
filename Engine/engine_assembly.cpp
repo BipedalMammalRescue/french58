@@ -12,10 +12,10 @@ const char g_PropNameTwo[] = "Prop_Name_2";
 const char g_ComponentName[] = "Component_Name";
 const char g_ModuleName[] = "Module_Name";
 
-ComponentProperty properties[] = {{g_PropNameOne, Scripting::DataType::BYTE},
+Scripting::NamedProperty properties[] = {{g_PropNameOne, Scripting::DataType::BYTE},
                                   {g_PropNameTwo, Scripting::DataType::INT32}};
 
-ComponentDefinition g_DummyComponent = {g_ComponentName, g_ComponentName, properties, 2};
+ComponentDefinition g_DummyComponent = {g_ComponentName, properties, 2};
 
 ComponentBuilder g_DummyBuilder = {nullptr, nullptr, nullptr};
 

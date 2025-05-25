@@ -3,6 +3,7 @@
 #include <Memory/in_place_read_stream.h>
 #include <memory>
 #include <tiny_obj_loader.h>
+#include <ErrorHandling/exceptions.h>
 
 using namespace Engine;
 using namespace Extension::RendererModule;
@@ -160,7 +161,7 @@ Core::AssetManagement::LoadedAsset Assets::Mesh::Load(const unsigned char *input
     if (!services->GetRenderer()->RegisterMesh({allVertices, (unsigned int)sizeof(Vertex) * vertexCount},
                                                {allIndices, indexCount}, newMesh))
     {
-        return {nullptr, 0};
+        SE_THROW_GRAPHICS_EXCEPTION;
     }
     
     // allocate and return

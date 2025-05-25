@@ -4,24 +4,21 @@
 
 #include <Rendering/renderer_data.h>
 
-namespace Extension {
-namespace RendererModule {
+namespace Engine::Extension::RendererModule::Assets {
 
-class RendererModule;
+class Material
+{ 
+  public:   
+    static Core::Pipeline::AssetDefinition GetDefinition();
 
-namespace Assets {
+    static bool Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
+                      Core::DependencyInjection::BuildtimeServies *services, std::ostream &output);
 
-struct Material
-{
-    // not a clean solution but the reflection system is designed with simple layouts in mind for simplciity,
-    // compelx objects like materials that require post-deserialization initialization needs to just declare the members
-    // as fields like this
-    Engine::Core::Rendering::RendererMaterial RendererID;
+    static Core::AssetManagement::LoadedAsset Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                                   Core::DependencyInjection::RuntimeServices *services);
 
-    static void Initialize(Engine::Core::DependencyInjection::RuntimeServices *services, void *asset);
-    static void Dispose(Engine::Core::DependencyInjection::RuntimeServices *services, void *asset);
+    static void Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
+                        Core::DependencyInjection::RuntimeServices *services);
 };
 
-} // namespace Assets
-} // namespace RendererModule
-} // namespace Extension
+}
