@@ -33,6 +33,12 @@ bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
     return true;
 }
 
+size_t Assets::VertexShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                 Core::DependencyInjection::RuntimeServices *services)
+{
+    return sizeof(Core::Rendering::RendererShader);
+}
+
 Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::VertexShader::Load(
     const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
     Core::DependencyInjection::RuntimeServices *services)
@@ -82,6 +88,12 @@ bool Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     output << sourceFile.rdbuf();
     sourceFile.close();
     return true;
+}
+
+size_t Assets::FragmentShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                           Core::DependencyInjection::RuntimeServices *services)
+{
+    return sizeof(Core::Rendering::RendererShader);
 }
 
 Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::FragmentShader::Load(

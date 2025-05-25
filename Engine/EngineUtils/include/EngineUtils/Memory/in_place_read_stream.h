@@ -29,7 +29,7 @@ class InPlaceReadStream
     template <typename T>
     T* ReadInPlace(size_t count = 1) 
     {
-        return ReadCore(sizeof(T) * count);
+        return (T*)ReadCore(sizeof(T) * count);
     }
 };
 

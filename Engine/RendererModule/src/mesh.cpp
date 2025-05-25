@@ -144,8 +144,14 @@ bool Assets::Mesh::Build(const Core::Pipeline::Scripting::Variant *fieldv, size_
 	return true;
 }
 
+size_t Assets::Mesh::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                 Core::DependencyInjection::RuntimeServices *services) 
+{
+    return sizeof(Core::Rendering::RendererMesh);
+}
+
 Core::AssetManagement::LoadedAsset Assets::Mesh::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                                   Core::DependencyInjection::RuntimeServices *services)
+                                                      Core::DependencyInjection::RuntimeServices *services)
 {
     Utils::Memory::InPlaceReadStream stream(inputDataV, inputDataC);
 

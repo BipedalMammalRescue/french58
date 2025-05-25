@@ -52,8 +52,13 @@ bool Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
     uint64_t vertShaderPath = fieldv[1].Data.Path;
     output.write(((const char*)&fragShaderPath), sizeof(uint64_t));
     output.write(((const char*)&vertShaderPath), sizeof(uint64_t));
-    
     return true;
+}
+
+size_t Assets::Material::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                 Core::DependencyInjection::RuntimeServices *services)
+{
+    return sizeof(Core::Rendering::RendererMaterial);
 }
 
 Core::AssetManagement::LoadedAsset Assets::Material::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
