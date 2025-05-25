@@ -18,7 +18,7 @@ Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::Verte
     return def;
 }
 
-void Engine::Extension::RendererModule::Assets::VertexShader::Build(
+bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
     const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
     Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
 {
@@ -30,6 +30,7 @@ void Engine::Extension::RendererModule::Assets::VertexShader::Build(
     sourceFile.open(sourceShader, std::ios::binary);
     output << sourceFile.rdbuf();
     sourceFile.close();
+    return true;
 }
 
 Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::VertexShader::Load(
@@ -68,7 +69,7 @@ Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::Fragm
     return def;
 }
 
-void Engine::Extension::RendererModule::Assets::FragmentShader::Build(
+bool Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
     Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
 {
@@ -80,6 +81,7 @@ void Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     sourceFile.open(sourceShader, std::ios::binary);
     output << sourceFile.rdbuf();
     sourceFile.close();
+    return true;
 }
 
 Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::FragmentShader::Load(

@@ -20,7 +20,7 @@ struct AssetPipeline
 {
     AssetDefinition Definition;
 
-    void (*Build)(const Scripting::Variant *fieldv, size_t fieldc, DependencyInjection::BuildtimeServies *services,
+    bool (*Build)(const Scripting::Variant *fieldv, size_t fieldc, DependencyInjection::BuildtimeServies *services,
                   std::ostream &output);
 
     AssetManagement::LoadedAsset (*Load)(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,

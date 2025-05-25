@@ -29,10 +29,6 @@ class RendererMaterial
     std::unordered_map<std::string, int> m_UniformLocationCache;
 };
 
-/// <summary>
-/// Encapsulates an internal representation of data structures and contracts between the renderer service and graphics
-/// backend. Currently it's just VB, VA and IB tokens from OpenGL.
-/// </summary>
 class RendererMesh
 {
   private:

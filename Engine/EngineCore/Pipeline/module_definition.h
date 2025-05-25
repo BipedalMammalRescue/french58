@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component_pipeline.h"
+#include "asset_pipeline.h"
 
 namespace Engine::Core::Pipeline {
 
@@ -11,6 +12,8 @@ struct ModuleDefinition
     const char *Name = nullptr;
     ComponentPipeline *Components = nullptr;
     size_t ComponentCount = 0;
+    AssetPipeline *Assets = nullptr;
+    size_t AssetCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

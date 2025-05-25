@@ -1,16 +1,17 @@
 #pragma once
 
-#include <DependencyInjection/service_provider.h>
+#include <AssetManagement/asset_manager.h>
+#include <DependencyInjection/buildtime_services.h>
+#include <DependencyInjection/runtime_services.h>
+#include <Pipeline/Scripting/variant.h>
+#include <Pipeline/asset_pipeline.h>
+#include <Rendering/renderer_data.h>
+#include <Rendering/renderer_service.h>
 #include <Rendering/renderer_data.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
-namespace Extension {
-namespace RendererModule {
-
-class RendererModule;
-
-namespace Assets {
+namespace Engine::Extension::RendererModule::Assets {
 
 struct Vertex
 {
@@ -19,21 +20,20 @@ struct Vertex
     glm::vec2 uv{};
 };
 
-/// <summary>
-/// Mesh = vertex array + index buffer, vertex array = vertex buffer + layout
-/// </summary>
+// Mesh = vertex array + index buffer, vertex array = vertex buffer + layout
 class Mesh
 {
-  private:
-    friend class Extension::RendererModule::RendererModule;
-    Engine::Core::Rendering::RendererMesh m_RendererCopy;
-
   public:
-    static void *LoadMesh(Engine::Core::DependencyInjection::RuntimeServices *services,
-                          Engine::Core::AssetManagement::ByteStream *source);
-    static void DisposeMesh(Engine::Core::DependencyInjection::RuntimeServices *services, void *data);
+    static Core::Pipeline::AssetDefinition GetDefinition();
+
+    static bool Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
+                      Core::DependencyInjection::BuildtimeServies *services, std::ostream &output);
+
+    static Core::AssetManagement::LoadedAsset Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+                                                   Core::DependencyInjection::RuntimeServices *services);
+
+    static void Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
+                        Core::DependencyInjection::RuntimeServices *services);
 };
 
-} // namespace Assets
-} // namespace RendererModule
-} // namespace Extension
+}

@@ -17,3 +17,5 @@
 #define SE_THROW_ALGORITHMIC_EXCEPTION throw std::runtime_error(AT " Unexpected algorithmic behavior!")
 
 #define SE_THROW_ALLOCATOR_EXCEPTION throw std::runtime_error(AT " Allocator encountered state corruption!")
+
+#define SE_THROW_READ_OVERFLOW_EXCEPTION throw std::runtime_error(AT " Reading memory past buffer boundary!")
