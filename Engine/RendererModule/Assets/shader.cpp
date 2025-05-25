@@ -4,33 +4,6 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-// static void *DeserializeFragmentShader(Core::DependencyInjection::ServiceProvider *services,
-//                                        Core::AssetManagement::ByteStream *source)
-// {
-//     // load the entire string in
-//     unsigned char *rawData = new unsigned char[source->Count()];
-//     source->FillBuffer(rawData, source->Count());
-
-//     // submit this to the rendering engine
-//     Core::Rendering::RendererShader rendererID;
-//     if (!services->GetRenderer()->CompileShader(rawData, source->Count(),
-//     Core::Rendering::ShaderType::FRAGMENT_SHADER,
-//                                                 0, 0, 0, 0, rendererID))
-//         return nullptr;
-
-//     delete[] rawData;
-
-//     // allocate new shader data structure and return it
-//     return services->GetGlobalAllocator()->New<Assets::FragmentShader>({rendererID});
-// }
-
-// static void DisposeFragmentShader(Core::DependencyInjection::RuntimeServices *services, void *data)
-// {
-//     Assets::FragmentShader *shader = (Assets::FragmentShader *)data;
-//     services->GetRenderer()->DeleteShader(shader->RendererID);
-//     services->GetGlobalAllocator()->Free(data);
-// }
-
 Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::VertexShader::GetDefinition()
 {
     static const char name[] = "Engine::Extension::RendererModule::Assets::VertexShader";
@@ -76,6 +49,56 @@ Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::Ve
 }
 
 void Engine::Extension::RendererModule::Assets::VertexShader::Dispose(
+    Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
+{
+    services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
+}
+
+Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::FragmentShader::GetDefinition()
+{
+    static const char name[] = "Engine::Extension::RendererModule::Assets::FragmentShader";
+    static const char propType[] = "Source";
+
+    static const Core::Pipeline::Scripting::NamedProperty properties[] = {
+        {propType, Core::Pipeline::Scripting::DataType::PATH}};
+
+    static Core::Pipeline::AssetDefinition def = {
+        name, properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
+
+    return def;
+}
+
+void Engine::Extension::RendererModule::Assets::FragmentShader::Build(
+    const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
+    Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
+{
+    // safety is not my concern
+    const char *sourceShader = services->GetFileAccessService()->GetPath(fieldv[0].Data.Path);
+
+    // read the file and dump it into the output stream
+    std::ofstream sourceFile;
+    sourceFile.open(sourceShader, std::ios::binary);
+    output << sourceFile.rdbuf();
+    sourceFile.close();
+}
+
+Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::FragmentShader::Load(
+    const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+    Core::DependencyInjection::RuntimeServices *services)
+{
+    // submit shader code to the rendering service
+    Core::Rendering::RendererShader rendererID;
+    if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::FRAGMENT_SHADER, 0,
+                                                1, 0, 0, rendererID))
+        return {nullptr, 0};
+
+    // allocate new shader data structure and return it
+    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
+    *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
+    return newAsset;
+}
+
+void Engine::Extension::RendererModule::Assets::FragmentShader::Dispose(
     Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
 {
     services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
