@@ -8,7 +8,7 @@ namespace Engine::Core::AssetManagement {
 class AssetManager
 {
   public:
-    LoadedAsset CreateAsset(size_t length, uint64_t id);
+    LoadedAsset CreateAsset(const size_t length, const uint64_t id);
     LoadedAsset GetAsset(const uint64_t id);
 };
 
