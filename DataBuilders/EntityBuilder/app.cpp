@@ -1,4 +1,4 @@
-#include "Pipeline/engine_assembly.h"
+#include <EngineCore/Pipeline/engine_assembly.h>
 #include <iostream>
 
 int main()

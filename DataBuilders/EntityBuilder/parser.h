@@ -1,10 +1,10 @@
 #pragma once
 
-#include "DependencyInjection/buildtime_services.h"
-#include "Pipeline/Scripting/variant.h"
-#include "Pipeline/component_pipeline.h"
-#include "Pipeline/engine_assembly.h"
-#include "Pipeline/unified_id_service.h"
+#include <EngineCore/DependencyInjection/buildtime_services.h>
+#include <EngineCore/Pipeline/Scripting/variant.h>
+#include <EngineCore/Pipeline/component_pipeline.h>
+#include <EngineCore/Pipeline/engine_assembly.h>
+#include <EngineUtils/String/unified_id.h>
 #include <cstddef>
 #include <istream>
 #include <unordered_map>
@@ -16,7 +16,6 @@ namespace EntityBuilder {
 class Parser
 {
   private:
-    Engine::Core::Pipeline::UnifiedIdService *m_Hasher;
     Engine::Core::Pipeline::ModuleAssembly *m_Assembly;
 
     struct Range
@@ -64,10 +63,7 @@ class Parser
     }
 
   public:
-    Parser(Engine::Core::DependencyInjection::BuildtimeServies *buildServices)
-    {
-        m_Hasher = buildServices->GetUnifiedIdService();
-    }
+    Parser() = default;
 
     // validate the components are well-formatted
     bool Validate() const;

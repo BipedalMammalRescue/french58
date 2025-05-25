@@ -1,6 +1,6 @@
 #include "parser.h"
-#include "Pipeline/Scripting/variant.h"
-#include "Pipeline/component_pipeline.h"
+#include <EngineCore/Pipeline/Scripting/variant.h>
+#include <EngineCore/Pipeline/component_pipeline.h>
 #include <unordered_map>
 #include <vector>
 
@@ -29,8 +29,8 @@ bool Parser::Validate() const
         componentDefMap.clear();
         for (size_t i = 0; i < iterator->second->PropertyCount; i++)
         {
-            const Pipeline::ComponentProperty &expectProperty = iterator->second->Properties[i];
-            uint64_t expectId = m_Hasher->IdString(expectProperty.Name);
+            const Pipeline::Scripting::NamedProperty &expectProperty = iterator->second->Properties[i];
+            uint64_t expectId = Engine::Utils::String::IdString(expectProperty.Name);
             componentDefMap[expectId] = expectProperty.Type;
         }
 

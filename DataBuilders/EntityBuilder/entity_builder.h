@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DependencyInjection/buildtime_services.h"
+#include <EngineCore/DependencyInjection/buildtime_services.h>
 #include <komihash.h>
 
 namespace DataBuilders {
