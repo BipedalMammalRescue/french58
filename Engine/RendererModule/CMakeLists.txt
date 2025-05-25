@@ -1,5 +1,7 @@
 add_library(RendererModule STATIC
-	renderer_module.cpp
-	Assets/shader.cpp)
+	src/renderer_module.cpp
+	src/shader.cpp
+	src/mesh.cpp
+	src/material.cpp)
 	
-target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

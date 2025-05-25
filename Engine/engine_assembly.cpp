@@ -1,7 +1,7 @@
-#include "Pipeline/Scripting/variant.h"
-#include "Pipeline/component_pipeline.h"
-#include "Pipeline/module_definition.h"
-#include <Pipeline/engine_assembly.h>
+#include <EngineCore/Pipeline/Scripting/variant.h>
+#include <EngineCore/Pipeline/component_pipeline.h>
+#include <EngineCore/Pipeline/module_definition.h>
+#include <EngineCore/Pipeline/engine_assembly.h>
 
 using namespace Engine::Core::Pipeline;
 
