@@ -1,4 +1,4 @@
-#include "Memory/FreeList/bucket_allocator.h"
+#include <EngineUtils/Memory/FreeList/bucket_allocator.h>
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -50,10 +50,10 @@ bool BucketAllocatorTest()
         int b = 0;
     };
 
-    std::cout << "sizeof(BucketAllocator) = " << sizeof(Engine::Core::Memory::FreeList::BucketAllocator<Data>)
+    std::cout << "sizeof(BucketAllocator) = " << sizeof(Engine::Utils::Memory::FreeList::BucketAllocator<Data>)
               << std::endl;
 
-    Engine::Core::Memory::FreeList::BucketAllocator<Data> allocator;
+    Engine::Utils::Memory::FreeList::BucketAllocator<Data> allocator;
 
     const size_t TRIALS = 1000000;
     std::vector<size_t> ids;
