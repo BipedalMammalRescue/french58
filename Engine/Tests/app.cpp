@@ -3,6 +3,7 @@
 #include <EngineUtils/Memory/FreeList/bucket_allocator.h>
 #include <EngineUtils/Memory/FreeList/compact_allocator.h>
 #include <EngineUtils/Memory/Lifo/unmanaged_stack_allocator.h>
+#include <EngineUtils/Memory/alignment_calc.h>
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -126,13 +127,32 @@ bool StackAllocatorTest()
     return true;
 }
 
+bool MemoryAlignmentTest() {
+    using namespace Engine::Utils::Memory;
+
+    for (size_t i = 1; i < 0xFFFFFFFF; i++) 
+    {
+        size_t expected = i * 8;
+
+        for (size_t j = 1; j < 8; j++) 
+        {
+            if (AlignLength((i - 1) * 8 + j, 8) != expected)
+                return false;
+        }
+    }
+
+    return true;
+}
+
 int main()
 {
     // SE_TEST_RUNTEST(BpTreeTest);
     // SE_TEST_RUNTEST(CacheLineAllocatorTest);
     // SE_TEST_RUNTEST(BucketAllocatorTest);
 
-    SE_TEST_RUNTEST(StackAllocatorTest);
+    // SE_TEST_RUNTEST(StackAllocatorTest);
+
+    SE_TEST_RUNTEST(MemoryAlignmentTest);
 
     std::cout << "DONE" << std::endl;
     return 0;

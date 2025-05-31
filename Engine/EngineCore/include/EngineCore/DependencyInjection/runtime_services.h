@@ -45,7 +45,7 @@ class RuntimeServices
 
     RuntimeServices()
         : m_Configurations(), m_PlatformAccess(&m_Configurations), m_RendererService(&m_PlatformAccess),
-          m_MemoryManager(Configuration::INITIAL_STACK_SIZE)
+          m_MemoryManager(Configuration::INITIAL_STACK_SIZE), m_AssetManager(&m_MemoryManager)
     {
     }
     ~RuntimeServices() = default;
