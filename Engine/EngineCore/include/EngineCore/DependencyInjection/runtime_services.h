@@ -1,9 +1,10 @@
 #pragma once
 
+#include "configuration_provider.h"
+#include <EngineCore/AssetManagement/asset_manager.h>
 #include <EngineCore/Platform/platform_access.h>
 #include <EngineCore/Rendering/renderer_service.h>
-#include <EngineCore/AssetManagement/asset_manager.h>
-#include "configuration_provider.h"
+#include <EngineCore/Runtime/memory_manager.h>
 
 namespace Engine::Core::DependencyInjection {
 
@@ -14,6 +15,7 @@ class RuntimeServices
     Platform::PlatformAccess m_PlatformAccess;
     Rendering::RendererService m_RendererService;
     AssetManagement::AssetManager m_AssetManager;
+    Runtime::MemoryManager m_MemoryManager;
 
   public:
     inline const ConfigurationProvider *GetConfigurations()
@@ -31,11 +33,19 @@ class RuntimeServices
         return &m_RendererService;
     }
 
-    inline AssetManagement::AssetManager* GetAssetManager() {
+    inline AssetManagement::AssetManager *GetAssetManager()
+    {
         return &m_AssetManager;
     }
 
-    RuntimeServices() : m_Configurations(), m_PlatformAccess(&m_Configurations), m_RendererService(&m_PlatformAccess)
+    inline Runtime::MemoryManager *GetMemoryManager()
+    {
+        return &m_MemoryManager;
+    }
+
+    RuntimeServices()
+        : m_Configurations(), m_PlatformAccess(&m_Configurations), m_RendererService(&m_PlatformAccess),
+          m_MemoryManager(Configuration::INITIAL_STACK_SIZE)
     {
     }
     ~RuntimeServices() = default;
