@@ -11,7 +11,7 @@ namespace Engine::Utils::Memory::FreeList {
 // Compact allocator allocates everything in comapct (no padding between allocated elements).
 // Due to the simpler logic, the only size limitation is 8bytes lower bound (again, sub-word allocation should not use
 // free list allocator)
-template <typename T, size_t TItemsPerBlock = 64, typename TGrowthFactor = LinearGrowth<>> class CompactAllocator
+template <typename T, size_t TItemsPerBlock = 64, typename TGrowthFactor = QuadraticGrowth<>> class CompactAllocator
 {
   private:
     union Item {

@@ -1,4 +1,8 @@
+#define DEBUG_OR_TEST 0b10
+
 #include <EngineUtils/Memory/FreeList/bucket_allocator.h>
+#include <EngineUtils/Memory/FreeList/compact_allocator.h>
+#include <EngineUtils/Memory/Lifo/unmanaged_stack_allocator.h>
 #include <cassert>
 #include <exception>
 #include <iostream>
@@ -85,11 +89,50 @@ bool BucketAllocatorTest()
     return true;
 }
 
+bool StackAllocatorTest()
+{
+    using namespace Engine::Utils::Memory::Lifo;
+
+    UnmanagedStackAllocator allocator(16);
+
+    size_t offsetOne = allocator.Allocate(16);
+
+    unsigned char *bufferOne = allocator.GetPointer(offsetOne);
+    for (unsigned char i = 0; i < 16; i++)
+    {
+        bufferOne[i] = i;
+    }
+
+    assert(allocator.DebugGetCapacity() == 16);
+
+    size_t offsetTwo = allocator.Allocate(5);
+    assert(allocator.DebugGetCapacity() == 32);
+
+    unsigned char *bufferTwo = allocator.GetPointer(offsetTwo);
+    for (unsigned char i = 0; i < 5; i++)
+    {
+        bufferTwo[i] = i + 16;
+    }
+
+    unsigned char *bufferOneNew = allocator.GetPointer(offsetOne);
+    for (unsigned char i = 0; i < 16; i++)
+    {
+        assert(bufferOneNew[i] == i);
+    }
+
+    allocator.Deallocate(offsetOne);
+    assert(allocator.DebugGetOffset() == 0);
+
+    return true;
+}
+
 int main()
 {
     // SE_TEST_RUNTEST(BpTreeTest);
     // SE_TEST_RUNTEST(CacheLineAllocatorTest);
-    SE_TEST_RUNTEST(BucketAllocatorTest);
+    // SE_TEST_RUNTEST(BucketAllocatorTest);
+
+    SE_TEST_RUNTEST(StackAllocatorTest);
 
     std::cout << "DONE" << std::endl;
     return 0;

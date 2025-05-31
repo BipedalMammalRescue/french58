@@ -8,7 +8,7 @@
 
 namespace Engine::Utils::Memory::FreeList {
 
-template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = LinearGrowth<1, 1>> class BucketAllocator
+template <typename T, size_t TBucketsPerBlock = 64, typename TGrowthFactor = QuadraticGrowth<2>> class BucketAllocator
 {
   private:
     static constexpr size_t GetBucketSize()
