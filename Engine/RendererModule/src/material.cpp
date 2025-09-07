@@ -19,25 +19,21 @@ static Core::Rendering::VertexAttribute s_VertexLayoutHardCode[] = {
 constexpr size_t s_VertexLayoutLength = sizeof(s_VertexLayoutHardCode) / sizeof(Core::Rendering::VertexAttribute);
 
 Core::Pipeline::AssetDefinition Assets::Material::GetDefinition() 
-{
-    static const char name[] = "Engine::Extension::Assets::Material";
-    static const char fragShaderPropName[] = "Fragment Shader";
-    static const char vertShaderPropName[] = "Vertex Shader";
-    
+{    
     static const Core::Pipeline::Scripting::NamedProperty properties[] = {
         {
-            fragShaderPropName,
+            "Fragment Shader",
             Core::Pipeline::Scripting::DataType::PATH
         },
         {
-            vertShaderPropName,
+            "Vertex Shader",
             Core::Pipeline::Scripting::DataType::PATH
         }
     };
     
     static const Core::Pipeline::AssetDefinition def = 
     {
-        name,
+        "Material",
         properties,
         sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)
     };

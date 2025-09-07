@@ -103,17 +103,14 @@ static bool LoadObj(const char* inPath, std::vector<Assets::Vertex>& outputVerti
 
 Core::Pipeline::AssetDefinition Assets::Mesh::GetDefinition() 
 {
-    static const char name[] = "Engine::Extension::RendererModule::Assets::Mesh";
-    static const char propNamePath[] = "Path";
-    
     static const Core::Pipeline::Scripting::NamedProperty properties[] = 
     {
-        {propNamePath, Core::Pipeline::Scripting::DataType::PATH}
+        {"Path", Core::Pipeline::Scripting::DataType::PATH}
     };
     
     static const Core::Pipeline::AssetDefinition def = 
     {
-        name,
+        "Mesh",
         properties,
         sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)
     };

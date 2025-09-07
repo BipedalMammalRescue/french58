@@ -4,7 +4,7 @@
 
 using namespace Engine::Core;
 
-int main() 
+int main()
 {
     std::cout << "hello world" << std::endl;
 

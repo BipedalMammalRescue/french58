@@ -6,14 +6,11 @@ using namespace Engine::Extension::RendererModule;
 
 Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::VertexShader::GetDefinition()
 {
-    static const char name[] = "Engine::Extension::RendererModule::Assets::VertexShader";
-    static const char propType[] = "Source";
-
     static const Core::Pipeline::Scripting::NamedProperty properties[] = {
-        {propType, Core::Pipeline::Scripting::DataType::PATH}};
+        {"Source", Core::Pipeline::Scripting::DataType::PATH}};
 
     static Core::Pipeline::AssetDefinition def = {
-        name, properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
+        "VertexShader", properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
 
     return def;
 }
@@ -63,14 +60,11 @@ bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
 
 Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::FragmentShader::GetDefinition()
 {
-    static const char name[] = "Engine::Extension::RendererModule::Assets::FragmentShader";
-    static const char propType[] = "Source";
-
     static const Core::Pipeline::Scripting::NamedProperty properties[] = {
-        {propType, Core::Pipeline::Scripting::DataType::PATH}};
+        {"Source", Core::Pipeline::Scripting::DataType::PATH}};
 
     static Core::Pipeline::AssetDefinition def = {
-        name, properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
+        "FragmentShader", properties, sizeof(properties) / sizeof(Core::Pipeline::Scripting::NamedProperty)};
 
     return def;
 }
