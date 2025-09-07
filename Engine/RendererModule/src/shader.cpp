@@ -33,33 +33,33 @@ bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
     return true;
 }
 
-size_t Assets::VertexShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                 Core::DependencyInjection::RuntimeServices *services)
-{
-    return sizeof(Core::Rendering::RendererShader);
-}
+// size_t Assets::VertexShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                  Core::DependencyInjection::RuntimeServices *services)
+// {
+//     return sizeof(Core::Rendering::RendererShader);
+// }
 
-Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::VertexShader::Load(
-    const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-    Core::DependencyInjection::RuntimeServices *services)
-{
-    // submit shader code to the rendering service
-    Core::Rendering::RendererShader rendererID;
-    if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::VERTEX_SHADER, 0,
-                                                1, 0, 0, rendererID))
-        return {nullptr, 0};
+// Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::VertexShader::Load(
+//     const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//     Core::DependencyInjection::RuntimeServices *services)
+// {
+//     // submit shader code to the rendering service
+//     Core::Rendering::RendererShader rendererID;
+//     if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::VERTEX_SHADER, 0,
+//                                                 1, 0, 0, rendererID))
+//         return {nullptr, 0};
 
-    // allocate new shader data structure and return it
-    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
-    *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
-    return newAsset;
-}
+//     // allocate new shader data structure and return it
+//     Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
+//     *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
+//     return newAsset;
+// }
 
-void Engine::Extension::RendererModule::Assets::VertexShader::Dispose(
-    Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
-{
-    services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
-}
+// void Engine::Extension::RendererModule::Assets::VertexShader::Dispose(
+//     Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
+// {
+//     services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
+// }
 
 Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::FragmentShader::GetDefinition()
 {
@@ -90,30 +90,30 @@ bool Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     return true;
 }
 
-size_t Assets::FragmentShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                           Core::DependencyInjection::RuntimeServices *services)
-{
-    return sizeof(Core::Rendering::RendererShader);
-}
+// size_t Assets::FragmentShader::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                            Core::DependencyInjection::RuntimeServices *services)
+// {
+//     return sizeof(Core::Rendering::RendererShader);
+// }
 
-Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::FragmentShader::Load(
-    const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-    Core::DependencyInjection::RuntimeServices *services)
-{
-    // submit shader code to the rendering service
-    Core::Rendering::RendererShader rendererID;
-    if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::FRAGMENT_SHADER, 0,
-                                                1, 0, 0, rendererID))
-        return {nullptr, 0};
+// Core::AssetManagement::LoadedAsset Engine::Extension::RendererModule::Assets::FragmentShader::Load(
+//     const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//     Core::DependencyInjection::RuntimeServices *services)
+// {
+//     // submit shader code to the rendering service
+//     Core::Rendering::RendererShader rendererID;
+//     if (!services->GetRenderer()->CompileShader(inputDataV, inputDataC, Core::Rendering::ShaderType::FRAGMENT_SHADER, 0,
+//                                                 1, 0, 0, rendererID))
+//         return {nullptr, 0};
 
-    // allocate new shader data structure and return it
-    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
-    *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
-    return newAsset;
-}
+//     // allocate new shader data structure and return it
+//     Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(rendererID), id);
+//     *((Core::Rendering::RendererShader *)newAsset.Buffer) = rendererID;
+//     return newAsset;
+// }
 
-void Engine::Extension::RendererModule::Assets::FragmentShader::Dispose(
-    Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
-{
-    services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
-}
+// void Engine::Extension::RendererModule::Assets::FragmentShader::Dispose(
+//     Core::AssetManagement::LoadedAsset asset, const uint64_t id, Core::DependencyInjection::RuntimeServices *services)
+// {
+//     services->GetRenderer()->DeleteShader(*(Core::Rendering::RendererShader *)asset.Buffer);
+// }

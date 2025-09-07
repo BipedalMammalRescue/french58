@@ -1,19 +1,21 @@
 #pragma once
 
-#include "component_pipeline.h"
 #include "asset_pipeline.h"
 
 namespace Engine::Core::Pipeline {
+
+struct AssetPipelineArray
+{
+    AssetPipeline *AssetsV = nullptr;
+    size_t AssetsC = 0;
+};
 
 // includes everything defined in a module
 struct ModuleDefinition
 {
     // static definitions
     const char *Name = nullptr;
-    ComponentPipeline *Components = nullptr;
-    size_t ComponentCount = 0;
-    AssetPipeline *Assets = nullptr;
-    size_t AssetCount = 0;
+    AssetPipelineArray Assets;
 };
 
 } // namespace Engine::Core::Pipeline

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "EngineCore/Configuration/compile_time_flags.h"
-
 #include <EngineUtils/Memory/Lifo/unmanaged_stack_allocator.h>
 
 namespace Engine::Core::Runtime {

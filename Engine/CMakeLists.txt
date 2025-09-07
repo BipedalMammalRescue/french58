@@ -27,7 +27,7 @@ target_link_libraries(RendererModule PUBLIC tinyobjloader)
 add_library(Engine STATIC engine_assembly.cpp)
 set_target_properties(Engine PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(Engine PUBLIC EngineCore)
-# target_link_libraries(Engine PUBLIC RendererModule)
+target_link_libraries(Engine PUBLIC RendererModule)
 
 # tests
 add_executable(EngineTests Tests/app.cpp)

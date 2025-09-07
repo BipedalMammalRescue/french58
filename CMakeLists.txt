@@ -19,9 +19,9 @@ add_subdirectory(Engine)
 add_subdirectory(Game)
 target_link_libraries(Game PUBLIC Engine)
 
-# builders, they should be depending only on extension modules
-add_subdirectory(DataBuilders)
-target_link_libraries(EntityBuilder PUBLIC Engine)
+# data builder executable
+add_subdirectory(DataBuilder)
+target_link_libraries(DataBuilder PUBLIC Engine)
 
 # prototyping
 add_subdirectory(Playground)

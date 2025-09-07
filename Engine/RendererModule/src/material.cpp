@@ -1,8 +1,9 @@
 #include "RendererModule/Assets/material.h"
 
-#include <EngineCore/DependencyInjection/runtime_services.h>
 #include <EngineUtils/Memory/in_place_read_stream.h>
 #include <EngineUtils/ErrorHandling/exceptions.h>
+
+#include <iostream>
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
@@ -55,34 +56,34 @@ bool Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
     return true;
 }
 
-size_t Assets::Material::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                 Core::DependencyInjection::RuntimeServices *services)
-{
-    return sizeof(Core::Rendering::RendererMaterial);
-}
+// size_t Assets::Material::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                  Core::DependencyInjection::RuntimeServices *services)
+// {
+//     return sizeof(Core::Rendering::RendererMaterial);
+// }
 
-Core::AssetManagement::LoadedAsset Assets::Material::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                                          Core::DependencyInjection::RuntimeServices *services) 
-{
-    Utils::Memory::InPlaceReadStream stream(inputDataV, inputDataC);
-    uint64_t fragShaderId = stream.ReadCopy<uint64_t>();
-    uint64_t vertShaderId = stream.ReadCopy<uint16_t>();
+// Core::AssetManagement::LoadedAsset Assets::Material::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                                           Core::DependencyInjection::RuntimeServices *services) 
+// {
+//     Utils::Memory::InPlaceReadStream stream(inputDataV, inputDataC);
+//     uint64_t fragShaderId = stream.ReadCopy<uint64_t>();
+//     uint64_t vertShaderId = stream.ReadCopy<uint16_t>();
     
-    Core::Rendering::RendererShader* fragShader = (Core::Rendering::RendererShader*)services->GetAssetManager()->GetAsset(fragShaderId).Buffer;
-    Core::Rendering::RendererShader* vertShader = (Core::Rendering::RendererShader*)services->GetAssetManager()->GetAsset(vertShaderId).Buffer;
+//     Core::Rendering::RendererShader* fragShader = (Core::Rendering::RendererShader*)services->GetAssetManager()->GetAsset(fragShaderId).Buffer;
+//     Core::Rendering::RendererShader* vertShader = (Core::Rendering::RendererShader*)services->GetAssetManager()->GetAsset(vertShaderId).Buffer;
     
-    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(Core::Rendering::RendererMaterial), id);
-    if (!services->GetRenderer()->CreateMaterial(*vertShader, *fragShader, s_VertexLayoutHardCode, s_VertexLayoutLength, 
-                                                 *((Core::Rendering::RendererMaterial*)newAsset.Buffer)))
-    {
-        SE_THROW_GRAPHICS_EXCEPTION;
-    }
+//     Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(Core::Rendering::RendererMaterial), id);
+//     if (!services->GetRenderer()->CreateMaterial(*vertShader, *fragShader, s_VertexLayoutHardCode, s_VertexLayoutLength, 
+//                                                  *((Core::Rendering::RendererMaterial*)newAsset.Buffer)))
+//     {
+//         SE_THROW_GRAPHICS_EXCEPTION;
+//     }
     
-    return newAsset;
-}
+//     return newAsset;
+// }
 
-void Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
-                        Core::DependencyInjection::RuntimeServices *services) 
-{
-    services->GetRenderer()->DeleteMaterial(*((Core::Rendering::RendererMaterial*)asset.Buffer));
-}
+// void Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
+//                         Core::DependencyInjection::RuntimeServices *services) 
+// {
+//     services->GetRenderer()->DeleteMaterial(*((Core::Rendering::RendererMaterial*)asset.Buffer));
+// }

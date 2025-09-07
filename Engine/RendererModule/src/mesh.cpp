@@ -1,8 +1,8 @@
 #include "RendererModule/Assets/mesh.h"
 
+#include <iostream>
 #include <EngineUtils/ErrorHandling/exceptions.h>
 #include <EngineUtils/Memory/in_place_read_stream.h>
-#include <memory>
 #include <tiny_obj_loader.h>
 
 
@@ -122,7 +122,7 @@ Core::Pipeline::AssetDefinition Assets::Mesh::GetDefinition()
 }
 
 bool Assets::Mesh::Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc, 
-                         Core::DependencyInjection::BuildtimeServies *services, std::ostream &output) 
+                         Core::DependencyInjection::BuildtimeServies *services, std::ostream *output) 
 {
     const char* filePath = services->GetFileAccessService()->GetPath(fieldv[0].Data.Path);
     
@@ -136,7 +136,7 @@ bool Assets::Mesh::Build(const Core::Pipeline::Scripting::Variant *fieldv, size_
     unsigned int vertexCount = (unsigned int)outputVertices.size();
 	unsigned int indexCount = (unsigned int)outputIndices.size();
     output
-		.write((const char*)&vertexCount, sizeof(vertexCount))
+		->write((const char*)&vertexCount, sizeof(vertexCount))
 		.write((const char*)(outputVertices.data()), outputVertices.size() * sizeof(RendererModule::Assets::Vertex))
 		.write((const char*)&indexCount, sizeof(indexCount))
 		.write((const char*)(outputIndices.data()), outputIndices.size() * sizeof(int));
@@ -144,43 +144,43 @@ bool Assets::Mesh::Build(const Core::Pipeline::Scripting::Variant *fieldv, size_
 	return true;
 }
 
-size_t Assets::Mesh::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                 Core::DependencyInjection::RuntimeServices *services) 
-{
-    return sizeof(Core::Rendering::RendererMesh);
-}
+// size_t Assets::Mesh::MaxLoadSize(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                  Core::DependencyInjection::RuntimeServices *services) 
+// {
+//     return sizeof(Core::Rendering::RendererMesh);
+// }
 
-Core::AssetManagement::LoadedAsset Assets::Mesh::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
-                                                      Core::DependencyInjection::RuntimeServices *services)
-{
-    Utils::Memory::InPlaceReadStream stream(inputDataV, inputDataC);
+// Core::AssetManagement::LoadedAsset Assets::Mesh::Load(const unsigned char *inputDataV, const size_t inputDataC, const uint64_t id,
+//                                                       Core::DependencyInjection::RuntimeServices *services)
+// {
+//     Utils::Memory::InPlaceReadStream stream(inputDataV, inputDataC);
 
-    // load all vertices
-    unsigned int vertexCount = stream.ReadCopy<unsigned int>();
-    Vertex* allVertices = stream.ReadInPlace<Vertex>(vertexCount);
+//     // load all vertices
+//     unsigned int vertexCount = stream.ReadCopy<unsigned int>();
+//     Vertex* allVertices = stream.ReadInPlace<Vertex>(vertexCount);
 
-    // load all indices
-    unsigned int indexCount = stream.ReadCopy<unsigned int>();
-    unsigned int* allIndices = stream.ReadInPlace<unsigned int>(indexCount);
+//     // load all indices
+//     unsigned int indexCount = stream.ReadCopy<unsigned int>();
+//     unsigned int* allIndices = stream.ReadInPlace<unsigned int>(indexCount);
 
-    // submit everything to server
-    Core::Rendering::RendererMesh newMesh;
-    if (!services->GetRenderer()->RegisterMesh({allVertices, (unsigned int)sizeof(Vertex) * vertexCount},
-                                               {allIndices, indexCount}, newMesh))
-    {
-        SE_THROW_GRAPHICS_EXCEPTION;
-    }
+//     // submit everything to server
+//     Core::Rendering::RendererMesh newMesh;
+//     if (!services->GetRenderer()->RegisterMesh({allVertices, (unsigned int)sizeof(Vertex) * vertexCount},
+//                                                {allIndices, indexCount}, newMesh))
+//     {
+//         SE_THROW_GRAPHICS_EXCEPTION;
+//     }
     
-    // allocate and return
-    Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(newMesh), id);
-    *((Core::Rendering::RendererMesh*)newAsset.Buffer) = newMesh;
+//     // allocate and return
+//     Core::AssetManagement::LoadedAsset newAsset = services->GetAssetManager()->CreateAsset(sizeof(newMesh), id);
+//     *((Core::Rendering::RendererMesh*)newAsset.Buffer) = newMesh;
 
-    return newAsset;
-}
+//     return newAsset;
+// }
 
-void Assets::Mesh::Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
-                        Core::DependencyInjection::RuntimeServices *services)
-{
-    Core::Rendering::RendererMesh* mesh = (Core::Rendering::RendererMesh*)asset.Buffer;
-    services->GetRenderer()->DeleteMesh(*mesh);
-}
+// void Assets::Mesh::Dispose(Core::AssetManagement::LoadedAsset asset, const uint64_t id,
+//                         Core::DependencyInjection::RuntimeServices *services)
+// {
+//     Core::Rendering::RendererMesh* mesh = (Core::Rendering::RendererMesh*)asset.Buffer;
+//     services->GetRenderer()->DeleteMesh(*mesh);
+// }

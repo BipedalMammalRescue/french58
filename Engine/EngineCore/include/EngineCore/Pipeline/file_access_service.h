@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <string>
-#include <istream>
 #include <unordered_map>
 
 namespace Engine::Core::Pipeline {

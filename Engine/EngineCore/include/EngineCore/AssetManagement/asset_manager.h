@@ -2,7 +2,6 @@
 
 #include "loaded_asset.h"
 #include <cstdint>
-#include <vector>
 
 namespace Engine::Core::Runtime {
 
