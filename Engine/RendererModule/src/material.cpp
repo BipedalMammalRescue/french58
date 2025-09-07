@@ -45,14 +45,14 @@ Core::Pipeline::AssetDefinition Assets::Material::GetDefinition()
     return def;
 }
 
-bool Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
-                      Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
+bool Assets::Material::Build(const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
+                      Core::DependencyInjection::BuildtimeServies *services, std::ostream *output)
 {
     // this is a high-level asset, just write two integers into the output
     uint64_t fragShaderPath = fieldv[0].Data.Path;
     uint64_t vertShaderPath = fieldv[1].Data.Path;
-    output.write(((const char*)&fragShaderPath), sizeof(uint64_t));
-    output.write(((const char*)&vertShaderPath), sizeof(uint64_t));
+    output->write(((const char*)&fragShaderPath), sizeof(uint64_t));
+    output->write(((const char*)&vertShaderPath), sizeof(uint64_t));
     return true;
 }
 

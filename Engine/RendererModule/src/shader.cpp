@@ -20,7 +20,7 @@ Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::Verte
 
 bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
     const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
-    Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
+    Core::DependencyInjection::BuildtimeServies *services, std::ostream *output)
 {
     // safety is not my concern
     const char *sourceShader = services->GetFileAccessService()->GetPath(fieldv[0].Data.Path);
@@ -28,7 +28,7 @@ bool Engine::Extension::RendererModule::Assets::VertexShader::Build(
     // read the file and dump it into the output stream
     std::ofstream sourceFile;
     sourceFile.open(sourceShader, std::ios::binary);
-    output << sourceFile.rdbuf();
+    (*output) << sourceFile.rdbuf();
     sourceFile.close();
     return true;
 }
@@ -77,7 +77,7 @@ Core::Pipeline::AssetDefinition Engine::Extension::RendererModule::Assets::Fragm
 
 bool Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     const Core::Pipeline::Scripting::Variant *fieldv, size_t fieldc,
-    Core::DependencyInjection::BuildtimeServies *services, std::ostream &output)
+    Core::DependencyInjection::BuildtimeServies *services, std::ostream *output)
 {
     // safety is not my concern
     const char *sourceShader = services->GetFileAccessService()->GetPath(fieldv[0].Data.Path);
@@ -85,7 +85,7 @@ bool Engine::Extension::RendererModule::Assets::FragmentShader::Build(
     // read the file and dump it into the output stream
     std::ofstream sourceFile;
     sourceFile.open(sourceShader, std::ios::binary);
-    output << sourceFile.rdbuf();
+    (*output) << sourceFile.rdbuf();
     sourceFile.close();
     return true;
 }
