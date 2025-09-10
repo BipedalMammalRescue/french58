@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json.Serialization;
 
 namespace SignourneyEngine.Companion.DataModels.BuildActions;
 
@@ -11,7 +10,7 @@ public class CommandBuildAction : BuildAction
     public required string Process { get; set; }
     public required string[] Arguments { get; set; }
 
-    protected override BuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output)
+    protected override ProtoBuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output)
     {
         using Process builder = new();
 

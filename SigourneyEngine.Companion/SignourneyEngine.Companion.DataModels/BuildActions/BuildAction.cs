@@ -1,65 +1,19 @@
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using SignourneyEngine.Companion.DataModels.BuildActions.Components.Input;
 using SignourneyEngine.Companion.DataModels.BuildActions.Components.Output;
 
 namespace SignourneyEngine.Companion.DataModels.BuildActions;
 
-public partial record BuildEnvironment(IDictionary<string, string> SourceData, BuildResult[] ChildrenResults)
-{
-    [GeneratedRegex("#\\((?<fieldref>\\w+)\\)")]
-    private partial Regex GetSourceReference();
-
-    [GeneratedRegex("#(?<id>[0-9]+):(?<tag>\\w+)")]
-    private partial Regex GetTagReference();
-
-    [GeneratedRegex("#(?<id>[0-9]+)")]
-    private partial Regex GetOutputReference();
-
-    public string ExpandValues(string source)
-    {
-        // expand env var
-        string result = Environment.ExpandEnvironmentVariables(source);
-
-        // expand source fields from the asset file
-        result = GetSourceReference().Replace(result, match =>
-        {
-            if (!match.Success)
-                return result;
-
-            string field = match.Groups["fieldref"].Value;
-            if (!SourceData.TryGetValue(field, out string? foundValue))
-                return result;
-
-            return foundValue;
-        });
-
-        // expand child tags
-        result = GetTagReference().Replace(result, match =>
-        {
-            int childIndex = int.Parse(match.Groups["id"].Value);
-            string tag = match.Groups["tag"].Value;
-            return ChildrenResults[childIndex].Tags[tag];
-        });
-
-        // expand child results (tags have been taken out already so there should be safe to use a subpattern)
-        result = GetOutputReference().Replace(result, match =>
-        {
-            int childIndex = int.Parse(match.Groups["id"].Value);
-            return ChildrenResults[childIndex].OutputPath;
-        });
-
-        return result;
-    }
-}
-
 [JsonPolymorphic]
 [JsonDerivedType(typeof(CommandBuildAction), typeDiscriminator: "command")]
 public abstract class BuildAction
 {
-    protected static BuildResult Result(Dictionary<string, string> tags) => new() { Tags = ImmutableDictionary<string, string>.Empty.AddRange(tags) };
-    protected static BuildResult Error(params string[] errors) => new() { Errors = errors };
+    protected record ProtoBuildResult(ImmutableDictionary<string, string> Tags, string[] Errors);
+    protected static ProtoBuildResult Result(Dictionary<string, string> tags) => new(tags.ToImmutableDictionary(), []);
+    protected static ProtoBuildResult Error(params string[] errors) => new(ImmutableDictionary<string, string>.Empty, errors);
+
+    public BuildAction[] ChildTasks { get; set; } = [];
 
     // transforms the input
     public IInputComponent[] InputComponents { get; set; } = [];
@@ -68,7 +22,7 @@ public abstract class BuildAction
     // used to generate extra tags
     public Dictionary<string, string> Tags { get; set; } = [];
 
-    public (BuildResult Result, string OutputPath) Execute(BuildEnvironment environment)
+    public BuildResult Execute(BuildEnvironment environment)
     {
         HashSet<string> tempFilesUsed = [];
 
@@ -95,7 +49,7 @@ public abstract class BuildAction
         // dump output into a temp file
         string outputPath = Path.GetTempFileName();
         FileStream output = File.Create(outputPath);
-        BuildResult result = ExecuteCore(environment, input, output);
+        ProtoBuildResult protoResult = ExecuteCore(environment, input, output);
 
         // close the files used just now
         input.Dispose();
@@ -117,6 +71,7 @@ public abstract class BuildAction
             outputPath = nextOutputPath;
         }
 
+
         // clean up
         foreach (string tempFile in tempFilesUsed)
         {
@@ -127,12 +82,18 @@ public abstract class BuildAction
         }
 
         // add in the extra tags
+        var tags = protoResult.Tags;
         foreach (KeyValuePair<string, string> extraTag in Tags)
         {
-            result.Tags = result.Tags.Add(environment.ExpandValues(extraTag.Key), environment.ExpandValues(extraTag.Value));
+            tags = protoResult.Tags.Add(environment.ExpandValues(extraTag.Key), environment.ExpandValues(extraTag.Value));
         }
 
-        return (result, outputPath);
+        return new BuildResult()
+        {
+            Errors = protoResult.Errors,
+            OutputPath = outputPath,
+            Tags = tags
+        };
     }
 
     /// <summary>
@@ -142,5 +103,5 @@ public abstract class BuildAction
     /// <param name="output">The initial output of this task.</param>
     /// <param name="environment">Helper functions that's based on part of the input data.</param>
     /// <returns></returns>
-    protected abstract BuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output);
+    protected abstract ProtoBuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output);
 }

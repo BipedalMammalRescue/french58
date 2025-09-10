@@ -1,20 +1,39 @@
-﻿using System.Collections.Immutable;
+﻿using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text.Json;
 using SignourneyEngine.Companion.DataModels.BuildActions;
 
 Console.WriteLine("hello world");
 
-Dictionary<string, string> source = new()
+Subject<int> sub = new();
+IObservable<int> subObv = sub;
+
+subObv.Subscribe(Console.WriteLine);
+subObv.Subscribe(Console.WriteLine);
+
+for (int i = 0; i < 10; i++)
 {
-    ["foo"] = "bar",
-    ["bar"] = "foo"
-};
+    sub.OnNext(i);
+}
 
-BuildResult[] children = [
-    new BuildResult() { OutputPath = "p1", Tags = ImmutableDictionary<string, string>.Empty.Add("key", "value1")},
-    new BuildResult() { OutputPath = "p2", Tags = ImmutableDictionary<string, string>.Empty.Add("key", "value2")}
-];
+// //lang=json
+// string actionSrc = """
+// {
+//     "$type": "command",
+//     "ChildTasks": [
+//         {
+//             "$type": "command",
+//             "Process": "echo",
+//             "Arguments": ["hello world \n 111"]
+//         }
+//     ],
+//     "Process": "grep",
+//     "Arguments": [
+//         "hello"
+//     ]
+// }
+// """;
 
-BuildEnvironment env = new(source, children);
+// BuildAction? action = JsonSerializer.Deserialize<BuildAction>(actionSrc);
 
-Console.WriteLine(env.ExpandValues("#(foo)? maybe #0:key at #1"));
+// Console.WriteLine(JsonSerializer.Serialize(action));
