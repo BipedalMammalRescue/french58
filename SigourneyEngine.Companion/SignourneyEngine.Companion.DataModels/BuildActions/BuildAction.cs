@@ -22,7 +22,7 @@ public abstract class BuildAction
     // used to generate extra tags
     public Dictionary<string, string> Tags { get; set; } = [];
 
-    public BuildResult Execute(BuildEnvironment environment)
+    public async Task<BuildResult> ExecuteAsync(BuildEnvironment environment)
     {
         HashSet<string> tempFilesUsed = [];
 
@@ -36,7 +36,7 @@ public abstract class BuildAction
 
             // transform data
             Stream nextInput = File.Create(tempFile);
-            inputComponent.Transform(environment, input, nextInput);
+            await inputComponent.TransformAsync(environment, input, nextInput).ConfigureAwait(false);
 
             // swap
             input.Dispose();
@@ -49,11 +49,11 @@ public abstract class BuildAction
         // dump output into a temp file
         string outputPath = Path.GetTempFileName();
         FileStream output = File.Create(outputPath);
-        ProtoBuildResult protoResult = ExecuteCore(environment, input, output);
+        ProtoBuildResult protoResult = await ExecuteCoreAsync(environment, input, output).ConfigureAwait(false);
 
         // close the files used just now
-        input.Dispose();
-        output.Dispose();
+        await input.DisposeAsync().ConfigureAwait(false);
+        await output.DisposeAsync().ConfigureAwait(false);
 
         // transform the output
         foreach (IOutputComponent outputComponent in OutputComponents)
@@ -62,9 +62,9 @@ public abstract class BuildAction
             string nextOutputPath = Path.GetTempFileName();
 
             // funnel the output to the next file
-            using FileStream prevOutput = File.OpenRead(outputPath);
-            using FileStream nextOutput = File.Create(outputPath);
-            outputComponent.Transform(environment, prevOutput, nextOutput);
+            await using FileStream prevOutput = File.OpenRead(outputPath);
+            await using FileStream nextOutput = File.Create(outputPath);
+            await outputComponent.TransformAsync(environment, prevOutput, nextOutput).ConfigureAwait(false);
 
             // keep tap and swap
             tempFilesUsed.Add(outputPath);
@@ -103,5 +103,5 @@ public abstract class BuildAction
     /// <param name="output">The initial output of this task.</param>
     /// <param name="environment">Helper functions that's based on part of the input data.</param>
     /// <returns></returns>
-    protected abstract ProtoBuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output);
+    protected abstract Task<ProtoBuildResult> ExecuteCoreAsync(BuildEnvironment environment, Stream input, Stream output);
 }

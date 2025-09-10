@@ -7,5 +7,5 @@ namespace SignourneyEngine.Companion.DataModels.BuildActions.Components.Input;
 [JsonDerivedType(typeof(FileInput), typeDiscriminator: "file")]
 public interface IInputComponent
 {
-    void Transform(BuildEnvironment environment, Stream source, Stream destination);
+    Task TransformAsync(BuildEnvironment environment, Stream source, Stream destination);
 }

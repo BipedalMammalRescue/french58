@@ -63,10 +63,10 @@ public class Coordinator
             .Subscribe(_scheduleInput);
 
         // construct the queue of results, where individual tasks are constucted asynchronously
-        _results = Observable.Merge(_readyQueue.Select(task => Task.Run(() =>
+        _results = Observable.Merge(_readyQueue.Select(task => Task.Run(async () =>
         {
             BuildEnvironment env = new(task.Task.Source, task.Children);
-            BuildResult result = task.Task.Action.Execute(env);
+            BuildResult result = await task.Task.Action.ExecuteAsync(env).ConfigureAwait(false);
             return new TaskResult(task.Task, result);
         }).ToObservable()));
 

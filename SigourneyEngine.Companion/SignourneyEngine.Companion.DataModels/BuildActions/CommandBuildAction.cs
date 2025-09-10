@@ -10,7 +10,7 @@ public class CommandBuildAction : BuildAction
     public required string Process { get; set; }
     public required string[] Arguments { get; set; }
 
-    protected override ProtoBuildResult ExecuteCore(BuildEnvironment environment, Stream input, Stream output)
+    protected override async Task<ProtoBuildResult> ExecuteCoreAsync(BuildEnvironment environment, Stream input, Stream output)
     {
         using Process builder = new();
 
@@ -26,10 +26,10 @@ public class CommandBuildAction : BuildAction
 
         // run the builder
         builder.Start();
-        input.CopyTo(builder.StandardInput.BaseStream);
+        await input.CopyToAsync(builder.StandardInput.BaseStream).ConfigureAwait(false);
         builder.StandardInput.Close();
-        builder.StandardOutput.BaseStream.CopyTo(output);
-        builder.WaitForExit();
+        await builder.StandardOutput.BaseStream.CopyToAsync(output).ConfigureAwait(false);
+        await builder.WaitForExitAsync().ConfigureAwait(false);
 
         // collect results
         if (builder.ExitCode != 0)

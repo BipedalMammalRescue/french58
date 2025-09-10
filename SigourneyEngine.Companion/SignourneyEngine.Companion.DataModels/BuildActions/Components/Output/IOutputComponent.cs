@@ -6,5 +6,5 @@ namespace SignourneyEngine.Companion.DataModels.BuildActions.Components.Output;
 [JsonDerivedType(typeof(FileOutput), typeDiscriminator: "file")]
 public interface IOutputComponent
 {
-    void Transform(BuildEnvironment environment, Stream prev, Stream next);
+    Task TransformAsync(BuildEnvironment environment, Stream prev, Stream next);
 }

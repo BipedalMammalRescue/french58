@@ -4,9 +4,9 @@ public class FileOutput : IOutputComponent
 {
     public required string Path { get; set; }
 
-    public void Transform(BuildEnvironment environment, Stream prev, Stream next)
+    public async Task TransformAsync(BuildEnvironment environment, Stream prev, Stream next)
     {
-        using FileStream source = File.OpenRead(environment.ExpandValues(Path));
-        source.CopyTo(next);
+        await using FileStream source = File.OpenRead(environment.ExpandValues(Path));
+        await source.CopyToAsync(next).ConfigureAwait(false);
     }
 }

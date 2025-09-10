@@ -7,9 +7,9 @@ public class FileInput : IInputComponent
 {
     public required string Path { get; set; }
 
-    public void Transform(BuildEnvironment environment, Stream source, Stream destination)
+    public async Task TransformAsync(BuildEnvironment environment, Stream source, Stream destination)
     {
-        using FileStream file = File.Create(environment.ExpandValues(Path));
-        source.CopyTo(file);
+        await using FileStream file = File.Create(environment.ExpandValues(Path));
+        await source.CopyToAsync(file).ConfigureAwait(false);
     }
 }
