@@ -76,6 +76,7 @@ public class Coordinator
             if (!_continuations.TryRemove(result.Task.Parent!.Value, out Continuation? cont))
                 return [];
 
+            // update continuations
             Continuation candidate = _continuations.AddOrUpdate(
                 result.Task.Parent!.Value,
                 _ => throw new Exception("child returns before cotinuation is created"),
@@ -88,6 +89,7 @@ public class Coordinator
                     };
                 });
 
+            // emit when a new task is ready
             return candidate.CurrentMap != candidate.TargetMap ? [] : [candidate];
         }).Select(cont => (cont.Task, cont.Children)).Subscribe(_readyQueue);
 
