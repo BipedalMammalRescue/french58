@@ -1,9 +1,20 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
 using SignourneyEngine.Companion.DataModels.BuildActions;
 
 Console.WriteLine("hello world");
 
-string sample = "{\"$type\": \"command\", \"Process\":\"echo\",\"Arguments\":[\"hello\",\"world\"],\"InputComponents\":[],\"OutputComponents\":[],\"Tags\":{}}";
-BuildAction? action = JsonSerializer.Deserialize<BuildAction>(sample);
+Dictionary<string, string> source = new()
+{
+    ["foo"] = "bar",
+    ["bar"] = "foo"
+};
 
-Console.WriteLine(JsonSerializer.Serialize(action));
+BuildResult[] children = [
+    new BuildResult() { OutputPath = "p1", Tags = ImmutableDictionary<string, string>.Empty.Add("key", "value1")},
+    new BuildResult() { OutputPath = "p2", Tags = ImmutableDictionary<string, string>.Empty.Add("key", "value2")}
+];
+
+BuildEnvironment env = new(source, children);
+
+Console.WriteLine(env.ExpandValues("#(foo)? maybe #0:key at #1"));

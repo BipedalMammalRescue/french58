@@ -8,11 +8,14 @@ namespace SignourneyEngine.Companion.DataModels.BuildActions;
 
 public partial record BuildEnvironment(IDictionary<string, string> SourceData, BuildResult[] ChildrenResults)
 {
-    [GeneratedRegex("#\\((?<fieldref>.+)\\)")]
+    [GeneratedRegex("#\\((?<fieldref>\\w+)\\)")]
     private partial Regex GetSourceReference();
 
-    [GeneratedRegex("#(?<id>[0-9]+):(?<tag>.+)")]
-    private partial Regex GetResultReference();
+    [GeneratedRegex("#(?<id>[0-9]+):(?<tag>\\w+)")]
+    private partial Regex GetTagReference();
+
+    [GeneratedRegex("#(?<id>[0-9]+)")]
+    private partial Regex GetOutputReference();
 
     public string ExpandValues(string source)
     {
@@ -32,12 +35,19 @@ public partial record BuildEnvironment(IDictionary<string, string> SourceData, B
             return foundValue;
         });
 
-        // expand child results
-        result = GetResultReference().Replace(result, match =>
+        // expand child tags
+        result = GetTagReference().Replace(result, match =>
         {
             int childIndex = int.Parse(match.Groups["id"].Value);
-            string tag = match.Groups["id"].Value;
+            string tag = match.Groups["tag"].Value;
             return ChildrenResults[childIndex].Tags[tag];
+        });
+
+        // expand child results (tags have been taken out already so there should be safe to use a subpattern)
+        result = GetOutputReference().Replace(result, match =>
+        {
+            int childIndex = int.Parse(match.Groups["id"].Value);
+            return ChildrenResults[childIndex].OutputPath;
         });
 
         return result;
