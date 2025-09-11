@@ -5,3 +5,6 @@ add_library(RendererModule STATIC
 	src/material.cpp)
 	
 target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(RendererModule PUBLIC EngineCore)
+target_link_libraries(RendererModule PUBLIC tinyobjloader)
+target_link_libraries(Engine PUBLIC RendererModule)
