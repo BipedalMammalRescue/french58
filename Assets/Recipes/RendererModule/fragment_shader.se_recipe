@@ -1,0 +1,14 @@
+{
+    "Module": "RendererModule",
+    "Type": "FragmentShader",
+    "Action": {
+        "$type": "command",
+        "Process": "glslc",
+        "Arguments": [
+            "-fshader-stage=fragment",
+            "-o",
+            "-",
+            "#(Source)"
+        ]
+    }
+}

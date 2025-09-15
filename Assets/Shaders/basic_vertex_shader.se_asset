@@ -1,0 +1,13 @@
+{
+    "Module": "RendererModule",
+    "Type": "VertexShader",
+    "Data":
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "Shaders/basic.frag"
+        }
+    }
+}

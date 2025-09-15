@@ -1,0 +1,8 @@
+{
+    "profiles": {
+        "testing ground": {
+            "commandName": "Project",
+            "workingDirectory": "../testground"
+        }
+    }
+}
