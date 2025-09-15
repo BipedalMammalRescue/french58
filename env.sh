@@ -9,6 +9,6 @@ echo "Entering code shell, $temp_path will be temporarily added to the PATH envi
 PATH=$temp_path:$PATH
 echo "To exit code shell, run \"exit\""
 
-asset_root=$project_root/Assets bash
+asset_root=$project_root/Assets project_root=$project_root bash
 
 echo "Exiting code shell..."
