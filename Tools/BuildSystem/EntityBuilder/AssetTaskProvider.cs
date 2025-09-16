@@ -11,7 +11,8 @@ public class AssetTaskProvider(ImmutableDictionary<string, ImmutableDictionary<s
 {
     public (BuildAction Action, IDataPoint SourceData) CreateTask(string key)
     {
-        using FileStream assetFile = File.OpenRead(key);
+        // requires asset files to use paths relative to the asset folder
+        using FileStream assetFile = File.OpenRead(Path.Combine(key));
         Asset asset = JsonSerializer.Deserialize<Asset>(assetFile) ?? throw new Exception($"Can't find valid asset in input file: {key}");
         if (!recipes.TryGetValue(asset.Module, out var perModuleRecipes) || !perModuleRecipes.TryGetValue(asset.Type, out BuildAction? action))
             throw new Exception($"Can't find recipe for asset type {asset.Module}:{asset.Type}");

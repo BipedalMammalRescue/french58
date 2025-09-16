@@ -2,7 +2,8 @@
     "profiles": {
         "testing ground": {
             "commandName": "Project",
-            "workingDirectory": "../testground"
+            "workingDirectory": "../testground",
+            "commandLineArgs": "build-asset --log-path=./logs/"
         }
     }
 }

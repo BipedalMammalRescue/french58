@@ -3,3 +3,6 @@ build
 compile_commands.json
 .vscode
 bin
+built_assets
+logs
+
