@@ -1,0 +1,11 @@
+{
+    "Module": "RendererModule",
+    "Type": "Mesh",
+    "Action": {
+        "$type": "command",
+        "Process": "MeshBuilder",
+        "Arguments": [
+            "#(Source)"
+        ]
+    }
+}

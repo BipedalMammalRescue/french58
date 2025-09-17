@@ -13,22 +13,22 @@ using namespace Engine::Extension::RendererModule;
 Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetModuleDefinition()
 {
     static Core::Pipeline::AssetPipeline allAssets[] = {
-        {
-        Assets::Mesh::GetDefinition(),
-        Assets::Mesh::Build
-        },
-        {
-            Assets::FragmentShader::GetDefinition(),
-            Assets::FragmentShader::Build
-        },
-        {
-            Assets::VertexShader::GetDefinition(),
-            Assets::VertexShader::Build
-        },
-        {
-            Assets::Material::GetDefinition(),
-            Assets::Material::Build
-        },
+        // {
+        // Assets::Mesh::GetDefinition(),
+        // Assets::Mesh::Build
+        // },
+        // {
+        //     Assets::FragmentShader::GetDefinition(),
+        //     Assets::FragmentShader::Build
+        // },
+        // {
+        //     Assets::VertexShader::GetDefinition(),
+        //     Assets::VertexShader::Build
+        // },
+        // {
+        //     Assets::Material::GetDefinition(),
+        //     Assets::Material::Build
+        // },
     };
 
     constexpr size_t AssetCount = sizeof(allAssets) / sizeof(Core::Pipeline::AssetPipeline);
