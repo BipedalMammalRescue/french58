@@ -1,5 +1,5 @@
 add_library(EngineUtils STATIC
-	src/in_place_read_stream.cpp
+    src/hex_strings.cpp
     src/unmanaged_stack_allocator.cpp)
 
 target_include_directories(EngineUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

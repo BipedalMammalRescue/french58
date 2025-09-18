@@ -1,6 +1,5 @@
 #include "RendererModule/renderer_module.h"
 
-#include <EngineCore/Pipeline/Scripting/variant.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Pipeline/engine_assembly.h>
 

@@ -1,45 +1,22 @@
 #include "EngineCore/AssetManagement/asset_manager.h"
-#include "EngineCore/Runtime/memory_manager.h"
+#include "EngineUtils/String/hex_strings.h"
 
-#include <EngineUtils/ErrorHandling/exceptions.h>
-#include <EngineUtils/Memory/alignment_calc.h>
+#include <fstream>
+#include <cstring>
 
 using namespace Engine::Core::AssetManagement;
 
-struct AssetIndexNode
+static const char FileExtension[] = ".se_bin";
+
+std::ifstream AssetManager::OpenAsset(const unsigned char* id) 
 {
-    uint64_t Key;
-    LoadedAsset Value;
-};
+    // construct a path "<MD5>.se_bin"
+    char path[16 * 2 + sizeof(FileExtension)];
+    Utils::String::BinaryToHex(16, id, path);
+    memcpy(path + 32, FileExtension, sizeof(FileExtension));
 
-LoadedAsset AssetManager::CreateAsset(size_t length, uint64_t id)
-{
-    SE_THROW_NOT_IMPLEMENTED;
-}
-
-LoadedAsset AssetManager::GetAsset(const uint64_t id)
-{
-    SE_THROW_NOT_IMPLEMENTED;
-}
-
-void AssetManager::ReorgnizeAssets(LoadedAsset* assetsV, size_t assetsC)
-{
-    // pop old buffer
-    m_MemoryManager->Deallocate(m_Buffer);
-
-    // calculate new index size
-    size_t indexSize = assetsC * sizeof(AssetIndexNode);
-
-    // calculate new buffer size
-    size_t newSize = 0;
-    for (size_t i = 0; i < assetsC; i++)
-    {
-        // align size to 8 bytes
-        assetsV[i].Length = Utils::Memory::AlignLength(assetsV[i].Length, sizeof(size_t));
-
-        newSize += assetsV[i].Length;
-        newSize += sizeof(AssetIndexNode);
-    }
-
-    SE_THROW_NOT_IMPLEMENTED;
+    // TODO: this implementation of asset folder is WRONG, need to figure out file organization
+    std::ifstream result;
+    result.open(path, std::ios::binary);
+    return result;
 }

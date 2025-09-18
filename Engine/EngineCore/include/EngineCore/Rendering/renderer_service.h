@@ -2,9 +2,9 @@
 
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Platform/platform_access.h"
+#include "renderer_data.h"
 #include <SDL3/SDL_gpu.h>
 #include <glm/fwd.hpp>
-#include "renderer_data.h"
 
 #include <string>
 #include <unordered_map>

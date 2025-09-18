@@ -8,7 +8,7 @@
 
 using namespace Engine::Extension::RendererModule;
 
-static bool LoadObj(const char* inputPath, std::vector<Assets::Vertex>& outputVertices, std::vector<int>& outputIndices)
+static bool LoadObj(const char* inputPath, std::vector<Assets::Vertex>& outputVertices, std::vector<unsigned int>& outputIndices)
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -109,7 +109,7 @@ enum class ErrorCodes
 int main(int argc, char *argv[])
 {
 	std::vector<Assets::Vertex> outputVertices;
-	std::vector<int> outputIndices;
+	std::vector<unsigned int> outputIndices;
 
 	if (argc != 2)
 	{

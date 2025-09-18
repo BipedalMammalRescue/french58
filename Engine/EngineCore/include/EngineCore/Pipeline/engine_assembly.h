@@ -1,6 +1,7 @@
 #pragma once
 
 #include "module_definition.h"
+#include <cstddef>
 
 namespace Engine {
 namespace Core {
@@ -12,9 +13,10 @@ struct ModuleAssembly
     size_t ModuleCount = 0;
 };
 
+// TODO: the engine assembly should have a way for quick lookups
 class EngineAssembly
 {
-  public:
+public:
     static ModuleAssembly ListModules();
 };
 
