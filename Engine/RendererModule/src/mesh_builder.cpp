@@ -2,17 +2,19 @@
 
 #include "RendererModule/Assets/mesh.h"
 
+#include <unordered_map>
 #include <tiny_obj_loader.h>
 #include <iostream>
 #include <vector>
 
 using namespace Engine::Extension::RendererModule;
 
+// TODO: add material metadata here
 static bool LoadObj(const char* inputPath, std::vector<Assets::Vertex>& outputVertices, std::vector<unsigned int>& outputIndices)
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials; // TODO: how to load material info?
+	std::vector<tinyobj::material_t> materials;
 	std::string warn, err;
 
 	bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputPath);
@@ -128,7 +130,7 @@ int main(int argc, char *argv[])
 	unsigned int vertexCount = (unsigned int)outputVertices.size();
 	unsigned int indexCount = (unsigned int)outputIndices.size();
 
-	// TODO: temp solution, sanity check output by checking the output file size
+	// temp solution, sanity check output by checking the output file size
 	if (vertexCount == 0 || indexCount == 0) 
 	{
 		std::cerr << "Error: obj data resutls in empty output." << std::endl;

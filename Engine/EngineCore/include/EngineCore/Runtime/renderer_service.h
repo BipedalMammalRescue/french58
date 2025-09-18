@@ -1,8 +1,7 @@
 #pragma once
 
 #include "EngineCore/Logging/logger_service.h"
-#include "EngineCore/Platform/platform_access.h"
-#include "renderer_data.h"
+#include "EngineCore/Rendering/renderer_data.h"
 #include <SDL3/SDL_gpu.h>
 #include <glm/fwd.hpp>
 
@@ -12,7 +11,9 @@
 struct SDL_GPUBuffer;
 struct SDL_GPUShader;
 
-namespace Engine::Core::Rendering {
+namespace Engine::Core::Runtime {
+
+class PlatformAccess;
 
 class RendererShader
 {
@@ -45,26 +46,27 @@ class RendererService
 {
   private:
     Logging::LoggerService *m_Logger = Logging::GetLogger();
-    Platform::PlatformAccess *m_Platform = nullptr;
+    Runtime::PlatformAccess *m_Platform = nullptr;
 
   public:
-    RendererService(Platform::PlatformAccess *platform) : m_Platform(platform)
+    RendererService(Runtime::PlatformAccess *platform) : m_Platform(platform)
     {
     }
 
     ~RendererService() = default;
 
   public:
-    bool CompileShader(const unsigned char *code, size_t codeLength, ShaderType type, unsigned int numSamplers,
-                       unsigned int numUniformBuffers, unsigned int numStorageBuffers, unsigned int numSotrageTextures,
-                       RendererShader &outID);
+    bool CompileShader(const unsigned char *code, size_t codeLength, Rendering::ShaderType type,
+                       unsigned int numSamplers, unsigned int numUniformBuffers, unsigned int numStorageBuffers,
+                       unsigned int numSotrageTextures, RendererShader &outID);
     bool DeleteShader(RendererShader &shader);
 
     bool CreateMaterial(const RendererShader &vertexShader, const RendererShader &fragmentShader,
-                        VertexAttribute *layouts, unsigned int layoutCount, RendererMaterial &outID);
+                        Rendering::VertexAttribute *layouts, unsigned int layoutCount, RendererMaterial &outID);
     bool DeleteMaterial(RendererMaterial &material);
 
-    bool RegisterMesh(const VertexCollection &vertices, const IndexCollection &indices, RendererMesh &outID);
+    bool RegisterMesh(const Rendering::VertexCollection &vertices, const Rendering::IndexCollection &indices,
+                      RendererMesh &outID);
     bool DeleteMesh(RendererMesh &inID);
 
     // rendering regular object would only require a MVP, and every object we assume has an MVP
@@ -74,4 +76,4 @@ class RendererService
     bool QueueRender(RendererMesh *mesh, RendererMaterial *material, const glm::mat4 &mvp);
 };
 
-} // namespace Engine::Core::Rendering
+} // namespace Engine::Core::Runtime

@@ -1,7 +1,7 @@
 #include "RendererModule/renderer_module.h"
 
 #include "EngineCore/Pipeline/module_definition.h"
-#include "EngineCore/Rendering/renderer_service.h"
+#include "EngineCore/Runtime/renderer_service.h"
 #include "EngineCore/Runtime/runtime_services.h"
 #include "RendererModule/Assets/mesh.h"
 #include "md5.h"
@@ -27,7 +27,7 @@ static void LoadMesh(Core::AssetManagement::AssetHeader* header, Core::Runtime::
     input->read((char*)indices.get(), indexCount * sizeof(int));
 
     // prepare output
-    Core::Rendering::RendererMesh* outAsset = (Core::Rendering::RendererMesh*)output;
+    Core::Runtime::RendererMesh* outAsset = (Core::Runtime::RendererMesh*)output;
 
     // register mesh
     services->RendererService->RegisterMesh(
@@ -38,7 +38,7 @@ static void LoadMesh(Core::AssetManagement::AssetHeader* header, Core::Runtime::
 
 static void UnloadMesh(Core::Runtime::RuntimeServices* services, void* mesh) 
 {
-    Core::Rendering::RendererMesh* renderMesh = (Core::Rendering::RendererMesh*)mesh;
+    Core::Runtime::RendererMesh* renderMesh = (Core::Runtime::RendererMesh*)mesh;
     services->RendererService->DeleteMesh(*renderMesh);
 }
 

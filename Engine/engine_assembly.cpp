@@ -5,6 +5,8 @@
 
 using namespace Engine;
 
+// TODO: this file need to be generated based on a list of modules during installs
+
 // define modules here
 Core::Pipeline::ModuleDefinition Modules[] = {
     Extension::RendererModule::GetModuleDefinition()

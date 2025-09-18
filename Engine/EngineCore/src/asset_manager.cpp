@@ -15,7 +15,7 @@ std::ifstream AssetManager::OpenAsset(const unsigned char* id)
     Utils::String::BinaryToHex(16, id, path);
     memcpy(path + 32, FileExtension, sizeof(FileExtension));
 
-    // TODO: this implementation of asset folder is WRONG, need to figure out file organization
+    // TODO: revisit this line when finialize asset folder structure
     std::ifstream result;
     result.open(path, std::ios::binary);
     return result;

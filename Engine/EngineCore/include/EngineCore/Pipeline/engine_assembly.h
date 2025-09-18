@@ -13,7 +13,7 @@ struct ModuleAssembly
     size_t ModuleCount = 0;
 };
 
-// TODO: the engine assembly should have a way for quick lookups
+// TODO: need a static table built into this class
 class EngineAssembly
 {
 public:

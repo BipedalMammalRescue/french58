@@ -1,4 +1,4 @@
-#include "EngineCore/Platform/platform_access.h"
+#include "EngineCore/Runtime/platform_access.h"
 #include "EngineCore/Configuration/compile_time_flags.h"
 #include "EngineCore/Logging/logger_service.h"
 
@@ -6,13 +6,13 @@
 #include <stdexcept>
 
 using namespace Engine::Core;
-using namespace Engine::Core::Platform;
+using namespace Engine::Core::Runtime;
 
 static const char s_ServiceName[] = "PlatformAccess";
 static const char s_SDLInitializationError[] = "SDL initialization failed, see logs for details.";
 static const char s_GLInitializationError[] = "OpenGL initialization failed, see logs for details.";
 
-bool Engine::Core::Platform::PlatformAccess::InitializeSDL()
+bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 {
 	// initialize sdl
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -48,12 +48,12 @@ bool Engine::Core::Platform::PlatformAccess::InitializeSDL()
 	return true;
 }
 
-void Engine::Core::Platform::PlatformAccess::BeginFrame()
+void Engine::Core::Runtime::PlatformAccess::BeginFrame()
 {
 	// clear screen?
 }
 
-void Engine::Core::Platform::PlatformAccess::EndFrame()
+void Engine::Core::Runtime::PlatformAccess::EndFrame()
 {
 	// finalize all the command buffers and swap?
 }
@@ -66,7 +66,7 @@ PlatformAccess::PlatformAccess(const DependencyInjection::ConfigurationProvider*
 		throw std::runtime_error(s_SDLInitializationError);
 }
 
-Engine::Core::Platform::PlatformAccess::~PlatformAccess()
+Engine::Core::Runtime::PlatformAccess::~PlatformAccess()
 {
 	// release gpu device
 	SDL_ReleaseWindowFromGPUDevice(m_GpuDevice, m_Window);
