@@ -20,7 +20,7 @@ class PlatformAccess
 {
 	// injected
 private:
-	const DependencyInjection::ConfigurationProvider* m_Configs = nullptr;
+	const Configuration::ConfigurationProvider* m_Configs = nullptr;
 
 	// initialized
 private:
@@ -32,13 +32,11 @@ private:
 	unsigned int m_VBO;
 	unsigned int m_IBO;
 
-private:
-	bool InitializeSDL();
-
 public:
+    bool InitializeSDL();
 	void BeginFrame();
 	void EndFrame();
-	PlatformAccess(const DependencyInjection::ConfigurationProvider* configs);
+	PlatformAccess(const Configuration::ConfigurationProvider* configs);
 	~PlatformAccess();
 };
 

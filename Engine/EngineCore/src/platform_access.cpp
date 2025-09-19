@@ -1,9 +1,7 @@
 #include "EngineCore/Runtime/platform_access.h"
-#include "EngineCore/Configuration/compile_time_flags.h"
 #include "EngineCore/Logging/logger_service.h"
 
 #include <SDL3/SDL.h>
-#include <stdexcept>
 
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
@@ -30,7 +28,7 @@ bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 	}
 
 	// Create GPU device
-	m_GpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, Configuration::USE_DEVICE_VALIDATION, NULL);
+	m_GpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, m_Configs->UseDeviceValidation, NULL);
 	if (m_GpuDevice == nullptr) 
 	{
 		Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
@@ -45,12 +43,14 @@ bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 	}
 	
 	SDL_SetWindowResizable(m_Window, false);
+    SDL_ShowWindow(m_Window);
 	return true;
 }
 
 void Engine::Core::Runtime::PlatformAccess::BeginFrame()
 {
 	// clear screen?
+    
 }
 
 void Engine::Core::Runtime::PlatformAccess::EndFrame()
@@ -58,13 +58,8 @@ void Engine::Core::Runtime::PlatformAccess::EndFrame()
 	// finalize all the command buffers and swap?
 }
 
-PlatformAccess::PlatformAccess(const DependencyInjection::ConfigurationProvider* configs)
-	: m_Configs(configs)
-{
-	// initialize SDL
-	if (!InitializeSDL())
-		throw std::runtime_error(s_SDLInitializationError);
-}
+PlatformAccess::PlatformAccess(const Configuration::ConfigurationProvider* configs)
+	: m_Configs(configs) {}
 
 Engine::Core::Runtime::PlatformAccess::~PlatformAccess()
 {

@@ -17,7 +17,6 @@ add_subdirectory(Engine)
 
 # game executable and its dependencies
 add_subdirectory(Game)
-target_link_libraries(Game PUBLIC Engine)
 
 # prototyping
 add_subdirectory(Playground)
