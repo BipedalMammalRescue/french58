@@ -25,6 +25,7 @@ int GameLoop::Run()
 
 		// begin update loop
 		m_PlatformAccess.BeginFrame();
+        // TODO: put the update logic here
 		m_PlatformAccess.EndFrame();
 	}
 

@@ -50,12 +50,14 @@ bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 void Engine::Core::Runtime::PlatformAccess::BeginFrame()
 {
 	// clear screen?
-    
+    SDL_Surface* surface = SDL_GetWindowSurface(m_Window);
+    SDL_FillSurfaceRect( surface, nullptr, SDL_MapSurfaceRGB( surface, 0xFF, 0xFF, 0xFF ) );
 }
 
 void Engine::Core::Runtime::PlatformAccess::EndFrame()
 {
 	// finalize all the command buffers and swap?
+    SDL_UpdateWindowSurface(m_Window);
 }
 
 PlatformAccess::PlatformAccess(const Configuration::ConfigurationProvider* configs)
