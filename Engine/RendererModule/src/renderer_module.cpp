@@ -27,7 +27,7 @@ static void LoadMesh(Core::AssetManagement::AssetHeader* header, Core::Runtime::
     input->read((char*)indices.get(), indexCount * sizeof(int));
 
     // prepare output
-    Core::Runtime::RendererMesh* outAsset = (Core::Runtime::RendererMesh*)output;
+    Core::Rendering::RendererMesh* outAsset = (Core::Rendering::RendererMesh*)output;
 
     // register mesh
     services->RendererService->RegisterMesh(
@@ -38,7 +38,7 @@ static void LoadMesh(Core::AssetManagement::AssetHeader* header, Core::Runtime::
 
 static void UnloadMesh(Core::Runtime::RuntimeServices* services, void* mesh) 
 {
-    Core::Runtime::RendererMesh* renderMesh = (Core::Runtime::RendererMesh*)mesh;
+    Core::Rendering::RendererMesh* renderMesh = (Core::Rendering::RendererMesh*)mesh;
     services->RendererService->DeleteMesh(*renderMesh);
 }
 

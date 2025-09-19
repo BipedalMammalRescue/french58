@@ -16,6 +16,7 @@
 
 using namespace Engine;
 using namespace Engine::Core;
+using namespace Engine::Core::Rendering;
 
 // TODO: how the fuck do I handle errors from SDL?
 

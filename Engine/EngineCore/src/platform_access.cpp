@@ -3,6 +3,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <stdexcept>
+
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
 
@@ -49,15 +51,27 @@ bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 
 void Engine::Core::Runtime::PlatformAccess::BeginFrame()
 {
-	// clear screen?
-    SDL_Surface* surface = SDL_GetWindowSurface(m_Window);
-    SDL_FillSurfaceRect( surface, nullptr, SDL_MapSurfaceRGB( surface, 0xFF, 0xFF, 0xFF ) );
+    // create command buffer
+    m_CommandBuffer = SDL_AcquireGPUCommandBuffer(m_GpuDevice);
+    if (m_CommandBuffer == NULL)
+    {
+        m_Logger->Error("PlatformAccess", "AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    // get a target texture
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_CommandBuffer, m_Window, &m_SwapchainTexture, nullptr, nullptr))
+    {
+        m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+        throw std::runtime_error(SDL_GetError());
+    }
 }
 
 void Engine::Core::Runtime::PlatformAccess::EndFrame()
 {
-	// finalize all the command buffers and swap?
-    SDL_UpdateWindowSurface(m_Window);
+	SDL_SubmitGPUCommandBuffer(m_CommandBuffer);
+    m_CommandBuffer = nullptr;
+    m_SwapchainTexture = nullptr;
 }
 
 PlatformAccess::PlatformAccess(const Configuration::ConfigurationProvider* configs)

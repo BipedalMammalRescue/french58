@@ -15,30 +15,6 @@ namespace Engine::Core::Runtime {
 
 class PlatformAccess;
 
-class RendererShader
-{
-  private:
-    friend class RendererService;
-    SDL_GPUShader *m_ShaderID = nullptr;
-};
-
-class RendererMaterial
-{
-  private:
-    friend class RendererService;
-    SDL_GPUGraphicsPipeline *m_ProgramID = 0;
-    std::unordered_map<std::string, int> m_UniformLocationCache;
-};
-
-class RendererMesh
-{
-  private:
-    friend class RendererService;
-    SDL_GPUBuffer *m_VertexBuffer;
-    SDL_GPUBuffer *m_IndexBuffer;
-    unsigned int m_IndexCount;
-};
-
 // Renderer service owns another set of SDL api outside of PlatformAccess as the ultimate endpoint for any rendering
 // behavior.
 // TODO: add render texture
@@ -58,22 +34,22 @@ class RendererService
   public:
     bool CompileShader(const unsigned char *code, size_t codeLength, Rendering::ShaderType type,
                        unsigned int numSamplers, unsigned int numUniformBuffers, unsigned int numStorageBuffers,
-                       unsigned int numSotrageTextures, RendererShader &outID);
-    bool DeleteShader(RendererShader &shader);
+                       unsigned int numSotrageTextures, Rendering::RendererShader &outID);
+    bool DeleteShader(Rendering::RendererShader &shader);
 
-    bool CreateMaterial(const RendererShader &vertexShader, const RendererShader &fragmentShader,
-                        Rendering::VertexAttribute *layouts, unsigned int layoutCount, RendererMaterial &outID);
-    bool DeleteMaterial(RendererMaterial &material);
+    bool CreateMaterial(const Rendering::RendererShader &vertexShader, const Rendering::RendererShader &fragmentShader,
+                        Rendering::VertexAttribute *layouts, unsigned int layoutCount, Rendering::RendererMaterial &outID);
+    bool DeleteMaterial(Rendering::RendererMaterial &material);
 
     bool RegisterMesh(const Rendering::VertexCollection &vertices, const Rendering::IndexCollection &indices,
-                      RendererMesh &outID);
-    bool DeleteMesh(RendererMesh &inID);
+                      Rendering::RendererMesh &outID);
+    bool DeleteMesh(Rendering::RendererMesh &inID);
 
     // rendering regular object would only require a MVP, and every object we assume has an MVP
     // maybe signature-annotate the puroose of this function?
     // TODO: how should this api work with uniforms?
     // WE CAN technically get some temp solutions?
-    bool QueueRender(RendererMesh *mesh, RendererMaterial *material, const glm::mat4 &mvp);
+    bool QueueRender(Rendering::RendererMesh *mesh, Rendering::RendererMaterial *material, const glm::mat4 &mvp);
 };
 
 } // namespace Engine::Core::Runtime
