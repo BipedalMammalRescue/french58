@@ -1,5 +1,8 @@
 add_library(RendererModule STATIC
-	src/renderer_module.cpp)
+	src/renderer_module.cpp
+    src/vertex_shader.cpp
+    src/fragment_shader.cpp
+    src/mesh.cpp)
 
 target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(RendererModule PUBLIC EngineCore)

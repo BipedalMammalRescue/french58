@@ -1,6 +1,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
-#include "RendererModule/Assets/mesh.h"
+#include "RendererModule/Data/vertex.h"
 
 #include <unordered_map>
 #include <tiny_obj_loader.h>
@@ -10,7 +10,7 @@
 using namespace Engine::Extension::RendererModule;
 
 // TODO: add material metadata here
-static bool LoadObj(const char* inputPath, std::vector<Assets::Vertex>& outputVertices, std::vector<unsigned int>& outputIndices)
+static bool LoadObj(const char* inputPath, std::vector<Data::Vertex>& outputVertices, std::vector<unsigned int>& outputIndices)
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -64,7 +64,7 @@ static bool LoadObj(const char* inputPath, std::vector<Assets::Vertex>& outputVe
 				}
 			}
 
-		    Assets::Vertex vertex;
+		    Data::Vertex vertex;
 
 			if (index.vertex_index >= 0)
 			{
@@ -110,7 +110,7 @@ enum class ErrorCodes
 
 int main(int argc, char *argv[])
 {
-	std::vector<Assets::Vertex> outputVertices;
+	std::vector<Data::Vertex> outputVertices;
 	std::vector<unsigned int> outputIndices;
 
 	if (argc != 2)
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 
 	std::cout
 		.write((const char*)&vertexCount, sizeof(vertexCount))
-		.write((const char*)(outputVertices.data()), outputVertices.size() * sizeof(Assets::Vertex))
+		.write((const char*)(outputVertices.data()), outputVertices.size() * sizeof(Data::Vertex))
 		.write((const char*)&indexCount, sizeof(indexCount))
 		.write((const char*)(outputIndices.data()), outputIndices.size() * sizeof(int));
 }

@@ -1,14 +1,12 @@
 #pragma once
 
+#include "EngineCore/Runtime/fwd.h"
+#include "EngineCore/Pipeline/asset_definition.h"
+
 #include <array>
 #include <md5.h>
 
 namespace Engine::Core::Pipeline {
-
-struct AssetDefinition 
-{
-    std::array<unsigned char, 16> Name;
-};
 
 // includes everything defined in a module
 struct ModuleDefinition
@@ -16,16 +14,15 @@ struct ModuleDefinition
     // static definitions
     std::array<unsigned char, 16> Name;
 
-    // assets
-    const AssetDefinition* Assets;
-    size_t AssetsCount;
-};
+    // module state
+    void *(*Initialize)(Runtime::ServiceTable *services);
+    void (*Dispose)(Runtime::ServiceTable *services, void *moduleState);
 
-class ModuleBuilderExample
-{
-public:
-    size_t CountAssets() { return 10; }
-    void Build(ModuleDefinition& def) {}
+    // assets
+    const AssetDefinition *Assets;
+    size_t AssetsCount;
+
+    // TODO: components
 };
 
 } // namespace Engine::Core::Pipeline

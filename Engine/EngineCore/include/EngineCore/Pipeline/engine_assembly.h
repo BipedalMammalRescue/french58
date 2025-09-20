@@ -1,20 +1,16 @@
 #pragma once
 
 #include "module_definition.h"
+
 #include <cstddef>
 
-namespace Engine {
-namespace Core {
-namespace Pipeline {
+namespace Engine::Core::Pipeline {
 
-struct ModuleAssembly
-{
-    ModuleDefinition *Modules = nullptr;
-    size_t ModuleCount = 0;
+struct ModuleAssembly {
+  ModuleDefinition *Modules = nullptr;
+  size_t ModuleCount = 0;
 };
 
 ModuleAssembly ListModules();
 
-} // namespace Pipeline
-} // namespace Core
-} // namespace Engine
+} // namespace Engine::Core::Pipeline

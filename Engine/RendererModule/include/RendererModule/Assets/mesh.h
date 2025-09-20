@@ -1,15 +1,25 @@
 #pragma once
 
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include "EngineCore/Pipeline/fwd.h"
+#include "EngineCore/Runtime/fwd.h"
+#include "EngineCore/Pipeline/hash_id.h"
+#include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::RendererModule::Assets {
 
-struct Vertex
+struct GpuMesh
 {
-    glm::vec3 position{};
-    glm::vec3 normal{};
-    glm::vec2 uv{};
+    SDL_GPUBuffer* IndexBuffer;
+    unsigned int IndexCount;
+    SDL_GPUBuffer* VertexBuffer;
 };
 
+void LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
+              Core::Runtime::ServiceTable *services,
+              void *moduleState);
+
+void UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
+                Core::Runtime::ServiceTable *services, void *moduleState);
+
 }
+

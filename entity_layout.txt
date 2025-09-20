@@ -1,0 +1,37 @@
+Entity layout
+
+int asset_group_count
+
+// TODO: assets need to partially order according to their dependency
+{
+    byte[16] module_id
+    byte[16] asset_type_id
+    int asset_count
+    {
+        byte[16] asset_id 
+        char[32] asset_path
+    }[asset_count] assets
+}[asset_group_count] asset_groups
+
+int entity_count
+
+{
+    int entity_id
+    int parent_entity
+    vec3 position
+}[entity_count] entities
+
+int component_group_count
+
+{
+    byte[16] module_id 
+    byte[16] component_type_id
+    int component_count
+    {
+        int component_id
+        int entity_id
+        int payload_size
+        // TODO: how does a module initialize this data?
+        byte[payload_size] payload
+    }[component_count] components
+}[component_group_count] component_groups
