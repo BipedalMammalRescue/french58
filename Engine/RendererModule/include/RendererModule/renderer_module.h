@@ -15,6 +15,7 @@ struct ModuleState
 {
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> FragmentShaders;
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> VertexShaders;
+    std::unordered_map<Core::Pipeline::HashId, SDL_GPUGraphicsPipeline*> GraphicsPipelines;
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::GpuMesh> Meshes;
 };
 
