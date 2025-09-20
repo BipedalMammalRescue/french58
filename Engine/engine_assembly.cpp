@@ -8,13 +8,13 @@ using namespace Engine;
 // TODO: this file need to be generated based on a list of modules during installs
 
 // define modules here
-Core::Pipeline::ModuleDefinition Modules[] = {
+static Core::Pipeline::ModuleDefinition Modules[] = {
     Extension::RendererModule::GetModuleDefinition()
 };
 
 constexpr size_t ModuleCount = sizeof(Modules) / sizeof(Core::Pipeline::ModuleDefinition);
 
-Core::Pipeline::ModuleAssembly Core::Pipeline::EngineAssembly::ListModules() 
+Core::Pipeline::ModuleAssembly Core::Pipeline::ListModules() 
 {
     return { Modules, ModuleCount };
 }

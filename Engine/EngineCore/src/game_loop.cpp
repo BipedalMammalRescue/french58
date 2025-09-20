@@ -8,11 +8,11 @@ GameLoop::GameLoop() : m_ConfigurationProvider(), m_PlatformAccess(&m_Configurat
 int GameLoop::Run() 
 {
     if (!m_PlatformAccess.InitializeSDL())
-    {
         return 1;
-    }
 
-	bool quit = false;
+    // TODO: load the initial scene
+
+    bool quit = false;
 	SDL_Event e;
 	while (!quit)
 	{

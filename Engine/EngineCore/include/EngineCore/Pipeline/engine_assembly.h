@@ -13,12 +13,7 @@ struct ModuleAssembly
     size_t ModuleCount = 0;
 };
 
-// TODO: need a static table built into this class
-class EngineAssembly
-{
-public:
-    static ModuleAssembly ListModules();
-};
+ModuleAssembly ListModules();
 
 } // namespace Pipeline
 } // namespace Core
