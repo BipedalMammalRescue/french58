@@ -1,9 +1,9 @@
-#include "EngineCore/Runtime/platform_access.h"
+#include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineUtils/ErrorHandling/exceptions.h"
+#include "SDL3/SDL_gpu.h"
 
 #include <SDL3/SDL.h>
-
-#include <stdexcept>
 
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
@@ -12,7 +12,7 @@ static const char s_ServiceName[] = "PlatformAccess";
 static const char s_SDLInitializationError[] = "SDL initialization failed, see logs for details.";
 static const char s_GLInitializationError[] = "OpenGL initialization failed, see logs for details.";
 
-bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
+bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 {
 	// initialize sdl
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -49,35 +49,35 @@ bool Engine::Core::Runtime::PlatformAccess::InitializeSDL()
 	return true;
 }
 
-void Engine::Core::Runtime::PlatformAccess::BeginFrame()
+void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 {
     // create command buffer
     m_CommandBuffer = SDL_AcquireGPUCommandBuffer(m_GpuDevice);
     if (m_CommandBuffer == NULL)
     {
         m_Logger->Error("PlatformAccess", "AcquireGPUCommandBuffer failed: %s", SDL_GetError());
-        throw std::runtime_error(SDL_GetError());
+        SE_THROW_GRAPHICS_EXCEPTION;
     }
 
     // get a target texture
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_CommandBuffer, m_Window, &m_SwapchainTexture, nullptr, nullptr))
     {
         m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-        throw std::runtime_error(SDL_GetError());
+        SE_THROW_GRAPHICS_EXCEPTION;
     }
 }
 
-void Engine::Core::Runtime::PlatformAccess::EndFrame()
+void Engine::Core::Runtime::GraphicsLayer::EndFrame()
 {
 	SDL_SubmitGPUCommandBuffer(m_CommandBuffer);
     m_CommandBuffer = nullptr;
     m_SwapchainTexture = nullptr;
 }
 
-PlatformAccess::PlatformAccess(const Configuration::ConfigurationProvider* configs)
+GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs)
 	: m_Configs(configs) {}
 
-Engine::Core::Runtime::PlatformAccess::~PlatformAccess()
+Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 {
 	// release gpu device
 	SDL_ReleaseWindowFromGPUDevice(m_GpuDevice, m_Window);
@@ -89,4 +89,25 @@ Engine::Core::Runtime::PlatformAccess::~PlatformAccess()
 
 	//Quit SDL subsystems
 	SDL_Quit();
+}
+
+SDL_GPURenderPass* GraphicsLayer::AddRenderPass() 
+{
+    if (m_SwapchainTexture == nullptr || m_CommandBuffer == nullptr)
+        SE_THROW_GRAPHICS_EXCEPTION;
+
+    // create render pass
+    SDL_GPUColorTargetInfo colorTargetInfo = {0};
+    colorTargetInfo.texture = m_SwapchainTexture;
+    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f};
+    colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
+    return renderPass;
+}
+
+void GraphicsLayer::CommitRenderPass(SDL_GPURenderPass* pass) 
+{
+    SDL_EndGPURenderPass(pass);
 }

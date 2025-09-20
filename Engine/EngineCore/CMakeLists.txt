@@ -1,8 +1,6 @@
 add_library(EngineCore STATIC
 	src/logger_service.cpp
-	src/platform_access.cpp
-	src/renderer_service.cpp
-	src/asset_manager.cpp
+	src/graphics_layer.cpp
     src/memory_manager.cpp
     src/game_loop.cpp)
 

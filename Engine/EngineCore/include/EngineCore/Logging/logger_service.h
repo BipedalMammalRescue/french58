@@ -9,6 +9,7 @@ namespace Core
 namespace Logging
 {
 
+// TODO: replace this logging with a threaded logger sending binary data
 class LoggerService
 {
 private:

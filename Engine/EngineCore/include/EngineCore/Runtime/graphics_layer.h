@@ -9,23 +9,12 @@
 
 struct SDL_Window;
 
-namespace Engine::Core::Rendering {
-
-class RendererMesh;
-class RendererMaterial;
-
-}
-
 namespace Engine::Core::Runtime {
 
-class RendererService;
+class GameLoop;
 
-/// <summary>
-/// PlatformAccess handles *almost* everything platform-specific.
-/// This is the first service that other services depend on, it's not a client-facing service.
-/// Currently: this is just a SDL wrapper.
-/// </summary>
-class PlatformAccess
+// Contains states and accesses to graphics related concepts, managed by the game loop.
+class GraphicsLayer
 {
 	// injected
 private:
@@ -33,20 +22,28 @@ private:
 
 	// initialized
 private:
-	friend class Engine::Core::Runtime::RendererService;
 	SDL_Window* m_Window = nullptr;
 	SDL_GPUDevice* m_GpuDevice = nullptr;
     SDL_GPUCommandBuffer* m_CommandBuffer = nullptr;
     SDL_GPUTexture* m_SwapchainTexture = nullptr;
     Logging::LoggerService* m_Logger = Logging::GetLogger();
 
-public:
+    // for game loop to directly control graphics behavior
+private:
+    friend class GameLoop;
     bool InitializeSDL();
 	void BeginFrame();
-    void CreateRenderPass(Rendering::RendererMesh *mesh, Rendering::RendererMaterial *material, const glm::mat4 &mvp);
 	void EndFrame();
-	PlatformAccess(const Configuration::ConfigurationProvider* configs);
-	~PlatformAccess();
+    GraphicsLayer(const Configuration::ConfigurationProvider* configs);
+
+public:
+	~GraphicsLayer();
+
+    inline SDL_Window* GetWindow() { return m_Window; }
+    inline SDL_GPUDevice* GetDevice() { return m_GpuDevice; }
+
+    SDL_GPURenderPass* AddRenderPass();
+    void CommitRenderPass(SDL_GPURenderPass* pass);
 };
 
 }
