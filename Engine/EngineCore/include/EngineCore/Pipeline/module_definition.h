@@ -2,6 +2,7 @@
 
 #include "EngineCore/Runtime/fwd.h"
 #include "EngineCore/Pipeline/asset_definition.h"
+#include "EngineCore/Pipeline/engine_callback.h"
 
 #include <array>
 #include <md5.h>
@@ -19,8 +20,12 @@ struct ModuleDefinition
     void (*Dispose)(Runtime::ServiceTable *services, void *moduleState);
 
     // assets
-    const AssetDefinition *Assets;
+    const AssetDefinition* Assets;
     size_t AssetsCount;
+
+    // event handler
+    const EngineCallback* Callbacks;
+    size_t CallbackCount;
 
     // TODO: components
 };

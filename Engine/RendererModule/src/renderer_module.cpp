@@ -53,7 +53,9 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         InitRendererModule,
         DisposeRendererModule,
         Assets,
-        sizeof(Assets) / sizeof(Core::Pipeline::AssetDefinition)
+        sizeof(Assets) / sizeof(Core::Pipeline::AssetDefinition),
+        nullptr,
+        0
     };
 }
 
