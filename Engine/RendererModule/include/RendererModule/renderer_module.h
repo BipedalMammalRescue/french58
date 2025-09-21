@@ -1,6 +1,5 @@
 #pragma once
 
-#include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/mesh.h"
 
 #include "EngineCore/Pipeline/module_definition.h"
