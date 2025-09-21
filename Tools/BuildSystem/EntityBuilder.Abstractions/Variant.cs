@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using MuThr.DataModels.Schema;
 
 namespace EntityBuilder.Abstractions;
@@ -25,7 +26,7 @@ public enum VariantType : byte
 
 public class Variant : ILeafDataPoint
 {
-
+    [JsonIgnore]
     public VariantType Type { get; private set; } = VariantType.Invalid;
 
     private object? _internalObj = null;

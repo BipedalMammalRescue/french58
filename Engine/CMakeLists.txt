@@ -23,7 +23,7 @@ target_link_libraries(EngineCore PUBLIC constexpr_md5)
 target_include_directories(EngineCore PUBLIC lib/komihash)
 
 # declare engine project early
-add_library(Engine STATIC engine_assembly.cpp)
+add_library(Engine STATIC engine_assembly.cpp game_loop.cpp)
 set_target_properties(Engine PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(Engine PUBLIC EngineCore)
 

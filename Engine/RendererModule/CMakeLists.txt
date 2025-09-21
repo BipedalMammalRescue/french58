@@ -3,7 +3,8 @@ add_library(RendererModule STATIC
     src/vertex_shader.cpp
     src/fragment_shader.cpp
     src/material.cpp
-    src/mesh.cpp)
+    src/mesh.cpp
+    src/mesh_renderer.cpp)
 
 target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(RendererModule PUBLIC EngineCore)

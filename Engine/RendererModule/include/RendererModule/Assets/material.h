@@ -3,8 +3,15 @@
 #include "EngineCore/Pipeline/fwd.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/fwd.h"
+#include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::RendererModule::Assets {
+
+struct Material 
+{
+    SDL_GPUGraphicsPipeline* Pipeline;
+    SDL_GPURenderPass* RenderPass;
+};
 
 void LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
                         Core::Runtime::ServiceTable *services,

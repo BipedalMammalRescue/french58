@@ -1,24 +1,64 @@
 #include "RendererModule/renderer_module.h"
-
-#include "EngineCore/Pipeline/asset_definition.h"
-#include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Pipeline/component_definition.h"
+#include "EngineCore/Pipeline/engine_callback.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
 #include "RendererModule/Assets/vertex_shader.h"
+
+#include "EngineCore/Pipeline/asset_definition.h"
+#include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Runtime/service_table.h"
+#include "EngineCore/Runtime/graphics_layer.h"
+
+#include "RendererModule/Components/mesh_renderer.h"
+#include "SDL3/SDL_gpu.h"
 #include "md5.h"
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void* InitRendererModule(Core::Runtime::ServiceTable* services)
+static void* InitRendererModule(Core::Runtime::ServiceTable* services)
 {
     return new ModuleState();
 }
 
-void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
+static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
 {
     delete static_cast<ModuleState*>(moduleState);
+}
+
+static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleState) 
+{
+    ModuleState* state = static_cast<ModuleState*>(moduleState);
+    SDL_GPUDevice* device = services->GraphicsLayer->GetDevice();
+    SDL_GPURenderPass* pass = services->GraphicsLayer->AddRenderPass();
+
+    for (const Components::MeshRenderer& renderTarget : state->MeshRendererComponents)
+    {
+        auto foundMaterial = state->Materials.find(renderTarget.Material);
+        // TODO: default material
+        if (foundMaterial == state->Materials.end())
+            continue;
+
+        auto foundMesh = state->Meshes.find(renderTarget.Mesh);
+        if (foundMesh == state->Meshes.end())
+            continue;
+
+        // bind pipeline
+        SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
+
+        // bind mesh (VB and IB)
+        SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
+        SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
+        SDL_GPUBufferBinding iboBinding{foundMesh->second.IndexBuffer, 0};
+        SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+        // draw
+        SDL_DrawGPUIndexedPrimitives(pass, foundMesh->second.IndexCount, 1, 0, 0, 0);
+    }
+
+    services->GraphicsLayer->CommitRenderPass(pass);
 }
 
 Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetModuleDefinition()
@@ -47,6 +87,23 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         }
     };
 
+    static const Core::Pipeline::EngineCallback Callbacks[]
+    {
+        {
+            Core::Pipeline::EngineCallbackStage::Render,
+            RenderUpdate
+        }
+    };
+
+    static const Core::Pipeline::ComponentDefinition Components[]
+    {
+        {
+            md5::compute("MeshRenderer"),
+            Components::CompileMeshRenderer,
+            Components::LoadMeshRenderer
+        }
+    };
+
     return Core::Pipeline::ModuleDefinition 
     {
         md5::compute("RendererModule"),
@@ -54,58 +111,9 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         DisposeRendererModule,
         Assets,
         sizeof(Assets) / sizeof(Core::Pipeline::AssetDefinition),
-        nullptr,
-        0
+        Callbacks,
+        sizeof(Callbacks) / sizeof(Core::Pipeline::EngineCallback),
+        Components,
+        sizeof(Components) / sizeof(Core::Pipeline::ComponentDefinition)
     };
 }
-
-
-/*
-
-bool Engine::Core::Runtime::RendererService::QueueRender(RendererMesh *mesh, RendererMaterial *material,
-                                                         const glm::mat4 &mvp)
-{
-    // create command buffer
-    SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(m_Platform->m_GpuDevice);
-    if (cmdbuf == NULL)
-    {
-        m_Logger->Error(s_ChannelName, "AcquireGPUCommandBuffer failed: %s", SDL_GetError());
-        return false;
-    }
-
-    // get a target texture
-    SDL_GPUTexture *swapchainTexture = nullptr;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, m_Platform->m_Window, &swapchainTexture, nullptr, nullptr))
-    {
-        m_Logger->Error(s_ChannelName, "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-        return false;
-    }
-
-    if (swapchainTexture == nullptr)
-    {
-        SDL_SubmitGPUCommandBuffer(cmdbuf);
-        return true;
-    }
-
-    // bind pipeline
-    SDL_BindGPUGraphicsPipeline(renderPass, material->m_ProgramID);
-
-    // bind mesh (VB and IB)
-    SDL_GPUBufferBinding vboBinding{mesh->m_VertexBuffer, 0};
-    SDL_BindGPUVertexBuffers(renderPass, 0, &vboBinding, 1);
-    SDL_GPUBufferBinding iboBinding{mesh->m_IndexBuffer, 0};
-    SDL_BindGPUIndexBuffer(renderPass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-
-    // set the mvp
-    SDL_PushGPUVertexUniformData(cmdbuf, 0, &mvp, sizeof(mvp));
-
-    // draw call
-    SDL_DrawGPUIndexedPrimitives(renderPass, mesh->m_IndexCount, 1, 0, 0, 0);
-    SDL_EndGPURenderPass(renderPass);
-    SDL_SubmitGPUCommandBuffer(cmdbuf);
-
-    return true;
-}
-
-
-*/

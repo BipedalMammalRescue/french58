@@ -3,6 +3,7 @@
 #include "EngineCore/Runtime/fwd.h"
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
+#include "EngineCore/Pipeline/component_definition.h"
 
 #include <array>
 #include <md5.h>
@@ -27,7 +28,9 @@ struct ModuleDefinition
     const EngineCallback* Callbacks;
     size_t CallbackCount;
 
-    // TODO: components
+    // components
+    const ComponentDefinition* Components;
+    size_t ComponentCount;
 };
 
 } // namespace Engine::Core::Pipeline

@@ -5,18 +5,19 @@
 
 #include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/service_table.h"
 
 #include <SDL3/SDL_gpu.h>
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
+void Assets::LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
                   Core::Runtime::ServiceTable *services,
                   void *moduleState) 
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
-    state->GraphicsPipelines.reserve(state->GraphicsPipelines.size() + inputStreams->Count());
+    state->Materials.reserve(state->Materials.size() + inputStreams->Count());
 
     while (inputStreams->MoveNext())
     {
@@ -98,22 +99,22 @@ void LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
         if (newPipeline == nullptr)
             SE_THROW_GRAPHICS_EXCEPTION;
 
-        state->GraphicsPipelines[asset->ID] = newPipeline;
+        state->Materials[asset->ID] = newPipeline;
     }
 }
             
-void UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
+void Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
                           Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     
     for (size_t i = 0; i < count; i++)
     {
-        auto foundPipeline = state->GraphicsPipelines.find(ids[i]);
-        if (foundPipeline == state->GraphicsPipelines.end())
+        auto foundPipeline = state->Materials.find(ids[i]);
+        if (foundPipeline == state->Materials.end())
             continue;
 
         SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), foundPipeline->second);
-        state->GraphicsPipelines.erase(foundPipeline);
+        state->Materials.erase(foundPipeline);
     }
 }

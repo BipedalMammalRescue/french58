@@ -11,7 +11,7 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
+void Assets::LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState)
 {
@@ -138,7 +138,7 @@ void LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
     }
 }
 
-void UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
+void Assets::UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
                           Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
