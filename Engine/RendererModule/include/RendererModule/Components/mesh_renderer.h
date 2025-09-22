@@ -10,6 +10,7 @@ void LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceT
 
 struct MeshRenderer
 {
+    int Entity;
     Core::Pipeline::HashId Material;
     Core::Pipeline::HashId Mesh;
 };

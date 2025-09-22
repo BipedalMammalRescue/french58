@@ -14,6 +14,7 @@ namespace Engine::Core::Pipeline {
 enum class VariantType 
 {
     Byte,
+    Bool,
     Int32,
     Int64,
     Uint32,

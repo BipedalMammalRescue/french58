@@ -18,7 +18,7 @@ struct SpatialRelation
     glm::vec3 Scale;
     glm::quat Rotation;
 
-    glm::mat4 Transform();
+    glm::mat4 Transform() const;
 };
 
 }

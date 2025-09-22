@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Ecs/Components/camera_component.h"
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Pipeline/module_definition.h"
 
@@ -12,7 +13,8 @@ struct RootModuleState
 {
     static Pipeline::ModuleDefinition GetDefinition();
 
-    std::vector<Ecs::Components::SpatialRelation> SpatialComponents;
+    std::unordered_map<int, Ecs::Components::SpatialRelation> SpatialComponents;
+    std::vector<Ecs::Components::Camera> CameraComponents;
 };
 
 }

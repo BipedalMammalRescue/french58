@@ -5,6 +5,7 @@
 #include "RendererModule/Assets/mesh.h"
 #include "RendererModule/Assets/vertex_shader.h"
 #include "RendererModule/Components/mesh_renderer.h"
+#include "RendererModule/configurations.h"
 
 #include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Pipeline/module_definition.h>
@@ -12,6 +13,9 @@
 #include <EngineCore/Runtime/graphics_layer.h>
 #include <EngineCore/Pipeline/component_definition.h>
 #include <EngineCore/Pipeline/engine_callback.h>
+#include <EngineCore/Runtime/module_manager.h>
+#include <EngineCore/Ecs/Components/spatial_component.h>
+#include <EngineCore/Ecs/Components/camera_component.h>
 
 #include <SDL3/SDL_gpu.h>
 #include <md5.h>
@@ -22,7 +26,7 @@ using namespace Engine::Extension::RendererModule;
 
 static void* InitRendererModule(Core::Runtime::ServiceTable* services)
 {
-    return new ModuleState();
+    return new ModuleState { services->ModuleManager->GetRootModule() };
 }
 
 static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
@@ -32,17 +36,57 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
 
 static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleState) 
 {
+    // get the primary engine camera
+    int cameraEntity = -1;
+    for (const Core::Ecs::Components::Camera& candidate : services->ModuleManager->GetRootModule()->CameraComponents) 
+    {
+        if (candidate.IsPrimary)
+        {
+            cameraEntity = candidate.Entity;
+            break;
+        }
+    }
+
+    // abort if primary camera doesn't exist or it doesn't have a valid spatial relation
+    if (cameraEntity == -1)
+        return;
+    auto foundCameraTransform = services->ModuleManager->GetRootModule()->SpatialComponents.find(cameraEntity);
+    if (foundCameraTransform == services->ModuleManager->GetRootModule()->SpatialComponents.end())
+        return;
+
+    // calculate view matrix
+    glm::mat4 viewMatrix = glm::inverse(foundCameraTransform->second.Transform());
+
+    // calculate projection matrix
+    glm::mat4 projectMatrix =
+        glm::perspective(glm::radians<float>(Configuration::FieldOfView),
+                         960.0f / 720.0f, 0.1f, 10000000.0f);
+
+    // pre-calculate the first part of MVP
+    glm::mat4 pvMatrix = projectMatrix * viewMatrix;
+
+    // iterate all models
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     SDL_GPUDevice* device = services->GraphicsLayer->GetDevice();
     SDL_GPURenderPass* pass = services->GraphicsLayer->AddRenderPass();
 
     for (const Components::MeshRenderer& renderTarget : state->MeshRendererComponents)
     {
+        // load the MVP, skip if the renderer has no spatial relation
+        auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
+        if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
+            continue;
+
+        // compute MVP from scene components
+        glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
+
+        // find the material
+        // TODO: default material when it's not found
         auto foundMaterial = state->Materials.find(renderTarget.Material);
-        // TODO: default material
         if (foundMaterial == state->Materials.end())
             continue;
 
+        // find the mesh, abort if there's no mesh
         auto foundMesh = state->Meshes.find(renderTarget.Mesh);
         if (foundMesh == state->Meshes.end())
             continue;
@@ -50,8 +94,8 @@ static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleStat
         // bind pipeline
         SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
 
-        // TODO: load mvp from somewhere
-        glm::mat4 mvp;
+        // insert MVP
+        glm::mat4 mvp = pvMatrix * modelMatrix;
         SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &mvp, sizeof(mvp));
 
         // bind mesh (VB and IB)

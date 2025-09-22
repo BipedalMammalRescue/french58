@@ -44,7 +44,8 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
     glm::quat quatRotation(*angleRotation);
 
     // write out the data
-    output->write((char*)translation, sizeof(glm::vec3))
+    output->write((char*)&input.Entity, sizeof(int))
+        .write((char*)translation, sizeof(glm::vec3))
         .write((char*)scale, sizeof(glm::vec3))
         .write((char*)&quatRotation, sizeof(glm::quat));
     return true;
@@ -58,14 +59,16 @@ void Components::LoadSpatialComponent(size_t count, std::istream* input, Core::R
     for (size_t i = 0; i < count; i++)
     {
         SpatialRelation newComponent;
-        input->read((char*)&newComponent.Translation, sizeof(glm::vec3))
+        int ownerEntity;
+        input->read((char*)&ownerEntity, sizeof(int))
+            .read((char*)&newComponent.Translation, sizeof(glm::vec3))
             .read((char*)&newComponent.Scale, sizeof(glm::vec3))
             .read((char*)&newComponent.Rotation, sizeof(glm::quat));
-        state->SpatialComponents.push_back(newComponent);
+        state->SpatialComponents[ownerEntity] = newComponent;
     }
 }
 
-glm::mat4 Components::SpatialRelation::Transform() 
+glm::mat4 Components::SpatialRelation::Transform() const
 {
     // apply order: TRANSLATION * ROTATION * SCALE
     return glm::scale(glm::translate(glm::mat4(), Translation) * glm::mat4_cast(Rotation), Scale);

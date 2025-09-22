@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/root_module.h"
 
 using namespace Engine::Core::Runtime;
 
@@ -39,7 +40,7 @@ bool ModuleManager::LoadModule(const std::array<unsigned char, 16>&& name, void*
     return true;
 }
 
-void* ModuleManager::FindModule(const Pipeline::HashId& name)
+const void* ModuleManager::FindModule(const Pipeline::HashId& name) const
 {
     auto foundModule = m_LoadedModules.find(name);
     if (foundModule == m_LoadedModules.end())
@@ -48,11 +49,16 @@ void* ModuleManager::FindModule(const Pipeline::HashId& name)
     return foundModule->second;
 }
 
-void* ModuleManager::FindModule(const Pipeline::HashId&& name) 
+const void* ModuleManager::FindModule(const Pipeline::HashId&& name) const
 {
     auto foundModule = m_LoadedModules.find(name);
     if (foundModule == m_LoadedModules.end())
         return nullptr;
     
     return foundModule->second;
+}
+
+const RootModuleState* ModuleManager::GetRootModule() const
+{
+    return static_cast<const RootModuleState*>(FindModule(RootModuleState::GetDefinition().Name));
 }

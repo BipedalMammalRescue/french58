@@ -32,6 +32,7 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
     if (materialPath == nullptr || meshPath == nullptr)
         return false;
 
+    output->write((char*)&input.Entity, sizeof(int));
     output->write((char*)materialPath->data(), 16);
     output->write((char*)meshPath->data(), 16);
     return true;
@@ -44,12 +45,14 @@ void Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runti
 
     for (size_t i = 0; i < count; i++) 
     {
+        int entity;
         Core::Pipeline::HashId material;
         Core::Pipeline::HashId mesh;
 
+        input->read((char*)&entity, sizeof(int));
         input->read((char*)material.Hash.data(), 16);
         input->read((char*)mesh.Hash.data(), 16);
 
-        state->MeshRendererComponents.push_back({ material, mesh });
+        state->MeshRendererComponents.push_back({ entity, material, mesh });
     }
 }
