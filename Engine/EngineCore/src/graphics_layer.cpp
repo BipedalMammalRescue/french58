@@ -69,7 +69,7 @@ void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     // create a single pass to clear screen
     SDL_GPUColorTargetInfo colorTargetInfo = {0};
     colorTargetInfo.texture = m_SwapchainTexture;
-    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f};
+    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f}; // ofc it should be magenta
     colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
