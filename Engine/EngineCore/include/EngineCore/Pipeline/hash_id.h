@@ -37,7 +37,6 @@ public:
     }
 
     HashId() = default;
-    HashId(std::array<unsigned char, 16> hash) : Hash(hash) {}
     HashId(const std::array<unsigned char, 16>& hash) : Hash(hash) {}
     HashId(const std::array<unsigned char, 16>&& hash) : Hash(hash) {}
     HashId(const HashId& other) : Hash(other.Hash) {}

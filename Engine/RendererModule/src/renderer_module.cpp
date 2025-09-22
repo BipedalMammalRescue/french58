@@ -1,19 +1,21 @@
 #include "RendererModule/renderer_module.h"
-#include "EngineCore/Pipeline/component_definition.h"
-#include "EngineCore/Pipeline/engine_callback.h"
+
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
 #include "RendererModule/Assets/vertex_shader.h"
-
-#include "EngineCore/Pipeline/asset_definition.h"
-#include "EngineCore/Pipeline/module_definition.h"
-#include "EngineCore/Runtime/service_table.h"
-#include "EngineCore/Runtime/graphics_layer.h"
-
 #include "RendererModule/Components/mesh_renderer.h"
-#include "SDL3/SDL_gpu.h"
-#include "md5.h"
+
+#include <EngineCore/Pipeline/asset_definition.h>
+#include <EngineCore/Pipeline/module_definition.h>
+#include <EngineCore/Runtime/service_table.h>
+#include <EngineCore/Runtime/graphics_layer.h>
+#include <EngineCore/Pipeline/component_definition.h>
+#include <EngineCore/Pipeline/engine_callback.h>
+
+#include <SDL3/SDL_gpu.h>
+#include <md5.h>
+#include <glm/mat4x4.hpp>
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
@@ -47,6 +49,10 @@ static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleStat
 
         // bind pipeline
         SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
+
+        // TODO: load mvp from somewhere
+        glm::mat4 mvp;
+        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &mvp, sizeof(mvp));
 
         // bind mesh (VB and IB)
         SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};

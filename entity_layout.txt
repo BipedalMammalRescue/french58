@@ -16,9 +16,9 @@ int asset_group_count
 int entity_count
 
 {
+    // no longer includes position/transform in entity
     int entity_id
     int parent_entity
-    vec3 position
 }[entity_count] entities
 
 int component_group_count

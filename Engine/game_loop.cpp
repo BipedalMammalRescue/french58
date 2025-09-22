@@ -5,11 +5,14 @@
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_events.h"
-#include <memory>
 
 using namespace Engine::Core::Runtime;
 
-GameLoop::GameLoop() : m_ConfigurationProvider(), m_GraphicsLayer(&m_ConfigurationProvider), m_WorldState(&m_ConfigurationProvider) {}
+GameLoop::GameLoop() : 
+    m_ConfigurationProvider(), 
+    m_GraphicsLayer(&m_ConfigurationProvider), 
+    m_WorldState(&m_ConfigurationProvider),
+    m_ModuleManager() {}
 
 struct InstancedCallback
 {
@@ -25,18 +28,22 @@ int GameLoop::Run()
 
     ServiceTable services {
         &m_GraphicsLayer,
-        &m_WorldState
+        &m_WorldState,
+        &m_ModuleManager
     };
 
-    // load modules and set up callbacks
     Pipeline::ModuleAssembly modules = Pipeline::ListModules();
     std::vector<InstancedCallback> renderCallbacks;
-    std::unique_ptr<void*[]> moduleStates = std::make_unique<void*[]>(modules.ModuleCount);
+    m_ModuleManager.m_LoadedModules.reserve(modules.ModuleCount);
+    
+    // load modules
     for (size_t i = 0; i < modules.ModuleCount; i++)
     {
         Pipeline::ModuleDefinition moduleDef = modules.Modules[i];
-        moduleStates[i] = moduleDef.Initialize(&services);
+        void* newState = moduleDef.Initialize(&services);
+        m_ModuleManager.LoadModule(moduleDef.Name, newState);
 
+        // set up callback table
         if (moduleDef.CallbackCount > 0)
         {
             for (size_t j = 0; j < moduleDef.CallbackCount; j++) 
@@ -49,7 +56,7 @@ int GameLoop::Run()
                     case Pipeline::EngineCallbackStage::ModuleUpdate:
                         break;
                     case Pipeline::EngineCallbackStage::Render:
-                        renderCallbacks.push_back({ callback.Callback, moduleStates[i] });
+                        renderCallbacks.push_back({ callback.Callback, newState });
                         break;
                 }
             }

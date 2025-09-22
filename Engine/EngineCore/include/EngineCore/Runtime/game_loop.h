@@ -2,6 +2,7 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/world_state.h"
 
 namespace Engine::Core::Runtime {
@@ -13,6 +14,7 @@ private:
     Configuration::ConfigurationProvider m_ConfigurationProvider;
     GraphicsLayer m_GraphicsLayer;
     WorldState m_WorldState;
+    ModuleManager m_ModuleManager;
 
 public:
     GameLoop();

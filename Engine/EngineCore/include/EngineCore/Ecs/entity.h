@@ -9,7 +9,6 @@ struct Entity
 {
     int ID;
     int Parent = -1;
-    glm::vec3 Position;
 };
 
 }

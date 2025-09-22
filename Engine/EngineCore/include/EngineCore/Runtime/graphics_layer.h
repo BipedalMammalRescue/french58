@@ -42,6 +42,7 @@ public:
     inline SDL_Window* GetWindow() { return m_Window; }
     inline SDL_GPUDevice* GetDevice() { return m_GpuDevice; }
 
+    inline SDL_GPUCommandBuffer* GetCurrentCommandBuffer() { return m_CommandBuffer; }
     SDL_GPURenderPass* AddRenderPass();
     void CommitRenderPass(SDL_GPURenderPass* pass);
 };

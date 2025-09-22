@@ -1,53 +1,33 @@
-#include <cstdio>
-#include <cstring>
-#include <fstream>
+#include "glm/fwd.hpp"
+#include "glm/gtc/constants.hpp"
+#include <array>
 #include <iostream>
-
-#include <komihash.h>
-#include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 using namespace std;
 
-template <typename TCallback> void Tokenize(std::istream &input, TCallback &&callback)
+void Foobar(const std::array<int, 4>& id)
 {
-    size_t count = 0;
-    std::string lineCache;
-    std::vector<const char *> words;
-    words.reserve(5);
-
-    while (std::getline(input, lineCache))
+    for (int i = 0; i < 4; i++)
     {
-        // split the line into words
-        size_t currentSegment = 0;
-        for (size_t pos = 0; pos < lineCache.size(); pos++)
-        {
-            if (lineCache[pos] == ' ')
-            {
-                words.push_back(lineCache.c_str() + currentSegment);
-                lineCache[pos] = 0;
-                currentSegment = pos + 1;
-            }
-        }
+        std::cout << id[i] << std::endl;
+    }
+}
 
-        words.push_back(lineCache.c_str() + currentSegment);
-        callback(words);
-        words.clear();
+void Foobar(const std::array<int, 4>&& id)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        std::cout << id[i] << std::endl;
     }
 }
 
 int main()
 {
-    ifstream file("test.txt");
-    istream &filePtr = file;
-    string line;
-
-    Tokenize(file, [](const std::vector<const char *> &line) {
-        for (const char *word : line)
-        {
-            printf("{%s} ", word);
-        }
-        printf("\n");
-    });
+    Foobar({10, 20, 30, 40});
+    std::array<int, 4> arr {10, 20, 30, 40};
+    Foobar(arr);
 
     return 0;
 }

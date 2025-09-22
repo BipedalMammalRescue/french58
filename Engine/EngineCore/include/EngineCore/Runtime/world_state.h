@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <istream>
-#include <unordered_map>
+#include <vector>
 
 namespace Engine::Core::Configuration {
 
@@ -20,14 +20,14 @@ class WorldState
 {
 private:
     friend class GameLoop;
-    // TODO: this is a temp solution
-    std::unordered_map<int, Ecs::Entity> m_Entities;
+    friend struct RootModuleState;
     Configuration::ConfigurationProvider* m_Configs;
+
+    std::vector<Ecs::Entity> m_Entities;
 
     WorldState(Configuration::ConfigurationProvider* configs) : m_Configs(configs) {}
 
 public:
-    bool GetEntityPosition(int id, glm::vec3& outPosition);
     void AddEntity(Ecs::Entity* entities, size_t count);
     bool LoadEntities(std::istream* input);
 };

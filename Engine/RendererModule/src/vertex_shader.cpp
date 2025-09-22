@@ -41,9 +41,9 @@ void Assets::LoadVertexShader(Engine::Core::Pipeline::AssetEnumerable *inputStre
                                               SDL_GPU_SHADERFORMAT_SPIRV,
                                               shaderStage,
                                               0,
-                                              1,
                                               0,
-                                              0};
+                                              0,
+                                              1};
 
         SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
         

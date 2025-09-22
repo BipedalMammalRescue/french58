@@ -65,6 +65,15 @@ void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
         m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
         SE_THROW_GRAPHICS_EXCEPTION;
     }
+
+    // create a single pass to clear screen
+    SDL_GPUColorTargetInfo colorTargetInfo = {0};
+    colorTargetInfo.texture = m_SwapchainTexture;
+    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f};
+    colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
+    SDL_EndGPURenderPass(pass);
 }
 
 void Engine::Core::Runtime::GraphicsLayer::EndFrame()
@@ -97,10 +106,9 @@ SDL_GPURenderPass* GraphicsLayer::AddRenderPass()
         SE_THROW_GRAPHICS_EXCEPTION;
 
     // create render pass
-    SDL_GPUColorTargetInfo colorTargetInfo = {0};
+    SDL_GPUColorTargetInfo colorTargetInfo {0};
     colorTargetInfo.texture = m_SwapchainTexture;
-    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f};
-    colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    colorTargetInfo.load_op = SDL_GPU_LOADOP_LOAD;
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
     SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);

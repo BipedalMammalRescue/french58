@@ -41,7 +41,7 @@ void Assets::LoadFragmentShader(Engine::Core::Pipeline::AssetEnumerable *inputSt
                                               SDL_GPU_SHADERFORMAT_SPIRV,
                                               shaderStage,
                                               0,
-                                              1,
+                                              0,
                                               0,
                                               0};
 

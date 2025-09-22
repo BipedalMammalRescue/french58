@@ -1,13 +1,13 @@
 #pragma once
 
-#include "module_definition.h"
+#include "EngineCore/Pipeline/module_definition.h"
 
 #include <cstddef>
 
 namespace Engine::Core::Pipeline {
 
 struct ModuleAssembly {
-  ModuleDefinition *Modules = nullptr;
+  const ModuleDefinition *Modules = nullptr;
   size_t ModuleCount = 0;
 };
 
