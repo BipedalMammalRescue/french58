@@ -2,8 +2,8 @@
     "profiles": {
         "testing ground": {
             "commandName": "Project",
-            "workingDirectory": "../testground",
-            "commandLineArgs": "build-asset --log-path=./logs/"
+            "workingDirectory": "../../../Assets",
+            "commandLineArgs": "build-entity --out=../built_data --recipe-root=Recipes/ Entities/example.se_entity"
         }
     }
 }

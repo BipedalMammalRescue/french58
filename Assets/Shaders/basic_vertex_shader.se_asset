@@ -7,7 +7,7 @@
         "Source": 
         {
             "$type": "leaf",
-            "Path": "Shaders/basic.frag"
+            "Path": "Shaders/basic.vert"
         }
     }
 }

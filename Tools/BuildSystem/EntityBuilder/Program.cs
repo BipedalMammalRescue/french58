@@ -45,6 +45,7 @@ internal class Program
 
         // actual commands
         rootCommand.AddCommand(new BuildAssetCommand(logger.WithChannel(nameof(BuildAssetCommand))));
+        rootCommand.AddCommand(new BuildEntityCommand(logger.WithChannel(nameof(BuildEntityCommand))));
 
         try
         {

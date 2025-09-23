@@ -12,7 +12,7 @@ bool CompileCameraComponent(Pipeline::RawComponent input, std::ostream* output)
         return false;
 
     output->write((char*)&input.Entity, sizeof(int))
-        .write((char*)&input.FieldV[0].Payload->Data, sizeof(bool));
+        .write((char*)&input.FieldV[0].Payload->Data.Bool, sizeof(bool));
     return true;
 }
 

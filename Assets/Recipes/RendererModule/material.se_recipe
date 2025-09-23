@@ -1,0 +1,32 @@
+{
+    "Module": "RendererModule",
+    "Type": "Material",
+    "Action": {
+        "$type": "bypass",
+        "ChildTasks": [
+            {
+                "$type": "derive",
+                "SourcePath": "VertexShader"
+            },
+            {
+                "$type": "derive",
+                "SourcePath": "FragmentShader"
+            }
+        ],
+        "OutputComponents": [
+            {
+                "$type": "concat",
+                "Sources": [
+                    {
+                        "$type": "binary",
+                        "SourcePath": "VertexShader"
+                    },
+                    {
+                        "$type": "binary",
+                        "SourcePath": "FragmentShader"
+                    }
+                ]
+            }
+        ]
+    }
+}

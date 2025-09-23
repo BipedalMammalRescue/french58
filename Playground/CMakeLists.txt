@@ -1,3 +1,3 @@
 add_executable(Playground app.cpp)
 
-target_include_directories(Playground PUBLIC ../Engine/lib/glm)
+target_link_libraries(Playground PUBLIC constexpr_md5)

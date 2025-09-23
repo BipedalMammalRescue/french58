@@ -27,11 +27,11 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
         {
             translation = &input.FieldV[i].Payload->Data.Vec3;
         }
-        else if (input.FieldV[i].Name == md5::compute("Translation"))
+        else if (input.FieldV[i].Name == md5::compute("Scale"))
         {
             scale = &input.FieldV[i].Payload->Data.Vec3;
         }
-        else if (input.FieldV[i].Name == md5::compute("Translation"))
+        else if (input.FieldV[i].Name == md5::compute("Rotation"))
         {
             angleRotation = &input.FieldV[i].Payload->Data.Vec3;
         }

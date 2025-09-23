@@ -9,6 +9,7 @@ namespace EntityBuilder.Abstractions;
 public enum VariantType : byte
 {
     Byte,
+    Bool,
     Int32,
     Int64,
     Uint32,
@@ -40,6 +41,18 @@ public class Variant : ILeafDataPoint
                 throw new Exception("Multiple values defined for variant.");
 
             Type = VariantType.Byte;
+            _internalObj = value;
+        }
+    }
+
+    public bool Bool
+    {
+        get => (bool)InternalObj; set
+        {
+            if (_internalObj != null)
+                throw new Exception("Multiple values defined for variant.");
+
+            Type = VariantType.Bool;
             _internalObj = value;
         }
     }
@@ -207,12 +220,15 @@ public class Variant : ILeafDataPoint
         _ => throw new Exception("Variant type unset.")
     };
 
-    private void Write(Span<byte> dest)
+    public void Write(Span<byte> dest)
     {
         switch (Type)
         {
             case VariantType.Byte:
                 dest[0] = Byte;
+                break;
+            case VariantType.Bool:
+                dest[0] = Bool ? (byte)0 : (byte)1;
                 break;
             case VariantType.Int32:
                 BinaryPrimitives.WriteInt32LittleEndian(dest, Int32);
@@ -247,9 +263,8 @@ public class Variant : ILeafDataPoint
 
     public byte[] GetBytes()
     {
-        byte[] output = new byte[sizeof(byte) + GetLength()];
-        output[0] = (byte)Type;
-        Write(output.AsSpan(1));
+        byte[] output = new byte[GetLength()];
+        Write(output);
         return output;
     }
 }

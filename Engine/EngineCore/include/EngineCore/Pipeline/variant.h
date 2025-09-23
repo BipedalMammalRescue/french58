@@ -11,7 +11,7 @@
 
 namespace Engine::Core::Pipeline {
 
-enum class VariantType 
+enum class VariantType : unsigned char
 {
     Byte,
     Bool,
@@ -35,6 +35,7 @@ struct Variant
     VariantType Type;
     union {
         unsigned char Byte;
+        bool Bool;
         int32_t Int32;
         uint32_t Uint32;
         uint64_t Uint64;

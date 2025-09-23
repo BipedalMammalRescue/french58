@@ -6,4 +6,6 @@ internal enum ErrorCodes : int
     InvalidRecipeRoot,
     InvalidAssetOutput,
     UnexpectedError,
+    InvalidEntity,
+    CircularDependency
 }

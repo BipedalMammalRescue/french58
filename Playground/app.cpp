@@ -1,9 +1,6 @@
-#include "glm/fwd.hpp"
-#include "glm/gtc/constants.hpp"
 #include <array>
 #include <iostream>
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <md5.h>
 
 using namespace std;
 
@@ -25,9 +22,19 @@ void Foobar(const std::array<int, 4>&& id)
 
 int main()
 {
-    Foobar({10, 20, 30, 40});
-    std::array<int, 4> arr {10, 20, 30, 40};
-    Foobar(arr);
+    constexpr std::array<unsigned char, 16> hash = md5::compute("111");
+    for (char i = 0; i < 16; i++)
+    {
+        char low = hash[i] & 0x0F;
+        char high = (hash[i] & 0xF0) >> 4;
+
+        low = low <= 9 ? (low + '0') : (low - 9 + 'A');
+        high = high <= 9 ? (high + '0') : (high - 9 + 'A');
+
+        std::cout << high << low << '-';
+    }
+
+    std::cout << endl;
 
     return 0;
 }

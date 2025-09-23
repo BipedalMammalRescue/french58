@@ -2,14 +2,12 @@ Entity layout
 
 int asset_group_count
 
-// TODO: assets need to partially order according to their dependency
 {
     byte[16] module_id
     byte[16] asset_type_id
     int asset_count
     {
-        byte[16] asset_id 
-        char[32] asset_path
+        byte[16] asset_id
     }[asset_count] assets
 }[asset_group_count] asset_groups
 
@@ -30,8 +28,10 @@ int component_group_count
     {
         int component_id
         int entity_id
-        int payload_size
-        // TODO: how does a module initialize this data?
-        byte[payload_size] payload
+        int field_count
+        {
+            byte[16] field_name
+            Variant field_value
+        }[field_count] fields
     }[component_count] components
 }[component_group_count] component_groups

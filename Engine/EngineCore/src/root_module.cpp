@@ -1,4 +1,5 @@
 #include "EngineCore/Runtime/root_module.h"
+#include "EngineCore/Ecs/Components/camera_component.h"
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Pipeline/component_definition.h"
 #include "EngineCore/Pipeline/module_definition.h"
@@ -20,9 +21,14 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
 {
     static const Pipeline::ComponentDefinition rootComponents[] {
         {
-            md5::compute("SpatialComponent"),
+            md5::compute("SpatialRelation"),
             Ecs::Components::CompileSpatialComponent,
             Ecs::Components::LoadSpatialComponent
+        },
+        {
+            md5::compute("Camera"),
+            Ecs::Components::CompileCameraComponent,
+            Ecs::Components::LoadCameraComponent
         }
     };
 

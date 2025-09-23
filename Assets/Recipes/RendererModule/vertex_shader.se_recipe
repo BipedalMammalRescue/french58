@@ -1,11 +1,11 @@
 {
     "Module": "RendererModule",
-    "Type": "FragmentShader",
+    "Type": "VertexShader",
     "Action": {
         "$type": "command",
         "Process": "glslc",
         "Arguments": [
-            "-fshader-stage=fragment",
+            "-fshader-stage=vertex",
             "-o",
             "-",
             "#(Source)"
