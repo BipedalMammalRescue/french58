@@ -271,7 +271,7 @@ public class BuildEntityCommand : Command
         // print out the asset list
         _logger.Verbose("Writing out asset groups ...");
         await using FileStream outEntityFile = File.Create(Path.Combine(outPath.FullName, Path.ChangeExtension(inputFile.Name, "bse_entity")));
-        outEntityFile.Write(assetGroups.Count());
+        outEntityFile.Write(assetGroups.Length);
         foreach (AssetGroup group in assetGroups)
         {
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
