@@ -3,4 +3,4 @@
 asset_key=$(realpath -m --relative-to=$ASSET_ROOT $1)
 
 cd $ASSET_ROOT
-EntityBuilder build-asset --log-path=../logs --asset-out=../built_assets --recipe-root=Recipes $asset_key
+EntityBuilder build-asset --log-path=../logs --asset-out=../built_data --recipe-root=Recipes $asset_key
