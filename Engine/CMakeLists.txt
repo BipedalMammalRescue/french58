@@ -30,6 +30,9 @@ target_link_libraries(Engine PUBLIC EngineCore)
 # define extension modules here; they should all depend on at least the engine core target
 add_subdirectory(RendererModule)
 
+# tools
+add_subdirectory(BuildComponent)
+
 # tests
 add_executable(EngineTests Tests/app.cpp)
 target_link_libraries(EngineTests PUBLIC EngineCore)

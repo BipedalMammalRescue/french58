@@ -1,6 +1,8 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/variant.h"
+
 #include <ostream>
 #include <istream>
 #include <array>
@@ -11,12 +13,10 @@ struct ServiceTable;
 
 namespace Engine::Core::Pipeline {
 
-struct Variant;
-
 struct Field 
 {
     HashId Name;
-    Variant* Payload;
+    Variant Payload;
 };
 
 struct RawComponent

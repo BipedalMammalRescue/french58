@@ -11,9 +11,9 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
 {
     // verify input shape
     if (input.FieldC != 3
-        || input.FieldV[0].Payload->Type != Pipeline::VariantType::Vec3
-        || input.FieldV[1].Payload->Type != Pipeline::VariantType::Vec3
-        || input.FieldV[2].Payload->Type != Pipeline::VariantType::Vec3)
+        || input.FieldV[0].Payload.Type != Pipeline::VariantType::Vec3
+        || input.FieldV[1].Payload.Type != Pipeline::VariantType::Vec3
+        || input.FieldV[2].Payload.Type != Pipeline::VariantType::Vec3)
         return false;
 
     // get values from fields
@@ -25,15 +25,15 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
     {
         if (input.FieldV[i].Name == md5::compute("Translation"))
         {
-            translation = &input.FieldV[i].Payload->Data.Vec3;
+            translation = &input.FieldV[i].Payload.Data.Vec3;
         }
         else if (input.FieldV[i].Name == md5::compute("Scale"))
         {
-            scale = &input.FieldV[i].Payload->Data.Vec3;
+            scale = &input.FieldV[i].Payload.Data.Vec3;
         }
         else if (input.FieldV[i].Name == md5::compute("Rotation"))
         {
-            angleRotation = &input.FieldV[i].Payload->Data.Vec3;
+            angleRotation = &input.FieldV[i].Payload.Data.Vec3;
         }
     }
 

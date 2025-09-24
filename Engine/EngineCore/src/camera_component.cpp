@@ -5,18 +5,18 @@
 using namespace Engine::Core;
 using namespace Engine::Core::Ecs::Components;
 
-bool CompileCameraComponent(Pipeline::RawComponent input, std::ostream* output)
+bool Engine::Core::Ecs::Components::CompileCameraComponent(Pipeline::RawComponent input, std::ostream* output)
 {
     // verify the only field
-    if (input.FieldC != 1 || input.FieldV[0].Payload->Type != Pipeline::VariantType::Bool)
+    if (input.FieldC != 1 || input.FieldV[0].Payload.Type != Pipeline::VariantType::Bool)
         return false;
 
     output->write((char*)&input.Entity, sizeof(int))
-        .write((char*)&input.FieldV[0].Payload->Data.Bool, sizeof(bool));
+        .write((char*)&input.FieldV[0].Payload.Data.Bool, sizeof(bool));
     return true;
 }
 
-void LoadCameraComponent(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState)
+void Engine::Core::Ecs::Components::LoadCameraComponent(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState)
 {
     Runtime::RootModuleState* state = static_cast<Runtime::RootModuleState*>(moduleState);
     state->CameraComponents.reserve(state->CameraComponents.size() + count);

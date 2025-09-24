@@ -2,9 +2,11 @@ using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using EntityBuilder.Abstractions;
 using MuThr.DataModels;
@@ -93,6 +95,78 @@ public class BuildEntityCommand : Command
                 };
             }
         }
+    }
+
+    private async Task<string?> BuildComponentGroupAsync(ComponentGroup group)
+    {
+        using Process componentBuilder = new();
+        componentBuilder.StartInfo.FileName = "BuildComponent";
+        componentBuilder.StartInfo.RedirectStandardInput = true;
+        componentBuilder.StartInfo.RedirectStandardOutput = true;
+        componentBuilder.ErrorDataReceived += (_, e) =>
+        {
+            _logger.Information("Builder message: {message}", e.Data);
+        };
+
+        // TODO: set up a way to report error
+        componentBuilder.StartInfo.RedirectStandardError = true;
+
+        componentBuilder.Start();
+
+        Task inputTask = Task.Run(() =>
+        {
+            Span<byte> variantBuffer = stackalloc byte[72];
+
+            // module
+            componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
+
+            // type
+            componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
+
+            // component count
+            componentBuilder.StandardInput.BaseStream.Write(group.Components.Length);
+
+            foreach (CompiledComponent component in group.Components)
+            {
+                // ids
+                componentBuilder.StandardInput.BaseStream.Write(component.Id);
+                componentBuilder.StandardInput.BaseStream.Write(component.Entity);
+
+                // fields
+                componentBuilder.StandardInput.BaseStream.Write(component.Fields.Length);
+                foreach (ComponentField field in component.Fields)
+                {
+                    componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(field.Name)));
+
+                    variantBuffer.Clear();
+                    BinaryPrimitives.WriteInt32LittleEndian(variantBuffer, (byte)field.Value.Type);
+
+                    // align the data to 8 bytes
+                    Span<byte> dataBuffer = variantBuffer[8..];
+                    field.Value.Write(dataBuffer);
+                    componentBuilder.StandardInput.BaseStream.Write(variantBuffer);
+                }
+            }
+        });
+
+        string tempFilePath = Path.GetTempFileName();
+        {
+
+            await using FileStream outFile = File.Create(tempFilePath);
+            Task copyTask = componentBuilder.StandardOutput.BaseStream.CopyToAsync(outFile);
+
+            await inputTask.ConfigureAwait(false);
+            await componentBuilder.WaitForExitAsync().ConfigureAwait(false);
+            await copyTask.ConfigureAwait(false);
+        }
+
+        if (componentBuilder.ExitCode != 0)
+        {
+            File.Delete(tempFilePath);
+            return null;
+        }
+
+        return tempFilePath;
     }
 
     public async Task<int> InvokeAsync(InvocationContext context)
@@ -196,8 +270,6 @@ public class BuildEntityCommand : Command
             group.Roots = group.Tasks.Where(t => taskProvider.AssetRelations[t].All(dep => !taskToGroupMapping.TryGetValue(dep, out AssetGroup? depGroup) || depGroup != group));
         }
 
-        // .Where(buildOutput.ContainsKey)
-
         // sort asset groups
         _logger.Verbose("Sorting asset groups in topolotical order ...");
         List<AssetGroup> groupOrdering = [];
@@ -271,6 +343,7 @@ public class BuildEntityCommand : Command
         // print out the asset list
         _logger.Verbose("Writing out asset groups ...");
         await using FileStream outEntityFile = File.Create(Path.Combine(outPath.FullName, Path.ChangeExtension(inputFile.Name, "bse_entity")));
+        outEntityFile.Write(0xCCBBFFF1);
         outEntityFile.Write(assetGroups.Length);
         foreach (AssetGroup group in assetGroups)
         {
@@ -286,6 +359,7 @@ public class BuildEntityCommand : Command
 
         // print out the entities
         _logger.Verbose("Building entities ...");
+        outEntityFile.Write(0xCCBBFFF2);
         outEntityFile.Write(entities.Length);
         foreach (CompiledEntity entity in entities)
         {
@@ -294,32 +368,29 @@ public class BuildEntityCommand : Command
         }
         _logger.Information("Entity section printed.");
 
-        // print out component groups
-        Span<byte> variantBuffer = stackalloc byte[72]; // this size is determined from engine code
-        _logger.Verbose("Building component groups ...");
-        outEntityFile.Write(componentGroups.Length);
-        foreach (ComponentGroup group in componentGroups)
+        // launch the component builder and start funneling in the data
+        _logger.Verbose("Launching component builder processes ...");
+        outEntityFile.Write(0xCCBBFFF3);
+        (ComponentGroup, Task<string?>)[] componentTasks = [.. componentGroups.Select(group => (group, Task.Run(async () => await BuildComponentGroupAsync(group).ConfigureAwait(false))))];
+        outEntityFile.Write(componentTasks.Length);
+        foreach ((ComponentGroup group, Task<string?> task) in componentTasks)
         {
+            string? result = await task.ConfigureAwait(false);
+            if (result == null)
+            {
+                _logger.Error("Failed to compile components for group {module}:{type}, it's skipped in the result entity.", group.Module, group.Type);
+                continue;
+            }
+
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
 
             outEntityFile.Write(group.Components.Length);
-            foreach (CompiledComponent component in group.Components)
-            {
-                outEntityFile.Write(component.Id);
-                outEntityFile.Write(component.Entity);
 
-                outEntityFile.Write(component.Fields.Length);
-                foreach (ComponentField field in component.Fields)
-                {
-                    outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(field.Name)));
+            await using FileStream componentFile = File.OpenRead(result);
+            await componentFile.CopyToAsync(outEntityFile);
 
-                    BinaryPrimitives.WriteInt32LittleEndian(variantBuffer, (byte)field.Value.Type);
-                    // align the data to 8 bytes
-                    Span<byte> dataBuffer = variantBuffer[8..];
-                    field.Value.Write(dataBuffer);
-                }
-            }
+            _logger.Information("Printed component group {module}:{type}", group.Module, group.Type);
         }
         _logger.Information("Component section printed.");
         return 0;

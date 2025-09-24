@@ -43,6 +43,17 @@ public:
     HashId(const HashId&& other) : Hash(other.Hash) {}
 };
 
+struct HashIdTuple
+{
+    HashId First;
+    HashId Second;
+
+    inline bool operator==(const HashIdTuple& other) const 
+    { 
+        return First == other.First && Second == other.Second;
+    }
+};
+
 }
 
 template <>
@@ -51,5 +62,14 @@ struct std::hash<Engine::Core::Pipeline::HashId>
     std::size_t operator()(const Engine::Core::Pipeline::HashId& k) const
     {
         return k.LowQuad();
+    }
+};
+
+template <>
+struct std::hash<Engine::Core::Pipeline::HashIdTuple>
+{
+    std::size_t operator()(const Engine::Core::Pipeline::HashIdTuple& k) const
+    {
+        return ((k.First.HighQuad() & 0xFFFFFFFF) << 32) + (k.Second.HighQuad() & 0xFFFFFFFF);
     }
 };

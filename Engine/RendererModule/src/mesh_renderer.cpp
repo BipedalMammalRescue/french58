@@ -10,8 +10,8 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
 {
     // verify the structure is good
     if (input.FieldC != 2
-        || input.FieldV[0].Payload->Type != Core::Pipeline::VariantType::Path 
-        || input.FieldV[1].Payload->Type != Core::Pipeline::VariantType::Path)
+        || input.FieldV[0].Payload.Type != Core::Pipeline::VariantType::Path 
+        || input.FieldV[1].Payload.Type != Core::Pipeline::VariantType::Path)
         return false;
 
     // write out the two asset references to the output
@@ -21,11 +21,11 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
     {
         if (input.FieldV[i].Name == md5::compute("Material")) 
         {
-            materialPath = &input.FieldV[i].Payload->Data.Path;
+            materialPath = &input.FieldV[i].Payload.Data.Path;
         }
         if (input.FieldV[i].Name == md5::compute("Mesh")) 
         {
-            meshPath = &input.FieldV[i].Payload->Data.Path;
+            meshPath = &input.FieldV[i].Payload.Data.Path;
         }
     }
 
