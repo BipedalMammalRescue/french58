@@ -16,16 +16,6 @@
 
 using namespace Engine::Core::Runtime;
 
-enum class FileIoResult
-{
-    Success,
-    NotOpened,
-    Corrupted,
-    AssetGroupNotFound,
-    ModuleNotFound,
-    ComponentGroupNotFound
-};
-
 GameLoop::GameLoop(Pipeline::ModuleAssembly modules) : 
     m_ConfigurationProvider(),
     m_Modules(modules)
@@ -61,7 +51,7 @@ struct InstancedCallback
     void* InstanceState;
 };
 
-int GameLoop::Run() 
+int GameLoop::Run(const char* initialEntity) 
 {
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider);
     WorldState worldState(&m_ConfigurationProvider);
@@ -108,6 +98,7 @@ int GameLoop::Run()
     }
 
     // TODO: load the initial scene
+    FileIoResult loadResult = LoadEntity(initialEntity, services);
 
     bool quit = false;
 	SDL_Event e;
@@ -198,17 +189,17 @@ static bool CheckMagicWord(unsigned int target, std::istream* input)
     return target == getWord;
 }
 
-int GameLoop::LoadEntity(const char* filePath, ServiceTable services)
+FileIoResult GameLoop::LoadEntity(const char* filePath, ServiceTable services)
 {
     std::ifstream entityFile;
     entityFile.open(filePath);
 
     if (!entityFile.is_open())
-        return static_cast<int>(FileIoResult::NotOpened);
+        return FileIoResult::NotOpened;
 
     // read the asset section
     if (!CheckMagicWord(0xCCBBFFF1, &entityFile))
-        return static_cast<int>(FileIoResult::Corrupted);
+        return FileIoResult::Corrupted;
     int assetGroupCount = 0;
     entityFile.read((char*)&assetGroupCount, sizeof(int));
     for (int assetGroupIndex = 0; assetGroupIndex < assetGroupCount; assetGroupIndex ++)
@@ -218,11 +209,11 @@ int GameLoop::LoadEntity(const char* filePath, ServiceTable services)
 
         auto targetAssetType = m_Assets.find(assetGroupId);
         if (targetAssetType == m_Assets.end())
-            return static_cast<int>(FileIoResult::AssetGroupNotFound);
+            return FileIoResult::AssetGroupNotFound;
 
         auto targetModuleState = services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
         if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
-            return static_cast<int>(FileIoResult::ModuleNotFound);
+            return FileIoResult::ModuleNotFound;
 
         StreamAssetEnumerator enumerator(&entityFile);
         targetAssetType->second.Load(&enumerator, &services, targetModuleState->second);
@@ -230,11 +221,11 @@ int GameLoop::LoadEntity(const char* filePath, ServiceTable services)
 
     // read the entities
     if (!CheckMagicWord(0xCCBBFFF2, &entityFile) || !services.WorldState->LoadEntities(&entityFile))
-        return static_cast<int>(FileIoResult::Corrupted);
+        return FileIoResult::Corrupted;
 
     // read the components
     if (!CheckMagicWord(0xCCBBFFF3, &entityFile))
-        return static_cast<int>(FileIoResult::Corrupted);
+        return FileIoResult::Corrupted;
     int componentGroupCount = 0;
     entityFile.read((char*)&componentGroupCount, sizeof(int));
     for (int componentGroupIndex = 0; componentGroupIndex < componentGroupCount; componentGroupIndex ++)
@@ -244,16 +235,16 @@ int GameLoop::LoadEntity(const char* filePath, ServiceTable services)
         
         auto targetComponent = m_Components.find(componentGroupId);
         if (targetComponent == m_Components.end())
-            return (int)FileIoResult::ComponentGroupNotFound;
+            return FileIoResult::ComponentGroupNotFound;
 
         auto targetModuleState = services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
         if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
-            return static_cast<int>(FileIoResult::ModuleNotFound);
+            return FileIoResult::ModuleNotFound;
 
         int componentCount = 0;
         entityFile.read((char*)&componentCount, sizeof(int));
         targetComponent->second.Load(componentCount, &entityFile, &services, targetModuleState->second);
     }
 
-    return (int)FileIoResult::Success;
+    return FileIoResult::Success;
 }

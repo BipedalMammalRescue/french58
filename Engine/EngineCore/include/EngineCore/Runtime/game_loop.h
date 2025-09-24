@@ -11,6 +11,16 @@
 
 namespace Engine::Core::Runtime {
 
+enum class FileIoResult
+{
+    Success,
+    NotOpened,
+    Corrupted,
+    AssetGroupNotFound,
+    ModuleNotFound,
+    ComponentGroupNotFound
+};
+
 class GameLoop
 {
 private:
@@ -21,11 +31,11 @@ private:
     std::unordered_map<Pipeline::HashIdTuple, Pipeline::AssetDefinition> m_Assets;
 
     // IO utilities (maybe move this to a service at sometime?)
-    int LoadEntity(const char* filePath, ServiceTable services);
+    FileIoResult LoadEntity(const char* filePath, ServiceTable services);
 
 public:
     GameLoop(Pipeline::ModuleAssembly modules);
-    int Run();
+    int Run(const char* initialEntity);
 };
 
 }

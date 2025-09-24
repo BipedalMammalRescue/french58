@@ -1,0 +1,15 @@
+int component_group_count
+{
+    byte[16] module_id 
+    byte[16] component_type_id
+    int component_count
+    {
+        int component_id
+        int entity_id
+        int field_count
+        {
+            byte[16] field_name
+            Variant field_value
+        }[field_count] fields
+    }[component_count] components
+}[component_group_count] component_groups

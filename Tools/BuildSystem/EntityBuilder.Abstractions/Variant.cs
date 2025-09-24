@@ -228,7 +228,7 @@ public class Variant : ILeafDataPoint
                 dest[0] = Byte;
                 break;
             case VariantType.Bool:
-                dest[0] = Bool ? (byte)0 : (byte)1;
+                dest[0] = Bool ? (byte)1 : (byte)0;
                 break;
             case VariantType.Int32:
                 BinaryPrimitives.WriteInt32LittleEndian(dest, Int32);

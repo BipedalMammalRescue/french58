@@ -4,5 +4,5 @@
 int main()
 {
     Engine::Core::Runtime::GameLoop gameloop(Engine::Core::Pipeline::ListModules());
-    return gameloop.Run();
+    return gameloop.Run("example.bse_entity");
 }

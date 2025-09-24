@@ -75,7 +75,8 @@ public class BuildEntityCommand : Command
         public required string Type { get; set; }
         public required IEnumerable<string> Tasks { get; set; }
         public IEnumerable<string> Roots { get; set; } = [];
-        public IEnumerable<AssetGroup> DependsOn { get; set; } = [];
+        public HashSet<AssetGroup> DependsOn { get; set; } = [];
+        public HashSet<AssetGroup> Dependents { get; set; } = [];
 
         public override string ToString() => $"{Module}:{Type}";
     }
@@ -275,24 +276,35 @@ public class BuildEntityCommand : Command
         Dictionary<string, AssetGroup> taskToGroupMapping = assetGroups.SelectMany(g => g.Tasks.Select(t => new KeyValuePair<string, AssetGroup>(t, g))).ToDictionary();
         foreach (AssetGroup group in assetGroups)
         {
-            group.DependsOn = group.Tasks.SelectMany(task => taskProvider.AssetRelations[task]).Where(buildOutput.ContainsKey).Select(t => taskToGroupMapping[t]).ToHashSet();
+            group.DependsOn = [.. group.Tasks.SelectMany(task => taskProvider.AssetRelations[task]).Where(buildOutput.ContainsKey).Select(t => taskToGroupMapping[t])];
             group.Roots = group.Tasks.Where(t => taskProvider.AssetRelations[t].All(dep => !taskToGroupMapping.TryGetValue(dep, out AssetGroup? depGroup) || depGroup != group));
+        }
+
+        foreach (AssetGroup group in assetGroups)
+        {
+            group.Dependents = assetGroups.Where(g => g.DependsOn.Contains(group)).ToHashSet();
         }
 
         // sort asset groups
         _logger.Verbose("Sorting asset groups in topolotical order ...");
         List<AssetGroup> groupOrdering = [];
         {
-            HashSet<AssetGroup> seen = [];
-            Stack<(AssetGroup, ImmutableHashSet<AssetGroup>)> stack = [];
-            foreach (AssetGroup group in assetGroups)
+            AssetGroup[] rootGroups = [.. assetGroups.Where(group => group.DependsOn.Count == 0)];
+            if (rootGroups.Length <= 0)
             {
-                stack.Push((group, []));
+                _logger.Fatal("Circular dependency among asset groups detected.");
+                return (int)ErrorCodes.CircularDependency;
             }
-
-            while (stack.Count > 0)
+            
+            HashSet<AssetGroup> seen = [];
+            Queue<(AssetGroup, ImmutableHashSet<AssetGroup>)> queue = [];
+            foreach (AssetGroup group in rootGroups)
             {
-                (AssetGroup next, ImmutableHashSet<AssetGroup> path) = stack.Pop();
+                queue.Enqueue((group, []));
+            }
+            while (queue.Count > 0)
+            {
+                (AssetGroup next, ImmutableHashSet<AssetGroup> path) = queue.Dequeue();
                 if (path.Contains(next))
                 {
                     _logger.Fatal("Circular dependency in asset groups detected: {path} - {last}", path, next);
@@ -300,15 +312,20 @@ public class BuildEntityCommand : Command
                 }
 
                 ImmutableHashSet<AssetGroup> newPath = path.Add(next);
-                foreach (AssetGroup child in next.DependsOn)
+
+                if (seen.Contains(next))
+                    continue;
+
+                if (next.DependsOn.Any(d => !seen.Contains(d)))
+                    continue;
+
+                foreach (AssetGroup dependent in next.Dependents)
                 {
-                    stack.Push((child, newPath));
+                    queue.Enqueue((dependent, newPath));
                 }
 
-                if (seen.Add(next))
-                {
-                    groupOrdering.Add(next);
-                }
+                seen.Add(next);
+                groupOrdering.Add(next);
             }
         }
 
@@ -316,6 +333,7 @@ public class BuildEntityCommand : Command
         _logger.Verbose("Sorting within each asset group in topological order ...");
         foreach (AssetGroup group in groupOrdering)
         {
+            // TODO: this is WRONG we need bidirectional dependency tracking
             HashSet<string> seen = [];
             List<string> outOrder = [];
             Stack<(string, ImmutableHashSet<string>)> stack = [];
@@ -353,8 +371,8 @@ public class BuildEntityCommand : Command
         _logger.Verbose("Writing out asset groups ...");
         await using FileStream outEntityFile = File.Create(Path.Combine(outPath.FullName, Path.ChangeExtension(inputFile.Name, "bse_entity")));
         outEntityFile.Write(0xCCBBFFF1);
-        outEntityFile.Write(assetGroups.Length);
-        foreach (AssetGroup group in assetGroups)
+        outEntityFile.Write(groupOrdering.Count);
+        foreach (AssetGroup group in groupOrdering)
         {
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
@@ -363,6 +381,7 @@ public class BuildEntityCommand : Command
             {
                 outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(task)));
             }
+            _logger.Information("Printed asset group {module}:{type}", group.Module, group.Type);
         }
         _logger.Information("Assets section printed.");
 
