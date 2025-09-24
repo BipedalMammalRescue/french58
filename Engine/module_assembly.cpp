@@ -2,7 +2,7 @@
 
 #include <EngineCore/Runtime/root_module.h>
 #include <EngineCore/Pipeline/module_definition.h>
-#include <EngineCore/Pipeline/engine_assembly.h>
+#include <EngineCore/Pipeline/module_assembly.h>
 
 using namespace Engine;
 

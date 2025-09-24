@@ -6,7 +6,8 @@ add_library(EngineCore STATIC
     src/spatial_component.cpp
     src/world_state.cpp
     src/module_manager.cpp
-    src/camera_component.cpp)
+    src/camera_component.cpp
+    src/game_loop.cpp)
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(EngineCore PRIVATE cxx_std_17)

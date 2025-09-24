@@ -1,5 +1,4 @@
 #include "EngineCore/Runtime/game_loop.h"
-#include "EngineCore/Pipeline/engine_assembly.h"
 
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/module_definition.h"
@@ -8,11 +7,12 @@
 
 using namespace Engine::Core::Runtime;
 
-GameLoop::GameLoop() : 
+GameLoop::GameLoop(Pipeline::ModuleAssembly modules) : 
     m_ConfigurationProvider(), 
     m_GraphicsLayer(&m_ConfigurationProvider), 
     m_WorldState(&m_ConfigurationProvider),
-    m_ModuleManager() {}
+    m_ModuleManager(),
+    m_Modules(modules) {}
 
 struct InstancedCallback
 {
@@ -32,14 +32,13 @@ int GameLoop::Run()
         &m_ModuleManager
     };
 
-    Pipeline::ModuleAssembly modules = Pipeline::ListModules();
     std::vector<InstancedCallback> renderCallbacks;
-    m_ModuleManager.m_LoadedModules.reserve(modules.ModuleCount);
+    m_ModuleManager.m_LoadedModules.reserve(m_Modules.ModuleCount);
     
     // load modules
-    for (size_t i = 0; i < modules.ModuleCount; i++)
+    for (size_t i = 0; i < m_Modules.ModuleCount; i++)
     {
-        Pipeline::ModuleDefinition moduleDef = modules.Modules[i];
+        Pipeline::ModuleDefinition moduleDef = m_Modules.Modules[i];
         void* newState = moduleDef.Initialize(&services);
         m_ModuleManager.LoadModule(moduleDef.Name, newState);
 
