@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using EntityBuilder.Abstractions;
 using MuThr.DataModels;
@@ -105,13 +104,16 @@ public class BuildEntityCommand : Command
         componentBuilder.StartInfo.RedirectStandardOutput = true;
         componentBuilder.ErrorDataReceived += (_, e) =>
         {
-            _logger.Information("Builder message: {message}", e.Data);
+            if (e.Data is null)
+                return;
+            _logger.Information("Builder ({pid}): {message}", componentBuilder.Id, e.Data);
         };
 
-        // TODO: set up a way to report error
         componentBuilder.StartInfo.RedirectStandardError = true;
 
         componentBuilder.Start();
+        componentBuilder.BeginErrorReadLine();
+        _logger.Verbose("Started BuildComponent process ({pid}) for group {module}:{type}.", componentBuilder.Id, group.Module, group.Type);
 
         Task inputTask = Task.Run(() =>
         {
@@ -147,25 +149,29 @@ public class BuildEntityCommand : Command
                     componentBuilder.StandardInput.BaseStream.Write(variantBuffer);
                 }
             }
+
+            componentBuilder.StandardInput.BaseStream.Dispose();
         });
 
         string tempFilePath = Path.GetTempFileName();
         {
-
             await using FileStream outFile = File.Create(tempFilePath);
             Task copyTask = componentBuilder.StandardOutput.BaseStream.CopyToAsync(outFile);
 
             await inputTask.ConfigureAwait(false);
             await componentBuilder.WaitForExitAsync().ConfigureAwait(false);
             await copyTask.ConfigureAwait(false);
+            _logger.Verbose("BuildComponent ({pid}) exits.", componentBuilder.Id);
         }
 
         if (componentBuilder.ExitCode != 0)
         {
+            _logger.Error("BuidComponent ({pid}) exit code error: {exitCode}", componentBuilder.Id, componentBuilder.ExitCode);
             File.Delete(tempFilePath);
             return null;
         }
 
+        _logger.Information("BuildComponent process ({pid}) for group {module}:{type} succeeds.", componentBuilder.Id, group.Module, group.Type);
         return tempFilePath;
     }
 
@@ -233,6 +239,9 @@ public class BuildEntityCommand : Command
         (CompiledEntity[] entities, ComponentGroup[] componentGroups) = loadedEntity.Compile(coordinator);
         _logger.Information("Entities compile finished: {eCount} entities + {cCount} components.", entities.Length, componentGroups.Length);
 
+        // start the component build process early
+        (ComponentGroup, Task<string?>)[] componentTasks = [.. componentGroups.Select(group => (group, Task.Run(async () => await BuildComponentGroupAsync(group).ConfigureAwait(false))))];
+
         // collect asset output
         ImmutableDictionary<string, BuildResult> buildOutput = await coordinator.OutputTask.ConfigureAwait(false);
         _logger.Information("Assets built.");
@@ -246,7 +255,7 @@ public class BuildEntityCommand : Command
                 {
                     foreach (var err in output.Value.Errors)
                     {
-                        _logger.Error("Task error ({key}): {err}", output.Key, err);
+                        _logger.Error("Asset task error ({key}): {err}", output.Key, err);
                     }
                 }
                 else
@@ -254,7 +263,7 @@ public class BuildEntityCommand : Command
                     string assetFileName = Path.ChangeExtension(Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(output.Key))), "bse_asset");
                     string outFilePath = Path.Combine(outPath.FullName, assetFileName);
                     File.Move(output.Value.OutputPath, outFilePath, overwrite: true);
-                    _logger.Information("Task result <{key}> {path}", output.Key, assetFileName);
+                    _logger.Information("Asset task result <{key}> {path}", output.Key, assetFileName);
                 }
             }
             _logger.Information("Built assets copied to {outPath}", outPath.FullName);
@@ -371,7 +380,6 @@ public class BuildEntityCommand : Command
         // launch the component builder and start funneling in the data
         _logger.Verbose("Launching component builder processes ...");
         outEntityFile.Write(0xCCBBFFF3);
-        (ComponentGroup, Task<string?>)[] componentTasks = [.. componentGroups.Select(group => (group, Task.Run(async () => await BuildComponentGroupAsync(group).ConfigureAwait(false))))];
         outEntityFile.Write(componentTasks.Length);
         foreach ((ComponentGroup group, Task<string?> task) in componentTasks)
         {
@@ -393,6 +401,10 @@ public class BuildEntityCommand : Command
             _logger.Information("Printed component group {module}:{type}", group.Module, group.Type);
         }
         _logger.Information("Component section printed.");
+
+        // wait for tasks to finish
+        await copyTask.ConfigureAwait(false);
+        _logger.Information("Done");
         return 0;
     }
 }
