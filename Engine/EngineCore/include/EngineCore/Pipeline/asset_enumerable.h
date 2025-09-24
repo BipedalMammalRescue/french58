@@ -11,18 +11,12 @@ struct RawAsset
     HashId ID;
 };
 
-class AssetEnumerable 
+class IAssetEnumerator 
 {
-private:
-    RawAsset* m_Storage;
-    int m_Count;
-    int m_Cursor;
-
 public:
-    AssetEnumerable(RawAsset* inStorage, int inCount) : m_Storage(inStorage), m_Count(inCount), m_Cursor(-1) {}
-    size_t Count() { return m_Count; }
-    bool MoveNext();
-    RawAsset* GetCurrent();
+    virtual size_t Count() = 0;
+    virtual bool MoveNext() = 0;
+    virtual RawAsset GetCurrent() = 0;
 };
 
 }

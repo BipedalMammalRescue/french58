@@ -13,7 +13,7 @@ struct Material
     SDL_GPURenderPass* RenderPass;
 };
 
-void LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
+void LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState);
                         

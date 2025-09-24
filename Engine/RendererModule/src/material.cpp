@@ -12,7 +12,7 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
+void Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
                   Core::Runtime::ServiceTable *services,
                   void *moduleState) 
 {
@@ -21,8 +21,8 @@ void Assets::LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
 
     while (inputStreams->MoveNext())
     {
-        Core::Pipeline::RawAsset* asset = inputStreams->GetCurrent();
-        std::istream* input = asset->Storage;
+        Core::Pipeline::RawAsset asset = inputStreams->GetCurrent();
+        std::istream* input = asset.Storage;
 
         // decode input
         Core::Pipeline::HashId vertShaderId;
@@ -99,7 +99,7 @@ void Assets::LoadMaterial(Core::Pipeline::AssetEnumerable *inputStreams,
         if (newPipeline == nullptr)
             SE_THROW_GRAPHICS_EXCEPTION;
 
-        state->Materials[asset->ID] = newPipeline;
+        state->Materials[asset.ID] = newPipeline;
     }
 }
             

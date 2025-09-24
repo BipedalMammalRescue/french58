@@ -14,7 +14,7 @@ struct GpuMesh
     SDL_GPUBuffer* VertexBuffer;
 };
 
-void LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
+void LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
               Core::Runtime::ServiceTable *services,
               void *moduleState);
 

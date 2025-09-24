@@ -8,14 +8,14 @@
 
 namespace Engine::Core::Pipeline {
 
-class AssetEnumerable;
+class IAssetEnumerator;
 
 struct AssetDefinition
 {
     std::array<unsigned char, 16> Name;
 
     // load function needs to support batch operations natively
-    void (*Load)(AssetEnumerable *inputStreams, Runtime::ServiceTable *services, void *moduleState);
+    void (*Load)(IAssetEnumerator *inputStreams, Runtime::ServiceTable *services, void *moduleState);
     void (*Unload)(HashId *ids, size_t count, Runtime::ServiceTable *services,
                    void *moduleState);
 };

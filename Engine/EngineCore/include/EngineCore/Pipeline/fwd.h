@@ -2,6 +2,6 @@
 
 namespace Engine::Core::Pipeline {
 
-class AssetEnumerable;
+class IAssetEnumerator;
 
 }

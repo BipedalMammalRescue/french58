@@ -11,7 +11,7 @@
 
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadFragmentShader(Engine::Core::Pipeline::AssetEnumerable *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
+void Assets::LoadFragmentShader(Engine::Core::Pipeline::IAssetEnumerator *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
 {
     using namespace Engine::Core::Runtime;
 
@@ -24,15 +24,15 @@ void Assets::LoadFragmentShader(Engine::Core::Pipeline::AssetEnumerable *inputSt
     // load every shader individually
     while (inputStreams->MoveNext()) 
     {
-        Engine::Core::Pipeline::RawAsset* rawAsset = inputStreams->GetCurrent();
+        Engine::Core::Pipeline::RawAsset rawAsset = inputStreams->GetCurrent();
 
         // load a prefixed length
         size_t codeLength = 0;
-        rawAsset->Storage->read((char*)&codeLength, sizeof(size_t));
+        rawAsset.Storage->read((char*)&codeLength, sizeof(size_t));
         
         // load the code
         std::unique_ptr<unsigned char[]> code = std::make_unique<unsigned char[]>(codeLength);
-        rawAsset->Storage->read((char*)code.get(), codeLength);
+        rawAsset.Storage->read((char*)code.get(), codeLength);
         
         // compile shader
         SDL_GPUShaderCreateInfo shaderInfo = {codeLength,
@@ -51,7 +51,7 @@ void Assets::LoadFragmentShader(Engine::Core::Pipeline::AssetEnumerable *inputSt
         if (newShader == nullptr)
             SE_THROW_GRAPHICS_EXCEPTION;
 
-        state->FragmentShaders[rawAsset->ID] = newShader;
+        state->FragmentShaders[rawAsset.ID] = newShader;
     }
 }
 

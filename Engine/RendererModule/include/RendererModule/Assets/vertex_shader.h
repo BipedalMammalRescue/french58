@@ -6,7 +6,7 @@
 
 namespace Engine::Extension::RendererModule::Assets {
 
-void LoadVertexShader(Core::Pipeline::AssetEnumerable *inputStreams,
+void LoadVertexShader(Core::Pipeline::IAssetEnumerator *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState);
                         

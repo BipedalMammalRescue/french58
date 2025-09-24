@@ -1,5 +1,4 @@
 #include "EngineCore/Runtime/world_state.h"
-#include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Ecs/entity.h"
 
 using namespace Engine::Core::Runtime;
@@ -14,12 +13,6 @@ void WorldState::AddEntity(Ecs::Entity* entities, size_t count)
 
 bool WorldState::LoadEntities(std::istream* input) 
 {
-    // confirm version
-    int version = 0;
-    input->read((char*)&version, sizeof(int));
-    if (version != m_Configs->EntityVersion)
-        return false;
-
     // reset state
     m_Entities.clear();
     
@@ -29,12 +22,11 @@ bool WorldState::LoadEntities(std::istream* input)
     m_Entities.reserve(count);
 
     // load all entities and leave the input stream as is
-    Ecs::Entity loadingBuffer[Configuration::EntityLoadBatchSize * sizeof(Ecs::Entity)];
-    while (count > 0) 
+    for (unsigned int i = 0; i < count; i++)
     {
-        size_t targetLoadCount = std::min((size_t)count, Configuration::EntityLoadBatchSize);
-        input->read((char*)loadingBuffer, targetLoadCount * sizeof(Ecs::Entity));
-        AddEntity(loadingBuffer, targetLoadCount);
+        Ecs::Entity nextEntity;
+        input->read((char*)&nextEntity, sizeof(Ecs::Entity));
+        m_Entities.push_back(nextEntity);
     }
 
     return true;

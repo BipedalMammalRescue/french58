@@ -11,7 +11,7 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
+void Assets::LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState)
 {
@@ -23,8 +23,8 @@ void Assets::LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
 
     while (inputStreams->MoveNext()) 
     {
-        Core::Pipeline::RawAsset* asset = inputStreams->GetCurrent();
-        std::istream* input = asset->Storage;
+        Core::Pipeline::RawAsset asset = inputStreams->GetCurrent();
+        std::istream* input = asset.Storage;
 
         // read the file
         unsigned int vertexCount = 0;
@@ -134,7 +134,7 @@ void Assets::LoadMesh(Core::Pipeline::AssetEnumerable *inputStreams,
 
         // add assets
         Assets::GpuMesh mesh { indexBuffer, indexCount, vertexBuffer };
-        state->Meshes[asset->ID] = mesh;
+        state->Meshes[asset.ID] = mesh;
     }
 }
 

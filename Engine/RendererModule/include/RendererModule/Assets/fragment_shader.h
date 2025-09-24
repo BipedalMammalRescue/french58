@@ -8,7 +8,7 @@
 
 namespace Engine::Extension::RendererModule::Assets {
 
-void LoadFragmentShader(Core::Pipeline::AssetEnumerable *inputStreams,
+void LoadFragmentShader(Core::Pipeline::IAssetEnumerator *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState);
                         

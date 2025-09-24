@@ -2,7 +2,7 @@
 #include <EngineCore/Pipeline/hash_id.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Pipeline/variant.h>
-#include <EngineCore/Pipeline/engine_assembly.h>
+#include <EngineCore/Pipeline/module_assembly.h>
 
 #include <iostream>
 #include <unordered_map>

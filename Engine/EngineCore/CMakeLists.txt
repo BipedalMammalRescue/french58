@@ -1,7 +1,6 @@
 add_library(EngineCore STATIC
 	src/logger_service.cpp
 	src/graphics_layer.cpp
-    src/asset_enumerable.cpp
     src/root_module.cpp
     src/spatial_component.cpp
     src/world_state.cpp

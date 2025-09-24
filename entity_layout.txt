@@ -1,7 +1,8 @@
 Entity layout
 
-int asset_group_count
+magic_word 0xCCBBFFF1
 
+int asset_group_count
 {
     byte[16] module_id
     byte[16] asset_type_id
@@ -11,16 +12,18 @@ int asset_group_count
     }[asset_count] assets
 }[asset_group_count] asset_groups
 
-int entity_count
+magic_word 0xCCBBFFF2
 
+int entity_count
 {
     // no longer includes position/transform in entity
     int entity_id
     int parent_entity
 }[entity_count] entities
 
-int component_group_count
+magic_word 0xCCBBFFF3
 
+int component_group_count
 {
     byte[16] module_id 
     byte[16] component_type_id
