@@ -1,0 +1,19 @@
+{
+    "Module": "RendererModule",
+    "Type": "VertexShader",
+    "Action": {
+        "$type": "command",
+        "Process": "glslc",
+        "Arguments": [
+            "-fshader-stage=vertex",
+            "-o",
+            "-",
+            "#(Source)"
+        ],
+        "OutputComponents": [
+            {
+                "$type": "prepend_length"
+            }
+        ]
+    }
+}

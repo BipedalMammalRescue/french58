@@ -1,0 +1,14 @@
+#!/bin/bash
+project_root=$(dirname $(dirname "$0"))
+cd $project_root
+project_root=$(pwd)
+
+rm -rf $project_root/bin
+
+cd $project_root/Tools/BuildSystem/EntityBuilder
+dotnet publish
+
+cd $project_root
+mkdir -p bin/src/EntityBuilder
+cp -r Tools/BuildSystem/EntityBuilder/bin/Release/net9.0/publish/* bin/src/EntityBuilder
+ln -s src/EntityBuilder/EntityBuilder bin/EntityBuilder

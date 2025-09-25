@@ -1,0 +1,9 @@
+{
+    "profiles": {
+        "testing ground": {
+            "commandName": "Project",
+            "workingDirectory": "../../../Assets",
+            "commandLineArgs": "build-entity --out=../built_data --recipe-root=Recipes/ Entities/example.se_entity",
+        }
+    }
+}

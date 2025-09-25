@@ -1,15 +1,8 @@
-#include "DummySinkModule.h"
-
-#include <Hosting/engine_host.h>
-#include <renderer_module.h>
-
-using namespace Engine::Core;
-using namespace Game;
+#include "EngineCore/Pipeline/module_assembly.h"
+#include "EngineCore/Runtime/game_loop.h"
 
 int main()
 {
-	Hosting::EngineHost engineHost;
-	engineHost.AddSinkModule<Extension::RendererModule::RendererModule>();
-	// engineHost.AddSinkModule<DummySinkModule>();
-	return engineHost.Run();
+    Engine::Core::Runtime::GameLoop gameloop(Engine::Core::Pipeline::ListModules());
+    return gameloop.Run("example.bse_entity");
 }

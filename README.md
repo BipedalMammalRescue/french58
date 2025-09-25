@@ -9,10 +9,6 @@ The Semantic Machine is a use case where I defined a simple functional language 
 
 This section of the engine is no longer used, scripting language will be redesigned to be pure-data.
 
-## Omni Parser (C++ project)
-
-Porting Parser Framework into C++ because I can.
-
 ## EngineCore
 
 The engine core runtime support library. 
@@ -25,3 +21,12 @@ The entry point project that leads to running the game. Depends on EngineCore an
 ## "XxxModule" C++ Projects
 
 Modules are high-level engine extensions; each module defines its own asset and component types, as well as providing one or more Module classes to be registered with the engine.
+
+# Acknowledgements
+
+As this project has become my exploration of setting up a completely FOSS workspace for my personal work, I would like to include a section acknowledging the open source projects I used in Sigourney Engine's development (the list may not be complete):
+
+CMake: Sigourney Engine's build system, as well as almost all of her dependencies.
+
+NeoVim (and NVChad): Editor and IDE used for this project.
+

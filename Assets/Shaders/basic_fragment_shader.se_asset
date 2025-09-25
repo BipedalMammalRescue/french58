@@ -1,0 +1,13 @@
+{
+    "Module": "RendererModule",
+    "Type": "FragmentShader",
+    "Data":
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "Shaders/basic.frag"
+        }
+    }
+}

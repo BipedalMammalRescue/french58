@@ -17,8 +17,6 @@ add_subdirectory(Engine)
 
 # game executable and its dependencies
 add_subdirectory(Game)
-target_link_libraries(Game PUBLIC Engine)
 
-# builders, they should be depending only on extension modules
-add_subdirectory(DataBuilders)
-target_link_libraries(MeshBuilder PUBLIC RendererModule)
+# prototyping
+add_subdirectory(Playground)

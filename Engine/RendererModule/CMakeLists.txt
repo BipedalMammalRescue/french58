@@ -1,8 +1,15 @@
 add_library(RendererModule STATIC
-	renderer_module.cpp
-	Assets/material.cpp
-	Assets/mesh.cpp
-	Assets/shader.cpp)
-	
-target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_precompile_headers(RendererModule PRIVATE pch.h)
+	src/renderer_module.cpp
+    src/vertex_shader.cpp
+    src/fragment_shader.cpp
+    src/material.cpp
+    src/mesh.cpp
+    src/mesh_renderer.cpp)
+
+target_include_directories(RendererModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(RendererModule PUBLIC EngineCore)
+target_link_libraries(RendererModule PUBLIC tinyobjloader)
+target_link_libraries(Engine PUBLIC RendererModule)
+
+add_executable(MeshBuilder src/mesh_builder.cpp)
+target_link_libraries(MeshBuilder PUBLIC RendererModule)

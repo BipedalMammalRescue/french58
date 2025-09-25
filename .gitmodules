@@ -7,6 +7,12 @@
 [submodule "Engine/lib/glm"]
 	path = Engine/lib/glm
 	url = https://github.com/g-truc/glm
-[submodule "DataBuilders/lib/tinyobjloader"]
-	path = DataBuilders/lib/tinyobjloader
-	url = https://github.com/tinyobjloader/tinyobjloader
+[submodule "Engine/lib/komihash"]
+	path = Engine/lib/komihash
+	url = https://github.com/avaneev/komihash.git
+[submodule "Engine/lib/tinyobjloader"]
+	path = Engine/lib/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "Engine/lib/constexpr-md5-cpp"]
+	path = Engine/lib/constexpr-md5-cpp
+	url = https://github.com/Wodann/constexpr-md5-cpp.git
