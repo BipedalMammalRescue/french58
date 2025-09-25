@@ -29,8 +29,31 @@ static void* InitRendererModule(Core::Runtime::ServiceTable* services)
     return new ModuleState { services->ModuleManager->GetRootModule() };
 }
 
+// TODO: need a better way to collect
 static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
 {
+    ModuleState* state = static_cast<ModuleState*>(moduleState);
+
+    for (const auto& shader : state->FragmentShaders)
+    {
+        Assets::DisposeFragmentShader(services, shader.second);
+    }
+
+    for (const auto& shader : state->VertexShaders)
+    {
+        SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
+    }
+
+    for (const auto& material : state->Materials)
+    {
+        SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), material.second);
+    }
+
+    for (const auto& mesh : state->Meshes)
+    {
+        Assets::DisposeMesh(services, mesh.second);
+    }
+
     delete static_cast<ModuleState*>(moduleState);
 }
 

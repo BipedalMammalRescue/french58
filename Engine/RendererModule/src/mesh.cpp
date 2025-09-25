@@ -57,7 +57,7 @@ void Assets::LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
         SDL_GPUBufferCreateInfo indexBufferCreateInfo
         {
             SDL_GPU_BUFFERUSAGE_INDEX,
-            indexCount
+            indexBufferSize
         };
 
         SDL_GPUBuffer* indexBuffer = SDL_CreateGPUBuffer(
@@ -149,9 +149,14 @@ void Assets::UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
         if (foundMesh == state->Meshes.end())
             continue;
 
-        SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), foundMesh->second.IndexBuffer);
-        SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), foundMesh->second.VertexBuffer);
+        Assets::DisposeMesh(services, foundMesh->second);
 
         state->Meshes.erase(foundMesh);
     }
+}
+
+void Assets::DisposeMesh(Core::Runtime::ServiceTable *services, GpuMesh mesh)
+{
+    SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), mesh.IndexBuffer);
+    SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), mesh.VertexBuffer);
 }

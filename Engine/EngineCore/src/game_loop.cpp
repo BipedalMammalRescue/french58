@@ -75,7 +75,7 @@ int GameLoop::Run(const char* initialEntity)
     {
         Pipeline::ModuleDefinition moduleDef = m_Modules.Modules[i];
         void* newState = moduleDef.Initialize(&services);
-        moduleManager.LoadModule(moduleDef.Name, newState);
+        moduleManager.LoadModule({ moduleDef, newState});
 
         // set up callback table
         if (moduleDef.CallbackCount > 0)
@@ -129,6 +129,12 @@ int GameLoop::Run(const char* initialEntity)
         // last step in the update loop
 		graphicsLayer.EndFrame();
 	}
+
+    // shut down modules
+    for (const auto& module : moduleManager.m_LoadedModules)
+    {
+        module.second.Definition.Dispose(&services, module.second.State);
+    }
 
     return 0;
 }
@@ -216,7 +222,7 @@ FileIoResult GameLoop::LoadEntity(const char* filePath, ServiceTable services)
             return FileIoResult::ModuleNotFound;
 
         StreamAssetEnumerator enumerator(&entityFile);
-        targetAssetType->second.Load(&enumerator, &services, targetModuleState->second);
+        targetAssetType->second.Load(&enumerator, &services, targetModuleState->second.State);
     }
 
     // read the entities
@@ -243,7 +249,7 @@ FileIoResult GameLoop::LoadEntity(const char* filePath, ServiceTable services)
 
         int componentCount = 0;
         entityFile.read((char*)&componentCount, sizeof(int));
-        targetComponent->second.Load(componentCount, &entityFile, &services, targetModuleState->second);
+        targetComponent->second.Load(componentCount, &entityFile, &services, targetModuleState->second.State);
     }
 
     return FileIoResult::Success;

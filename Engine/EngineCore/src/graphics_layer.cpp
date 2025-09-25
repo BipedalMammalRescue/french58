@@ -1,8 +1,8 @@
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineUtils/ErrorHandling/exceptions.h"
-#include "SDL3/SDL_gpu.h"
 
+#include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL.h>
 
 using namespace Engine::Core;

@@ -21,5 +21,6 @@ void LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
 void UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
                 Core::Runtime::ServiceTable *services, void *moduleState);
 
+void DisposeMesh(Core::Runtime::ServiceTable *services, GpuMesh mesh);
 }
 

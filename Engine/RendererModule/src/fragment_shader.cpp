@@ -67,9 +67,14 @@ void Assets::UnloadFragmentShader(Engine::Core::Pipeline::HashId *ids, size_t co
             continue;
 
         // delete shader from GPU
-        SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), foundShader->second);
+        DisposeFragmentShader(services, foundShader->second);
 
         // erase asset
         state->FragmentShaders.erase(foundShader);
     }
+}
+
+void Assets::DisposeFragmentShader(Core::Runtime::ServiceTable *services, SDL_GPUShader *shader)
+{
+    SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader);
 }

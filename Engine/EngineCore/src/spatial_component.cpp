@@ -71,5 +71,5 @@ void Components::LoadSpatialComponent(size_t count, std::istream* input, Core::R
 glm::mat4 Components::SpatialRelation::Transform() const
 {
     // apply order: TRANSLATION * ROTATION * SCALE
-    return glm::scale(glm::translate(glm::mat4(), Translation) * glm::mat4_cast(Rotation), Scale);
+    return glm::translate(glm::mat4_cast(Rotation) * glm::scale(glm::mat4(1.0), Scale), Translation);
 }

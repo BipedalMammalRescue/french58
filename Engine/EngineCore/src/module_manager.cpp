@@ -4,39 +4,21 @@
 
 using namespace Engine::Core::Runtime;
 
-bool ModuleManager::LoadModule(const Pipeline::HashId& name, void* instance)
+bool ModuleManager::LoadModule(const ModuleInstance& instance)
 {
-    auto foundCollision = m_LoadedModules.find(name);
+    auto foundCollision = m_LoadedModules.find(instance.Definition.Name);
     if (foundCollision != m_LoadedModules.end())
         return false;
-    m_LoadedModules[name] = instance;
+    m_LoadedModules[instance.Definition.Name] = instance;
     return true;
 }
 
-bool ModuleManager::LoadModule(const Pipeline::HashId&& name, void* instance)
+bool ModuleManager::LoadModule(const ModuleInstance&& instance)
 {
-    auto foundCollision = m_LoadedModules.find(name);
+    auto foundCollision = m_LoadedModules.find(instance.Definition.Name);
     if (foundCollision != m_LoadedModules.end())
         return false;
-    m_LoadedModules[name] = instance;
-    return true;
-}
-
-bool ModuleManager::LoadModule(const std::array<unsigned char, 16>& name, void* instance)
-{
-    auto foundCollision = m_LoadedModules.find(name);
-    if (foundCollision != m_LoadedModules.end())
-        return false;
-    m_LoadedModules[name] = instance;
-    return true;
-}
-
-bool ModuleManager::LoadModule(const std::array<unsigned char, 16>&& name, void* instance)
-{
-    auto foundCollision = m_LoadedModules.find(name);
-    if (foundCollision != m_LoadedModules.end())
-        return false;
-    m_LoadedModules[name] = instance;
+    m_LoadedModules[instance.Definition.Name] = instance;
     return true;
 }
 
@@ -46,7 +28,7 @@ const void* ModuleManager::FindModule(const Pipeline::HashId& name) const
     if (foundModule == m_LoadedModules.end())
         return nullptr;
     
-    return foundModule->second;
+    return foundModule->second.State;
 }
 
 const void* ModuleManager::FindModule(const Pipeline::HashId&& name) const
@@ -55,7 +37,7 @@ const void* ModuleManager::FindModule(const Pipeline::HashId&& name) const
     if (foundModule == m_LoadedModules.end())
         return nullptr;
     
-    return foundModule->second;
+    return foundModule->second.State;
 }
 
 const RootModuleState* ModuleManager::GetRootModule() const
