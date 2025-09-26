@@ -16,3 +16,6 @@
 [submodule "Engine/lib/constexpr-md5-cpp"]
 	path = Engine/lib/constexpr-md5-cpp
 	url = https://github.com/Wodann/constexpr-md5-cpp.git
+[submodule "Engine/lib/spdlog"]
+	path = Engine/lib/spdlog
+	url = https://github.com/gabime/spdlog.git
