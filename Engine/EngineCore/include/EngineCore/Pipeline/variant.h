@@ -37,6 +37,7 @@ struct Variant
         unsigned char Byte;
         bool Bool;
         int32_t Int32;
+        int64_t Int64;
         uint32_t Uint32;
         uint64_t Uint64;
         float Float;

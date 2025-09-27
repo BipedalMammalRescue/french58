@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineCore/Logging/log_data.h"
+
 #include <cstddef>
 
 namespace Engine::Core::Configuration {
@@ -15,6 +17,8 @@ struct ConfigurationProvider
 
     int EntityVersion = 1;
 
+    size_t LoggerBufferSize = 1024 * 32;
+    Logging::LogLevel MinimumLogLevel = Logging::LogLevel::Information;
 };
 
 constexpr size_t EntityLoadBatchSize = 1024;

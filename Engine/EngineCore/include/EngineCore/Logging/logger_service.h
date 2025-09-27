@@ -1,57 +1,34 @@
 #pragma once
-#include <time.h>
-#include <stdio.h>
 
-namespace Engine
-{
-namespace Core
-{
-namespace Logging
-{
+#include "EngineCore/Configuration/configuration_provider.h"
+#include "EngineCore/Logging/log_data.h"
+#include "EngineCore/Logging/logger.h"
 
-// TODO: replace this logging with a threaded logger sending binary data
+#include <concurrentqueue.h>
+#include <thread>
+
+// TODO: how do I handle string data?
+
+namespace Engine::Core::Logging {
+
 class LoggerService
 {
 private:
-	template <typename... TArgs>
-	void Log(const char* level, const char* channel, const char* message, TArgs... args)
-	{
-		time_t timeNow = time(nullptr);
-		tm* now = localtime(&timeNow);
+    friend class Logger;
+    std::atomic<int> m_Sequencer;
+    moodycamel::ConcurrentQueue<LogEvent> m_Queue;
+    std::thread m_Thread;
+    LogLevel m_MinLevel;
 
-		printf("[%d:%d:%d][%s][%s] ", now->tm_hour, now->tm_min, now->tm_sec, level, channel);
-		printf(message, args...);
-		printf("\n");
-	}
+    static void LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue);
+    bool Write(const LogEvent& event);
+    bool Write(const LogEvent&& event);
+    int GetSequence();
 
 public:
-	template <typename... TArgs>
-	void Verbose(const char* channel, const char* message, TArgs... args)
-	{
-		Log("VER", channel, message, args...);
-	}
-
-	template <typename... TArgs>
-	void Information(const char* channel, const char* message, TArgs... args)
-	{
-		Log("INF", channel, message, args...);
-	}
-	
-	template <typename... TArgs>
-	void Error(const char* channel, const char* message, TArgs... args)
-	{
-		Log("ERR", channel, message, args...);
-	}
-
-	template <typename... TArgs>
-	void Warning(const char* channel, const char* message, TArgs... args)
-	{
-		Log("WRN", channel, message, args...);
-	}
+    LoggerService(Configuration::ConfigurationProvider configs);
+    ~LoggerService();
+    Logger CreateLogger(const char** channels, size_t channelCount);
 };
 
-LoggerService* GetLogger();
-
-}
-}
 }

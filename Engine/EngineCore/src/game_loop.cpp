@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/game_loop.h"
 
+#include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Pipeline/engine_callback.h"
@@ -53,7 +54,8 @@ struct InstancedCallback
 
 int GameLoop::Run(const char* initialEntity) 
 {
-    GraphicsLayer graphicsLayer(&m_ConfigurationProvider);
+    Logging::LoggerService loggerService(m_ConfigurationProvider);
+    GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
 

@@ -7,7 +7,7 @@ add_subdirectory(lib/json)
 add_subdirectory(lib/glm)
 add_subdirectory(lib/tinyobjloader)
 add_subdirectory(lib/constexpr-md5-cpp)
-add_subdirectory(lib/spdlog)
+add_subdirectory(lib/concurrentqueue)
 
 add_subdirectory(EngineUtils)
 
@@ -20,6 +20,7 @@ target_link_libraries(EngineCore PUBLIC SDL3::SDL3)
 target_link_libraries(EngineCore PUBLIC nlohmann_json)
 target_link_libraries(EngineCore PUBLIC glm)
 target_link_libraries(EngineCore PUBLIC constexpr_md5)
+target_link_libraries(EngineCore PUBLIC concurrentqueue)
 
 target_include_directories(EngineCore PUBLIC lib/komihash)
 

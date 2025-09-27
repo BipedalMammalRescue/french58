@@ -8,41 +8,47 @@
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
 
-static const char s_ServiceName[] = "PlatformAccess";
-static const char s_SDLInitializationError[] = "SDL initialization failed, see logs for details.";
-static const char s_GLInitializationError[] = "OpenGL initialization failed, see logs for details.";
+static const char* LogChannels[] = { "GraphicsLayer" };
 
 bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 {
 	// initialize sdl
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
-		Logging::GetLogger()->Error(s_ServiceName, "SDL could not initialize!SDL Error: %s", SDL_GetError());
+		// Logging::GetLogger()->Error(s_ServiceName, "SDL could not initialize!SDL Error: %s", SDL_GetError());
+        m_Logger.Error("SDL could not initialize.", {});
 		return false;
 	}
+    m_Logger.Information("SDL initialized.", {});
 
 	// Create window
 	m_Window = SDL_CreateWindow("Foobar Game",  m_Configs->WindowWidth, m_Configs->WindowHeight, 0);
 	if (m_Window == nullptr)
 	{
-		Logging::GetLogger()->Error(s_ServiceName, "Window could not be created! SDL Error: %s", SDL_GetError());
+		// Logging::GetLogger()->Error(s_ServiceName, "Window could not be created! SDL Error: %s", SDL_GetError());
+        m_Logger.Error("Window creation failed", {});
 		return false;
 	}
+    m_Logger.Information("Window created.", {});
 
 	// Create GPU device
 	m_GpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, m_Configs->UseDeviceValidation, NULL);
 	if (m_GpuDevice == nullptr) 
 	{
-		Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
+		// Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
+        m_Logger.Error("GPU device creation failed.", {});
 		return false;
 	}
+    m_Logger.Information("GPU device created", {});
 	
 	// setup gpu window
 	if (!SDL_ClaimWindowForGPUDevice(m_GpuDevice, m_Window))
 	{
-		Logging::GetLogger()->Error(s_ServiceName, "Failed to initialize GPU accelerated window! SDL Error: %s", SDL_GetError());
-		return false;
+		// Logging::GetLogger()->Error(s_ServiceName, "Failed to initialize GPU accelerated window! SDL Error: %s", SDL_GetError());
+		m_Logger.Error("GPU acceleration initialization failed.", {});
+        return false;
 	}
+    m_Logger.Information("Accelerated window created.", {});
 	
 	SDL_SetWindowResizable(m_Window, false);
     SDL_ShowWindow(m_Window);
@@ -51,18 +57,22 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 
 void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 {
+    m_Logger.Verbose("Begin frame.", {});
+
     // create command buffer
     m_CommandBuffer = SDL_AcquireGPUCommandBuffer(m_GpuDevice);
     if (m_CommandBuffer == NULL)
     {
-        m_Logger->Error("PlatformAccess", "AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+        // m_Logger->Error("AcquireGPUCommandBuffer failed: s", SDL_GetError());
+        m_Logger.Error("AcquireGPUCommandBuffer failed", {});
         SE_THROW_GRAPHICS_EXCEPTION;
     }
 
     // get a target texture
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_CommandBuffer, m_Window, &m_SwapchainTexture, nullptr, nullptr))
     {
-        m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+        // m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+        m_Logger.Error("WaitAndAcquireGPUSwapchainTexture failed.", {});
         SE_THROW_GRAPHICS_EXCEPTION;
     }
 
@@ -78,13 +88,15 @@ void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 
 void Engine::Core::Runtime::GraphicsLayer::EndFrame()
 {
+    m_Logger.Verbose("End frame.", {});
+
 	SDL_SubmitGPUCommandBuffer(m_CommandBuffer);
     m_CommandBuffer = nullptr;
     m_SwapchainTexture = nullptr;
 }
 
-GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs)
-	: m_Configs(configs) {}
+GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService)
+	: m_Configs(configs), m_Logger(loggerService->CreateLogger(LogChannels, 1)) {}
 
 Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 {
