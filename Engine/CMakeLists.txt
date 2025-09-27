@@ -7,6 +7,7 @@ add_subdirectory(lib/json)
 add_subdirectory(lib/glm)
 add_subdirectory(lib/tinyobjloader)
 add_subdirectory(lib/constexpr-md5-cpp)
+add_subdirectory(lib/spdlog)
 
 add_subdirectory(EngineUtils)
 
