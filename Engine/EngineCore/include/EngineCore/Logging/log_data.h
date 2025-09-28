@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Pipeline/variant.h"
+
 namespace Engine::Core::Logging {
 
 enum class LogLevel : unsigned char

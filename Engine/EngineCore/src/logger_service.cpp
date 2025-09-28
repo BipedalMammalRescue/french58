@@ -23,7 +23,6 @@ void LoggerService::LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue)
 
         if (event.Type == LogEventType::Header)
         {
-            // level
             // time
             size_t hours = event.Payload.Header.Timestamp / 1000 / 60 / 60;
             size_t minutes = (event.Payload.Header.Timestamp / 1000 / 60) % 60;
@@ -32,13 +31,14 @@ void LoggerService::LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue)
 
             printf("[%02lu:%02lu:%02lu.%03lu ", hours, minutes, seconds, ms);
 
+            // level
             switch (event.Payload.Header.Level)
             {
             case LogLevel::Verbose:
                 printf("VER]");
                 break;
             case LogLevel::Debug:
-                printf("[DBG]");
+                printf("DBG]");
                 break;
             case LogLevel::Information:
                 printf("INF]");
