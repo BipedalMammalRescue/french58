@@ -7,17 +7,14 @@
 
 using namespace Engine::Core::Logging;
 
-static size_t GetTimestamp()
-{
-    return SDL_GetTicks();
-}
-
+// break the log message into 1 + N normalized segments and send them with distinct sequences
 bool Logger::Write(LogLevel level, const char* message, std::initializer_list<Pipeline::Variant> params)
 {
     if (level < Service->m_MinLevel)
         return true;
 
-    int seq = Service->GetSequence();
+    int paramCount = params.size();
+    int seq = Service->ReserveSequence(paramCount + 1);
 
     LogEvent event {
         {.Header= {
@@ -25,7 +22,8 @@ bool Logger::Write(LogLevel level, const char* message, std::initializer_list<Pi
             Channels,
             ChanneCount,
             SDL_GetCurrentThreadID(),
-            GetTimestamp(),
+            SDL_GetTicks(),
+            paramCount,
             level
         }},
         seq,
@@ -35,11 +33,11 @@ bool Logger::Write(LogLevel level, const char* message, std::initializer_list<Pi
     if (!Service->Write(event))
         return false;
 
-    for (auto i = params.begin(); i != params.end(); i++)
+    for (int i = 0; i < paramCount; i++)
     {
         LogEvent subEvent {
-            {.Parameter=*i},
-            seq,
+            {.Parameter=params.begin()[i]},
+            seq + i + 1,
             LogEventType::Parameter
         };
 

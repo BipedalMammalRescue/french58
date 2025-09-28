@@ -6,8 +6,13 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Runtime/world_state.h"
+#include "EngineCore/Pipeline/hash_id.h"
 
 #include <unordered_map>
+
+namespace Engine::Core::Logging {
+class Logger;
+}
 
 namespace Engine::Core::Runtime {
 
@@ -31,11 +36,15 @@ private:
     std::unordered_map<Pipeline::HashIdTuple, Pipeline::AssetDefinition> m_Assets;
 
     // IO utilities (maybe move this to a service at sometime?)
-    FileIoResult LoadEntity(const char* filePath, ServiceTable services);
+    FileIoResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
+
+    // crash handling
+    void RaiseIoError(FileIoResult result, const char* decorator) const;
+    void RaiseSdlError() const;
 
 public:
     GameLoop(Pipeline::ModuleAssembly modules);
-    int Run(const char* initialEntity);
+    int Run(Pipeline::HashId initialEntity);
 };
 
 }

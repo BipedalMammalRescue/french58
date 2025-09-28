@@ -16,7 +16,7 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
 		// Logging::GetLogger()->Error(s_ServiceName, "SDL could not initialize!SDL Error: %s", SDL_GetError());
-        m_Logger.Error("SDL could not initialize.", {});
+        m_Logger.Fatal("SDL could not initialize.", {});
 		return false;
 	}
     m_Logger.Information("SDL initialized.", {});
@@ -26,7 +26,7 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	if (m_Window == nullptr)
 	{
 		// Logging::GetLogger()->Error(s_ServiceName, "Window could not be created! SDL Error: %s", SDL_GetError());
-        m_Logger.Error("Window creation failed", {});
+        m_Logger.Fatal("Window creation failed.", {});
 		return false;
 	}
     m_Logger.Information("Window created.", {});
@@ -36,7 +36,7 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	if (m_GpuDevice == nullptr) 
 	{
 		// Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
-        m_Logger.Error("GPU device creation failed.", {});
+        m_Logger.Fatal("GPU device creation failed.", {});
 		return false;
 	}
     m_Logger.Information("GPU device created", {});
@@ -45,7 +45,7 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	if (!SDL_ClaimWindowForGPUDevice(m_GpuDevice, m_Window))
 	{
 		// Logging::GetLogger()->Error(s_ServiceName, "Failed to initialize GPU accelerated window! SDL Error: %s", SDL_GetError());
-		m_Logger.Error("GPU acceleration initialization failed.", {});
+		m_Logger.Fatal("GPU acceleration initialization failed.", {});
         return false;
 	}
     m_Logger.Information("Accelerated window created.", {});
@@ -55,7 +55,7 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	return true;
 }
 
-void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
+bool Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 {
     m_Logger.Verbose("Begin frame.", {});
 
@@ -64,16 +64,16 @@ void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     if (m_CommandBuffer == NULL)
     {
         // m_Logger->Error("AcquireGPUCommandBuffer failed: s", SDL_GetError());
-        m_Logger.Error("AcquireGPUCommandBuffer failed", {});
-        SE_THROW_GRAPHICS_EXCEPTION;
+        m_Logger.Fatal("AcquireGPUCommandBuffer failed");
+        return false;
     }
 
     // get a target texture
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_CommandBuffer, m_Window, &m_SwapchainTexture, nullptr, nullptr))
     {
         // m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-        m_Logger.Error("WaitAndAcquireGPUSwapchainTexture failed.", {});
-        SE_THROW_GRAPHICS_EXCEPTION;
+        m_Logger.Fatal("WaitAndAcquireGPUSwapchainTexture failed.");
+        return false;
     }
 
     // create a single pass to clear screen
@@ -84,15 +84,22 @@ void Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
     SDL_EndGPURenderPass(pass);
+    return true;
 }
 
-void Engine::Core::Runtime::GraphicsLayer::EndFrame()
+bool Engine::Core::Runtime::GraphicsLayer::EndFrame()
 {
     m_Logger.Verbose("End frame.", {});
 
-	SDL_SubmitGPUCommandBuffer(m_CommandBuffer);
+	if (!SDL_SubmitGPUCommandBuffer(m_CommandBuffer))
+    {
+        m_Logger.Fatal("Failed to submit GPU command buffer.");
+        return false;
+    }
+    
     m_CommandBuffer = nullptr;
     m_SwapchainTexture = nullptr;
+    return true;
 }
 
 GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService)
@@ -100,6 +107,7 @@ GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs
 
 Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 {
+    m_Logger.Verbose("Shutting down SDL.");
 	// release gpu device
 	SDL_ReleaseWindowFromGPUDevice(m_GpuDevice, m_Window);
 	SDL_DestroyGPUDevice(m_GpuDevice);
@@ -110,6 +118,7 @@ Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 
 	//Quit SDL subsystems
 	SDL_Quit();
+    m_Logger.Information("SDL shutdown.");
 }
 
 SDL_GPURenderPass* GraphicsLayer::AddRenderPass() 

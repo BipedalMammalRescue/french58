@@ -200,9 +200,9 @@ bool LoggerService::Write(const LogEvent&& event)
     return m_Queue.try_enqueue(event);
 }
 
-int LoggerService::GetSequence()
+int LoggerService::ReserveSequence(int segmentCount)
 {
-    return m_Sequencer.fetch_add(1);
+    return m_Sequencer.fetch_add(segmentCount);
 }
 
 Logger LoggerService::CreateLogger(const char** channels, size_t channelCount)

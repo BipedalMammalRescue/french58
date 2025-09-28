@@ -28,7 +28,14 @@ struct LogHeader
     size_t ChannelCount;
     size_t ThreadId;
     size_t Timestamp;
+    int ParamCount;
     LogLevel Level;
+};
+
+enum class LogParameterType
+{
+    FixedSize,
+    String
 };
 
 struct LogEvent

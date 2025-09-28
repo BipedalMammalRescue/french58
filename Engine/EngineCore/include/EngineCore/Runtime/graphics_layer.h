@@ -36,8 +36,8 @@ private:
 private:
     friend class GameLoop;
     bool InitializeSDL();
-	void BeginFrame();
-	void EndFrame();
+	bool BeginFrame();
+	bool EndFrame();
     GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService);
 
 public:

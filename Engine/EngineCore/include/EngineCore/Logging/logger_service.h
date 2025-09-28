@@ -23,7 +23,7 @@ private:
     static void LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue);
     bool Write(const LogEvent& event);
     bool Write(const LogEvent&& event);
-    int GetSequence();
+    int ReserveSequence(int segmentCount);
 
 public:
     LoggerService(Configuration::ConfigurationProvider configs);
