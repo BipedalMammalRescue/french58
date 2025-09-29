@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Pipeline/fwd.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/fwd.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "SDL3/SDL_gpu.h"
@@ -14,11 +15,11 @@ struct GpuMesh
     SDL_GPUBuffer* VertexBuffer;
 };
 
-void LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
+Core::Runtime::CallbackResult LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
               Core::Runtime::ServiceTable *services,
               void *moduleState);
 
-void UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
+Core::Runtime::CallbackResult UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
                 Core::Runtime::ServiceTable *services, void *moduleState);
 
 void DisposeMesh(Core::Runtime::ServiceTable *services, GpuMesh mesh);

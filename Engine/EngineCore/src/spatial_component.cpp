@@ -1,4 +1,5 @@
 #include "EngineCore/Ecs/Components/spatial_component.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -51,7 +52,7 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
     return true;
 }
 
-void Components::LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
 {
     Runtime::RootModuleState* state = static_cast<Runtime::RootModuleState*>(moduleState);
     state->SpatialComponents.reserve(state->SpatialComponents.size() + count);
@@ -66,6 +67,8 @@ void Components::LoadSpatialComponent(size_t count, std::istream* input, Core::R
             .read((char*)&newComponent.Rotation, sizeof(glm::quat));
         state->SpatialComponents[ownerEntity] = newComponent;
     }
+
+    return Runtime::CallbackSuccess();
 }
 
 glm::mat4 Components::SpatialRelation::Transform() const

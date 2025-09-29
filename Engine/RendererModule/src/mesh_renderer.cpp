@@ -1,6 +1,7 @@
 #include "RendererModule/Components/mesh_renderer.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/renderer_module.h"
 #include <md5.h>
 
@@ -38,7 +39,7 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
     return true;
 }
 
-void Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     state->MeshRendererComponents.reserve(state->MeshRendererComponents.size() + count);
@@ -55,4 +56,6 @@ void Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runti
 
         state->MeshRendererComponents.push_back({ entity, material, mesh });
     }
+
+    return Core::Runtime::CallbackSuccess();
 }

@@ -16,3 +16,6 @@
 [submodule "Engine/lib/constexpr-md5-cpp"]
 	path = Engine/lib/constexpr-md5-cpp
 	url = https://github.com/Wodann/constexpr-md5-cpp.git
+[submodule "Engine/lib/concurrentqueue"]
+	path = Engine/lib/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git

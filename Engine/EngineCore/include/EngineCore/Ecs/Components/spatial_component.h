@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Pipeline/component_definition.h"
+#include "EngineCore/Runtime/crash_dump.h"
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -10,7 +11,7 @@
 namespace Engine::Core::Ecs::Components {
 
 bool CompileSpatialComponent(Core::Pipeline::RawComponent input, std::ostream* output);
-void LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
+Runtime::CallbackResult LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
 
 struct SpatialRelation
 {

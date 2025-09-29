@@ -1,40 +1,30 @@
-#include <array>
-#include <iostream>
-#include <md5.h>
 
-using namespace std;
-
-void Foobar(const std::array<int, 4>& id)
+#include <exception>
+#include <optional>
+#include <stdexcept>
+#include <stdio.h>
+class Foobar
 {
-    for (int i = 0; i < 4; i++)
+public:
+    ~Foobar() 
     {
-        std::cout << id[i] << std::endl;
+        printf("dtor\n");
     }
-}
-
-void Foobar(const std::array<int, 4>&& id)
-{
-    for (int i = 0; i < 4; i++)
-    {
-        std::cout << id[i] << std::endl;
-    }
-}
+};
 
 int main()
 {
-    constexpr std::array<unsigned char, 16> hash = md5::compute("111");
-    for (char i = 0; i < 16; i++)
+    std::optional<Foobar> result((Foobar()));
+
+    try 
     {
-        char low = hash[i] & 0x0F;
-        char high = (hash[i] & 0xF0) >> 4;
-
-        low = low <= 9 ? (low + '0') : (low - 9 + 'A');
-        high = high <= 9 ? (high + '0') : (high - 9 + 'A');
-
-        std::cout << high << low << '-';
+        Foobar var;
+        throw std::runtime_error("1111");
     }
-
-    std::cout << endl;
+    catch (std::exception& ex)
+    {
+        printf("%s\n", ex.what());
+    }
 
     return 0;
 }

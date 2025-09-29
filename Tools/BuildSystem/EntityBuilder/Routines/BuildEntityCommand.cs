@@ -188,7 +188,7 @@ public class BuildEntityCommand : Command
             _logger.Error("Invalid input path: {path}", inputFile);
             return (int)ErrorCodes.InvalidInputFile;
         }
-        _logger.Information("Input path: {path}", inputFile);
+        _logger.Information("Input path: {path}", inputFile.FullName);
 
         // try to deserialize the file
         Entity? loadedEntity = await LoadEntityAsync(inputFile.FullName).ConfigureAwait(false);
@@ -369,7 +369,8 @@ public class BuildEntityCommand : Command
 
         // print out the asset list
         _logger.Verbose("Writing out asset groups ...");
-        await using FileStream outEntityFile = File.Create(Path.Combine(outPath.FullName, Path.ChangeExtension(inputFile.Name, "bse_entity")));
+        string entityFilePath = Path.Combine(outPath.FullName, Path.ChangeExtension(Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(Environment.CurrentDirectory, inputFile.FullName)))), "bse_entity"));
+        await using FileStream outEntityFile = File.Create(entityFilePath);
         outEntityFile.Write(0xCCBBFFF1);
         outEntityFile.Write(groupOrdering.Count);
         foreach (AssetGroup group in groupOrdering)

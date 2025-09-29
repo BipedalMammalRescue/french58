@@ -6,18 +6,8 @@
 #define TOSTRING(x) STRINGIFY(x)
 #define AT __FILE__ ":" TOSTRING(__LINE__)
 
-// C#'s NotImplementedException has grown on me
-#define SE_THROW_NOT_IMPLEMENTED throw std::runtime_error(AT " Method not implemented!")
-
 // now if you think this is not exactly a good way to report error, I agree, I just don't want to spend too much time up
 // front, as long as it crashes the system it's fine
 #define SE_THROW_GRAPHICS_EXCEPTION throw std::runtime_error(AT " Graphics error: see previous logs for details!")
-
-// in some places, code safety is guaranteed by the algorithm itself, throw this exception if that guarantee is broken
-#define SE_THROW_ALGORITHMIC_EXCEPTION throw std::runtime_error(AT " Unexpected algorithmic behavior!")
-
-#define SE_THROW_ALLOCATOR_EXCEPTION throw std::runtime_error(AT " Allocator encountered state corruption!")
-
-#define SE_THROW_READ_OVERFLOW_EXCEPTION throw std::runtime_error(AT " Reading memory past buffer boundary!")
 
 #define SE_THROW_ASSET_NOT_LOADED throw std::runtime_error(AT " Request asset isn't loaded!")

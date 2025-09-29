@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Runtime/crash_dump.h"
 namespace Engine::Core::Runtime {
 struct ServiceTable;
 }
@@ -17,7 +18,7 @@ enum class EngineCallbackStage
 struct EngineCallback
 {
     EngineCallbackStage Stage;
-    void (*Callback)(Runtime::ServiceTable* services, void* moduleState);
+    Runtime::CallbackResult (*Callback)(Runtime::ServiceTable* services, void* moduleState);
 };
 
 }

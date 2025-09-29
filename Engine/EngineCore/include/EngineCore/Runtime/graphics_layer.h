@@ -1,13 +1,18 @@
 #pragma once
 
 #include "EngineCore/Configuration/configuration_provider.h"
-#include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Logging/logger.h"
+#include "EngineCore/Runtime/crash_dump.h"
 
 #include <glm/fwd.hpp>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_gpu.h>
 
 struct SDL_Window;
+
+namespace Engine::Core::Logging {
+class LoggerService;
+}
 
 namespace Engine::Core::Runtime {
 
@@ -26,15 +31,15 @@ private:
 	SDL_GPUDevice* m_GpuDevice = nullptr;
     SDL_GPUCommandBuffer* m_CommandBuffer = nullptr;
     SDL_GPUTexture* m_SwapchainTexture = nullptr;
-    Logging::LoggerService* m_Logger = Logging::GetLogger();
+    Logging::Logger m_Logger;
 
     // for game loop to directly control graphics behavior
 private:
     friend class GameLoop;
-    bool InitializeSDL();
-	void BeginFrame();
-	void EndFrame();
-    GraphicsLayer(const Configuration::ConfigurationProvider* configs);
+    CallbackResult InitializeSDL();
+	CallbackResult BeginFrame();
+	CallbackResult EndFrame();
+    GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService);
 
 public:
 	~GraphicsLayer();

@@ -1,4 +1,5 @@
 #include "RendererModule/Assets/mesh.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/renderer_module.h"
 #include "RendererModule/Data/vertex.h"
 
@@ -11,7 +12,7 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
+Core::Runtime::CallbackResult Assets::LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
                         Core::Runtime::ServiceTable *services,
                         void *moduleState)
 {
@@ -136,9 +137,11 @@ void Assets::LoadMesh(Core::Pipeline::IAssetEnumerator *inputStreams,
         Assets::GpuMesh mesh { indexBuffer, indexCount, vertexBuffer };
         state->Meshes[asset.ID] = mesh;
     }
+
+    return Core::Runtime::CallbackSuccess();
 }
 
-void Assets::UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
+Core::Runtime::CallbackResult Assets::UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
                           Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
@@ -153,6 +156,8 @@ void Assets::UnloadMesh(Core::Pipeline::HashId *ids, size_t count,
 
         state->Meshes.erase(foundMesh);
     }
+
+    return Core::Runtime::CallbackSuccess();
 }
 
 void Assets::DisposeMesh(Core::Runtime::ServiceTable *services, GpuMesh mesh)

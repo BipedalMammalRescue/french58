@@ -6,7 +6,7 @@
 namespace Engine::Extension::RendererModule::Components {
 
 bool CompileMeshRenderer(Core::Pipeline::RawComponent input, std::ostream* output);
-void LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
+Core::Runtime::CallbackResult LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
 
 struct MeshRenderer
 {
