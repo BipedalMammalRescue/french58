@@ -1,5 +1,6 @@
 #include "RendererModule/Assets/vertex_shader.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/renderer_module.h"
 
 #include "EngineCore/Pipeline/asset_enumerable.h"
@@ -11,7 +12,7 @@
 
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadVertexShader(Engine::Core::Pipeline::IAssetEnumerator *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::LoadVertexShader(Engine::Core::Pipeline::IAssetEnumerator *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
 {
     using namespace Engine::Core::Runtime;
 
@@ -53,9 +54,11 @@ void Assets::LoadVertexShader(Engine::Core::Pipeline::IAssetEnumerator *inputStr
 
         state->VertexShaders[rawAsset.ID] = newShader;
     }
+
+    return CallbackSuccess();
 }
 
-void Assets::UnloadVertexShader(Engine::Core::Pipeline::HashId *ids, size_t count, Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::UnloadVertexShader(Engine::Core::Pipeline::HashId *ids, size_t count, Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     
@@ -72,4 +75,6 @@ void Assets::UnloadVertexShader(Engine::Core::Pipeline::HashId *ids, size_t coun
         // erase asset
         state->VertexShaders.erase(foundShader);
     }
+
+    return Core::Runtime::CallbackSuccess();
 }

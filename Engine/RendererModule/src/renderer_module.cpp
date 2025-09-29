@@ -1,5 +1,6 @@
 #include "RendererModule/renderer_module.h"
 
+#include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
@@ -57,7 +58,7 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
     delete static_cast<ModuleState*>(moduleState);
 }
 
-static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleState) 
+static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleState) 
 {
     // get the primary engine camera
     int cameraEntity = -1;
@@ -72,10 +73,10 @@ static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleStat
 
     // abort if primary camera doesn't exist or it doesn't have a valid spatial relation
     if (cameraEntity == -1)
-        return;
+        return Core::Runtime::CallbackSuccess();
     auto foundCameraTransform = services->ModuleManager->GetRootModule()->SpatialComponents.find(cameraEntity);
     if (foundCameraTransform == services->ModuleManager->GetRootModule()->SpatialComponents.end())
-        return;
+        return Core::Runtime::CallbackSuccess();
 
     // calculate view matrix
     glm::mat4 viewMatrix = glm::inverse(foundCameraTransform->second.Transform());
@@ -132,6 +133,7 @@ static void RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleStat
     }
 
     services->GraphicsLayer->CommitRenderPass(pass);
+    return Core::Runtime::CallbackSuccess();
 }
 
 Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetModuleDefinition()

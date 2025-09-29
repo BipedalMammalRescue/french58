@@ -1,23 +1,36 @@
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineUtils/ErrorHandling/exceptions.h"
+#include "SDL3/SDL_error.h"
 
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL.h>
+#include <cstring>
 
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
 
 static const char* LogChannels[] = { "GraphicsLayer" };
 
-bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
+#define SdlCrashOut(header) Crash(__FILE__, __LINE__, WrapSdlError(header))
+
+std::string WrapSdlError(const char* header)
+{
+    std::string lastwords(header);
+    lastwords.append(" SDL error: ");
+    lastwords.append(SDL_GetError());
+    return lastwords;
+}
+
+CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 {
 	// initialize sdl
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
-		// Logging::GetLogger()->Error(s_ServiceName, "SDL could not initialize!SDL Error: %s", SDL_GetError());
-        m_Logger.Fatal("SDL could not initialize.", {});
-		return false;
+        static const char errorMessage[] = "SDL could not initialize.";
+        m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
 	}
     m_Logger.Information("SDL initialized.", {});
 
@@ -25,9 +38,9 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	m_Window = SDL_CreateWindow("Foobar Game",  m_Configs->WindowWidth, m_Configs->WindowHeight, 0);
 	if (m_Window == nullptr)
 	{
-		// Logging::GetLogger()->Error(s_ServiceName, "Window could not be created! SDL Error: %s", SDL_GetError());
-        m_Logger.Fatal("Window creation failed.", {});
-		return false;
+        static const char errorMessage[] = "Window creation failed.";
+        m_Logger.Fatal(errorMessage, {});
+		return SdlCrashOut(errorMessage);
 	}
     m_Logger.Information("Window created.", {});
 
@@ -35,27 +48,28 @@ bool Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	m_GpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, m_Configs->UseDeviceValidation, NULL);
 	if (m_GpuDevice == nullptr) 
 	{
+        const char errorMessage[] = "GPU device creation failed.";
 		// Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
-        m_Logger.Fatal("GPU device creation failed.", {});
-		return false;
+        m_Logger.Fatal(errorMessage, {});
+		return SdlCrashOut(errorMessage);
 	}
     m_Logger.Information("GPU device created", {});
 	
 	// setup gpu window
 	if (!SDL_ClaimWindowForGPUDevice(m_GpuDevice, m_Window))
 	{
-		// Logging::GetLogger()->Error(s_ServiceName, "Failed to initialize GPU accelerated window! SDL Error: %s", SDL_GetError());
-		m_Logger.Fatal("GPU acceleration initialization failed.", {});
-        return false;
+        const char errorMessage[] = "GPU acceleration initialization failed.";
+		m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
 	}
     m_Logger.Information("Accelerated window created.", {});
 	
 	SDL_SetWindowResizable(m_Window, false);
     SDL_ShowWindow(m_Window);
-	return true;
+	return CallbackSuccess();
 }
 
-bool Engine::Core::Runtime::GraphicsLayer::BeginFrame()
+CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 {
     m_Logger.Verbose("Begin frame.", {});
 
@@ -63,17 +77,17 @@ bool Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     m_CommandBuffer = SDL_AcquireGPUCommandBuffer(m_GpuDevice);
     if (m_CommandBuffer == NULL)
     {
-        // m_Logger->Error("AcquireGPUCommandBuffer failed: s", SDL_GetError());
-        m_Logger.Fatal("AcquireGPUCommandBuffer failed");
-        return false;
+        const char errorMessage[] = "AcquireGPUCommandBuffer failed";
+        m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
     }
 
     // get a target texture
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_CommandBuffer, m_Window, &m_SwapchainTexture, nullptr, nullptr))
     {
-        // m_Logger->Error("PlatformAccess", "WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-        m_Logger.Fatal("WaitAndAcquireGPUSwapchainTexture failed.");
-        return false;
+        const char errorMessage[] = "WaitAndAcquireGPUSwapchainTexture failed.";
+        m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
     }
 
     // create a single pass to clear screen
@@ -84,22 +98,23 @@ bool Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
     SDL_EndGPURenderPass(pass);
-    return true;
+    return CallbackSuccess();
 }
 
-bool Engine::Core::Runtime::GraphicsLayer::EndFrame()
+CallbackResult Engine::Core::Runtime::GraphicsLayer::EndFrame()
 {
     m_Logger.Verbose("End frame.", {});
 
 	if (!SDL_SubmitGPUCommandBuffer(m_CommandBuffer))
     {
-        m_Logger.Fatal("Failed to submit GPU command buffer.");
-        return false;
+        const char errorMessage[] = "Failed to submit GPU command buffer.";
+        m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
     }
     
     m_CommandBuffer = nullptr;
     m_SwapchainTexture = nullptr;
-    return true;
+    return CallbackSuccess();
 }
 
 GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService)

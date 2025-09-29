@@ -1,5 +1,6 @@
 #include "RendererModule/Assets/material.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineUtils/ErrorHandling/exceptions.h"
 #include "RendererModule/renderer_module.h"
 
@@ -12,7 +13,7 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-void Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
+Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
                   Core::Runtime::ServiceTable *services,
                   void *moduleState) 
 {
@@ -101,9 +102,11 @@ void Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
 
         state->Materials[asset.ID] = newPipeline;
     }
+
+    return Core::Runtime::CallbackSuccess();
 }
             
-void Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
+Core::Runtime::CallbackResult Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
                           Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
@@ -117,4 +120,6 @@ void Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
         SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), foundPipeline->second);
         state->Materials.erase(foundPipeline);
     }
+
+    return Core::Runtime::CallbackSuccess();
 }

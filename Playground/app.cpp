@@ -1,5 +1,6 @@
 
 #include <exception>
+#include <optional>
 #include <stdexcept>
 #include <stdio.h>
 class Foobar
@@ -13,6 +14,8 @@ public:
 
 int main()
 {
+    std::optional<Foobar> result((Foobar()));
+
     try 
     {
         Foobar var;

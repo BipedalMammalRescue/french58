@@ -2,6 +2,7 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Runtime/crash_dump.h"
 
 #include <glm/fwd.hpp>
 #include <SDL3/SDL_video.h>
@@ -35,9 +36,9 @@ private:
     // for game loop to directly control graphics behavior
 private:
     friend class GameLoop;
-    bool InitializeSDL();
-	bool BeginFrame();
-	bool EndFrame();
+    CallbackResult InitializeSDL();
+	CallbackResult BeginFrame();
+	CallbackResult EndFrame();
     GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService);
 
 public:

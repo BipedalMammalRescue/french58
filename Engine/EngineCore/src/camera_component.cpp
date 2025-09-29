@@ -1,5 +1,6 @@
 #include "EngineCore/Ecs/Components/camera_component.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
 
 using namespace Engine::Core;
@@ -16,7 +17,7 @@ bool Engine::Core::Ecs::Components::CompileCameraComponent(Pipeline::RawComponen
     return true;
 }
 
-void Engine::Core::Ecs::Components::LoadCameraComponent(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState)
+Runtime::CallbackResult Engine::Core::Ecs::Components::LoadCameraComponent(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState)
 {
     Runtime::RootModuleState* state = static_cast<Runtime::RootModuleState*>(moduleState);
     state->CameraComponents.reserve(state->CameraComponents.size() + count);
@@ -28,4 +29,6 @@ void Engine::Core::Ecs::Components::LoadCameraComponent(size_t count, std::istre
             .read((char*)&newComponent.IsPrimary, sizeof(bool));
         state->CameraComponents.push_back(newComponent);
     }
+
+    return Runtime::CallbackSuccess();
 }

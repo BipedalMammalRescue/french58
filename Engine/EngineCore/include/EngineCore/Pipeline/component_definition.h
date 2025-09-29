@@ -2,6 +2,7 @@
 
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/crash_dump.h"
 
 #include <ostream>
 #include <istream>
@@ -30,7 +31,7 @@ struct ComponentDefinition
 {
     std::array<unsigned char, 16> Name;
     bool (*Compile)(RawComponent input, std::ostream* output);
-    void (*Load)(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState);
+    Runtime::CallbackResult (*Load)(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState);
 };
 
 }

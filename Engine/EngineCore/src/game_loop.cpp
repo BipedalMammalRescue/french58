@@ -7,6 +7,7 @@
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
@@ -16,6 +17,9 @@
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <fstream>
+#include <string>
+
+#define IoCrashOut(error) Engine::Core::Runtime::Crash(__FILE__, __LINE__, )
 
 using namespace Engine::Core::Runtime;
 
@@ -50,14 +54,12 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules) :
 
 struct InstancedCallback
 {
-    void (*Callback)(ServiceTable* services, void* moduleState);
+    CallbackResult (*Callback)(ServiceTable* services, void* moduleState);
     void* InstanceState;
 };
 
-int GameLoop::Run(Pipeline::HashId initialEntityId) 
+CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
-    const char* errorMessage = nullptr;
-
     Logging::LoggerService loggerService(m_ConfigurationProvider);
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
@@ -68,8 +70,9 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
     Logging::Logger topLevelLogger = loggerService.CreateLogger(topLevelChannels, 1);
 
     // initialize services
-    if (!graphicsLayer.InitializeSDL())
-        return 1;
+    CallbackResult sdlInitResult = graphicsLayer.InitializeSDL();
+    if (sdlInitResult.has_value())
+        return sdlInitResult;
 
     ServiceTable services {
         &graphicsLayer,
@@ -108,15 +111,7 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
     }
 
     // load the first scene
-    FileIoResult loadResult = LoadEntity(initialEntityId, services, &topLevelLogger);
-    if (loadResult != FileIoResult::Success)
-    {
-        return 1;
-    }
-    else 
-    {
-        topLevelLogger.Information("Loaded entity: {entityId}", { initialEntityId });
-    }
+    CallbackResult loadResult = LoadEntity(initialEntityId, services, &topLevelLogger);
 
     bool quit = false;
     SDL_Event e;
@@ -130,11 +125,9 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
         }
 
         // begin update loop
-        if (!graphicsLayer.BeginFrame())
-        {
-            errorMessage = SDL_GetError();
-            break;
-        }
+        CallbackResult beginFrameResult = graphicsLayer.BeginFrame();
+        if (beginFrameResult.has_value())
+            return beginFrameResult;
 
         // pre update
 
@@ -145,15 +138,15 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
         // render pass
         for (auto& callback : renderCallbacks)
         {
-            callback.Callback(&services, callback.InstanceState);
+            CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState);
+            if (callbackResult.has_value())
+                return callbackResult;
         }
         
         // last step in the update loop
-        if (!graphicsLayer.EndFrame())
-        {
-            errorMessage = SDL_GetError();
-            break;
-        }
+        CallbackResult endFrameResult = graphicsLayer.EndFrame();
+        if (endFrameResult.has_value())
+            return endFrameResult;
     }
 
     // shut down modules
@@ -163,9 +156,21 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
         topLevelLogger.Information("Module shut down: {module}", {module.first});
     }
 
-    topLevelLogger.Information("Game shut down.");
+    return CallbackSuccess();
+}
 
-    return 0;
+int GameLoop::Run(Pipeline::HashId initialEntityId) 
+{
+    // allow crash to persistent outside the game loop
+    CallbackResult gameError = RunCore(initialEntityId);
+
+    if (!gameError.has_value())
+        return 0;
+
+    printf("*** GAME CRASHED ***\n");
+    printf("location: %s : %d\n", gameError->File.c_str(), gameError->Line);
+    printf("crash dump: %s\n", gameError->ErrorDetail.c_str());
+    return 1;
 }
 
 class StreamAssetEnumerator : public Engine::Core::Pipeline::IAssetEnumerator
@@ -224,9 +229,21 @@ static bool CheckMagicWord(unsigned int target, std::istream* input)
     return target == getWord;
 }
 
-FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger)
+static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, const char* reason)
 {
-    logger->Verbose("Loading entity {id}", {entityId});
+    std::string errorMessage;
+    errorMessage.append("Error loading entity ");
+    char entityIdStr[33];
+    Engine::Utils::String::BinaryToHex(16, entityId.Hash.data(), entityIdStr);
+    errorMessage.append(entityIdStr);
+    errorMessage.append(" reasion: ");
+    errorMessage.append(reason);
+    return errorMessage;
+}
+
+CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger)
+{
+    logger->Information("Loading entity {id}", {entityId});
 
     char pathBuffer[] = "CD0ED230BD87479C61DB68677CAA9506.bse_entity";
     Utils::String::BinaryToHex(16, entityId.Hash.data(), pathBuffer);
@@ -235,13 +252,18 @@ FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable servic
     entityFile.open(pathBuffer);
 
     if (!entityFile.is_open())
-        return FileIoResult::NotOpened;
+    {
+        static const char errorMessage[] = "Entity file can't be opened.";
+        logger->Fatal(errorMessage);
+        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
+    }
 
     // read the asset section
     if (!CheckMagicWord(0xCCBBFFF1, &entityFile))
     {
-        logger->Fatal("Entity magic word for asset section mismatch.");
-        return FileIoResult::Corrupted;
+        static const char errorMessage[] = "Entity magic word for asset section mismatch.";
+        logger->Fatal(errorMessage);
+        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
     int assetGroupCount = 0;
@@ -253,11 +275,17 @@ FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable servic
 
         auto targetAssetType = m_Assets.find(assetGroupId);
         if (targetAssetType == m_Assets.end())
-            return FileIoResult::AssetGroupNotFound;
+        {
+            logger->Fatal("Module state not found for asset: {module}:{type}.", {assetGroupId.First, assetGroupId.Second});
+            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
+        }
 
         auto targetModuleState = services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
         if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
-            return FileIoResult::ModuleNotFound;
+        {
+            logger->Fatal("Module state not found: {module}.", {assetGroupId.First});
+            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
+        }
 
         StreamAssetEnumerator enumerator(&entityFile);
         targetAssetType->second.Load(&enumerator, &services, targetModuleState->second.State);
@@ -266,15 +294,17 @@ FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable servic
     // read the entities
     if (!CheckMagicWord(0xCCBBFFF2, &entityFile) || !services.WorldState->LoadEntities(&entityFile))
     {
-        logger->Fatal("Entity magic word for entity section mismatch.");
-        return FileIoResult::Corrupted;
+        static const char errorMessage[] = "Entity magic word for entity section mismatch.";
+        logger->Fatal(errorMessage);
+        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
     // read the components
     if (!CheckMagicWord(0xCCBBFFF3, &entityFile))
     {
-        logger->Fatal("Entity magic word for component section mismatch.");
-        return FileIoResult::Corrupted;
+        static const char errorMessage[] = "Entity magic word for component section mismatch.";
+        logger->Fatal(errorMessage);
+        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
     int componentGroupCount = 0;
@@ -286,11 +316,17 @@ FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable servic
         
         auto targetComponent = m_Components.find(componentGroupId);
         if (targetComponent == m_Components.end())
-            return FileIoResult::ComponentGroupNotFound;
+        {
+            logger->Fatal("Module state not found for component: {module}:{type}.", {componentGroupId.First, componentGroupId.Second});
+            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
+        }
 
         auto targetModuleState = services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
         if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
-            return FileIoResult::ModuleNotFound;
+        {
+            logger->Fatal("Module state not found: {module}.", {componentGroupId.First});
+            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
+        }
 
         int componentCount = 0;
         entityFile.read((char*)&componentCount, sizeof(int));
@@ -298,5 +334,5 @@ FileIoResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable servic
     }
 
     logger->Verbose("Loaded {assetC} asset groups, {componentCount} component groups.", {assetGroupCount, componentGroupCount});
-    return FileIoResult::Success;
+    return CallbackSuccess();
 }
