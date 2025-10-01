@@ -39,8 +39,6 @@ public:
     HashId() = default;
     HashId(const std::array<unsigned char, 16>& hash) : Hash(hash) {}
     HashId(const std::array<unsigned char, 16>&& hash) : Hash(hash) {}
-    HashId(const HashId& other) : Hash(other.Hash) {}
-    HashId(const HashId&& other) : Hash(other.Hash) {}
 };
 
 struct HashIdTuple

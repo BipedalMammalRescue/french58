@@ -1,23 +1,69 @@
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "SDL3/SDL_timer.h"
 
+#include <cmath>
 #include <stdio.h>
 
 using namespace Engine::Core::Logging;
 
+static constexpr int SpinCycleCount = 1000;
+static constexpr int SleepSteps = 10;
+
+class SleepCounter
+{
+private:
+    unsigned int m_State;
+    
+public:
+    void Wait()
+    {
+        static const int MaxSleepLength = std::pow(2, SleepSteps);
+
+        // spin for 100 cycles
+        if (m_State <= SpinCycleCount)
+        {
+            m_State++;
+            return;
+        }
+
+        // sleep with a exponential number (10 stages)
+        if (m_State - SpinCycleCount <= SleepSteps)
+        {
+            SDL_Delay(std::pow(2, m_State - SpinCycleCount));
+            m_State ++;
+            return;
+        }
+
+        // sleep for about a full second when it's already too far
+        SDL_Delay(MaxSleepLength);
+        return;
+    }
+
+
+    void Reset()
+    {
+        m_State = 0;
+    }
+};
+
 void LoggerService::LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue)
 {
     LogEvent event;
+    SleepCounter counter;
 
     while (true)
     {
-        // need an exponential back off algorithm
+        // exponential back off
         while (!queue->try_dequeue(event))
-        {}
+        {
+            counter.Wait();
+        }
+        counter.Reset();
 
         if (event.Type == LogEventType::Terminator)
-            return;
+            break;
 
         printf("[SEQ:%d]", event.Sequence);
 

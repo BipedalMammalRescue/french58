@@ -1,11 +1,11 @@
 #pragma once
 
+#include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/fwd.h"
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/component_definition.h"
 
-#include <array>
 #include <md5.h>
 
 namespace Engine::Core::Pipeline {
@@ -14,7 +14,7 @@ namespace Engine::Core::Pipeline {
 struct ModuleDefinition
 {
     // static definitions
-    std::array<unsigned char, 16> Name;
+    HashId Name;
 
     // module state
     void *(*Initialize)(Runtime::ServiceTable *services);

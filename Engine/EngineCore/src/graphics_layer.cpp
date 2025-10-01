@@ -25,15 +25,6 @@ std::string WrapSdlError(const char* header)
 
 CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 {
-	// initialize sdl
-	if (!SDL_Init(SDL_INIT_VIDEO))
-	{
-        static const char errorMessage[] = "SDL could not initialize.";
-        m_Logger.Fatal(errorMessage);
-        return SdlCrashOut(errorMessage);
-	}
-    m_Logger.Information("SDL initialized.", {});
-
 	// Create window
 	m_Window = SDL_CreateWindow("Foobar Game",  m_Configs->WindowWidth, m_Configs->WindowHeight, 0);
 	if (m_Window == nullptr)
@@ -122,7 +113,6 @@ GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs
 
 Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 {
-    m_Logger.Verbose("Shutting down SDL.");
 	// release gpu device
 	SDL_ReleaseWindowFromGPUDevice(m_GpuDevice, m_Window);
 	SDL_DestroyGPUDevice(m_GpuDevice);
@@ -131,9 +121,8 @@ Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 	SDL_DestroyWindow(m_Window);
 	m_Window = NULL;
 
-	//Quit SDL subsystems
-	SDL_Quit();
-    m_Logger.Information("SDL shutdown.");
+    // log
+    m_Logger.Information("GPU resources cleaned up.");    
 }
 
 SDL_GPURenderPass* GraphicsLayer::AddRenderPass() 
