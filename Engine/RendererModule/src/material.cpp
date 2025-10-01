@@ -90,7 +90,6 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
                 services->GraphicsLayer->GetWindow()
             )
         };
-
         pipelineCreateInfo.target_info = {&colorTarget, 1};
 
         SDL_GPUGraphicsPipeline *newPipeline = SDL_CreateGPUGraphicsPipeline(

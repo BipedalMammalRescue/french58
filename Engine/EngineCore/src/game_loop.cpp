@@ -6,6 +6,7 @@
 #include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/graphics_layer.h"
@@ -13,6 +14,7 @@
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineUtils/String/hex_strings.h"
+#include "SDL3/SDL_init.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
@@ -52,14 +54,17 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules) :
     }
 }
 
-struct InstancedCallback
-{
-    CallbackResult (*Callback)(ServiceTable* services, void* moduleState);
-    void* InstanceState;
-};
-
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
+    // initialize sdl
+	if (!SDL_Init(SDL_INIT_VIDEO))
+	{
+        std::string error("SDL initialization failed, error: ");
+        error.append(SDL_GetError());
+        return Crash(__FILE__, __LINE__, error);
+	}
+
+    // create services
     Logging::LoggerService loggerService(m_ConfigurationProvider);
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
@@ -70,49 +75,25 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     Logging::Logger topLevelLogger = loggerService.CreateLogger(topLevelChannels, 1);
 
     // initialize services
-    CallbackResult sdlInitResult = graphicsLayer.InitializeSDL();
-    if (sdlInitResult.has_value())
-        return sdlInitResult;
-
     ServiceTable services {
+        &loggerService,
         &graphicsLayer,
         &worldState,
         &moduleManager
     };
-
-    std::vector<InstancedCallback> renderCallbacks;
-    moduleManager.m_LoadedModules.reserve(m_Modules.ModuleCount);
-    
-    // load modules
-    for (size_t i = 0; i < m_Modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition moduleDef = m_Modules.Modules[i];
-        void* newState = moduleDef.Initialize(&services);
-        moduleManager.LoadModule({ moduleDef, newState});
-
-        // set up callback table
-        if (moduleDef.CallbackCount > 0)
-        {
-            for (size_t j = 0; j < moduleDef.CallbackCount; j++) 
-            {
-                Pipeline::EngineCallback callback = moduleDef.Callbacks[j];
-                switch (callback.Stage)
-                {
-                    case Pipeline::EngineCallbackStage::Preupdate:
-                    case Pipeline::EngineCallbackStage::ScriptUpdate:
-                    case Pipeline::EngineCallbackStage::ModuleUpdate:
-                        break;
-                    case Pipeline::EngineCallbackStage::Render:
-                        renderCallbacks.push_back({ callback.Callback, newState });
-                        break;
-                }
-            }
-        }
-    }
+    CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
+    if (serviceInitResult.has_value())
+        return serviceInitResult;
+    serviceInitResult = moduleManager.LoadModules(Pipeline::ListModules(), &services);
+    if (serviceInitResult.has_value())
+        return serviceInitResult;
 
     // load the first scene
     CallbackResult loadResult = LoadEntity(initialEntityId, services, &topLevelLogger);
+    if (loadResult.has_value())
+        return loadResult;
 
+    // game loop
     bool quit = false;
     SDL_Event e;
     while (!quit)
@@ -136,7 +117,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         // module update
 
         // render pass
-        for (auto& callback : renderCallbacks)
+        for (auto& callback : moduleManager.m_RenderCallbacks)
         {
             CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState);
             if (callbackResult.has_value())
@@ -148,13 +129,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         if (endFrameResult.has_value())
             return endFrameResult;
     }
-
-    // shut down modules
-    for (const auto& module : moduleManager.m_LoadedModules)
-    {
-        module.second.Definition.Dispose(&services, module.second.State);
-        topLevelLogger.Information("Module shut down: {module}", {module.first});
-    }
+    topLevelLogger.Information("Game exiting without error.");
 
     return CallbackSuccess();
 }
@@ -163,6 +138,9 @@ int GameLoop::Run(Pipeline::HashId initialEntityId)
 {
     // allow crash to persistent outside the game loop
     CallbackResult gameError = RunCore(initialEntityId);
+
+    // quit SDL
+    SDL_Quit();
 
     if (!gameError.has_value())
         return 0;
@@ -233,10 +211,10 @@ static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, c
 {
     std::string errorMessage;
     errorMessage.append("Error loading entity ");
-    char entityIdStr[33];
+    char entityIdStr[33] {0};
     Engine::Utils::String::BinaryToHex(16, entityId.Hash.data(), entityIdStr);
     errorMessage.append(entityIdStr);
-    errorMessage.append(" reasion: ");
+    errorMessage.append(" reason: ");
     errorMessage.append(reason);
     return errorMessage;
 }
