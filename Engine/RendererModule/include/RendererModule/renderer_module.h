@@ -26,6 +26,8 @@ struct ModuleState
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::GpuMesh> Meshes;
 
     std::vector<Components::MeshRenderer> MeshRendererComponents;
+
+    SDL_GPUTexture* DepthBuffer;
 };
 
 Engine::Core::Pipeline::ModuleDefinition GetModuleDefinition();

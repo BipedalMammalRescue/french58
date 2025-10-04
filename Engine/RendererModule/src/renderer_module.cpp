@@ -85,7 +85,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
     // calculate projection matrix
     glm::mat4 projectMatrix =
         glm::perspective(glm::radians<float>(Configuration::FieldOfView),
-                         960.0f / 720.0f, 0.1f, 10000000.0f);
+                         960.0f / 720.0f, 0.1f, 500.0f);
 
     // pre-calculate the first part of MVP
     glm::mat4 pvMatrix = projectMatrix * viewMatrix;

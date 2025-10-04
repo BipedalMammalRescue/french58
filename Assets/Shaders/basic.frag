@@ -19,7 +19,7 @@ void main()
     vec4 ambientColor = vec4(0, 1, 0, 1);
 
     // define these in world space (same as the vertex normals)
-    vec3 lightDirection = vec3(0.0, 1, 0.0);
+    vec3 lightDirection = normalize(vec3(1.0, 1.0, -1.0));
     vec4 lightColor = vec4(1, 1, 1, 1.0);
 
     // diffuse switch

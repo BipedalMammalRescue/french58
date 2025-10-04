@@ -31,6 +31,7 @@ private:
 	SDL_GPUDevice* m_GpuDevice = nullptr;
     SDL_GPUCommandBuffer* m_CommandBuffer = nullptr;
     SDL_GPUTexture* m_SwapchainTexture = nullptr;
+    SDL_GPUTexture* m_DepthBuffer = nullptr;
     Logging::Logger m_Logger;
 
     // for game loop to directly control graphics behavior
@@ -44,9 +45,10 @@ private:
 public:
 	~GraphicsLayer();
 
-    inline SDL_Window* GetWindow() { return m_Window; }
-    inline SDL_GPUDevice* GetDevice() { return m_GpuDevice; }
+    inline SDL_Window* GetWindow() const { return m_Window; }
+    inline SDL_GPUDevice* GetDevice() const { return m_GpuDevice; }
 
+    inline SDL_GPUTexture* GetSharedDepthBuffer() const { return m_DepthBuffer; }
     inline SDL_GPUCommandBuffer* GetCurrentCommandBuffer() { return m_CommandBuffer; }
     SDL_GPURenderPass* AddRenderPass();
     void CommitRenderPass(SDL_GPURenderPass* pass);

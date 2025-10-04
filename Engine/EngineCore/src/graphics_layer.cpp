@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL.h>
+#include <cstdint>
 #include <cstring>
 
 using namespace Engine::Core;
@@ -49,7 +50,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	// setup gpu window
 	if (!SDL_ClaimWindowForGPUDevice(m_GpuDevice, m_Window))
 	{
-        const char errorMessage[] = "GPU acceleration initialization failed.";
+        static const char errorMessage[] = "GPU acceleration initialization failed.";
 		m_Logger.Fatal(errorMessage);
         return SdlCrashOut(errorMessage);
 	}
@@ -57,6 +58,26 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	
 	SDL_SetWindowResizable(m_Window, false);
     SDL_ShowWindow(m_Window);
+
+    // create a z-buffer
+    SDL_GPUTextureCreateInfo depthBufferInfo {
+        SDL_GPUTextureType::SDL_GPU_TEXTURETYPE_2D,
+        SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+        SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+        (uint32_t)m_Configs->WindowWidth,
+        (uint32_t)m_Configs->WindowHeight,
+        1,
+        1
+    };
+    m_DepthBuffer = SDL_CreateGPUTexture(m_GpuDevice, &depthBufferInfo);
+
+    if (m_DepthBuffer == nullptr)
+    {
+        static const char errorMessage[] = "Failed to create depth buffer.";
+        m_Logger.Fatal(errorMessage);
+        return SdlCrashOut(errorMessage);
+    }
+
 	return CallbackSuccess();
 }
 
@@ -81,13 +102,20 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
         return SdlCrashOut(errorMessage);
     }
 
-    // create a single pass to clear screen
+    // create a single pass to clear screen & clean depth buffer
     SDL_GPUColorTargetInfo colorTargetInfo = {0};
     colorTargetInfo.texture = m_SwapchainTexture;
     colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f}; // ofc it should be magenta
     colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
-    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
+
+    SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo = {0};
+    depthStencilTargetInfo.clear_depth = -1.0f;
+    depthStencilTargetInfo.texture = m_DepthBuffer;
+    depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, &depthStencilTargetInfo);
     SDL_EndGPURenderPass(pass);
     return CallbackSuccess();
 }
@@ -136,7 +164,12 @@ SDL_GPURenderPass* GraphicsLayer::AddRenderPass()
     colorTargetInfo.load_op = SDL_GPU_LOADOP_LOAD;
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
-    SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, NULL);
+    SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo = {0};
+    depthStencilTargetInfo.texture = m_DepthBuffer;
+    depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_LOAD;
+    depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(m_CommandBuffer, &colorTargetInfo, 1, &depthStencilTargetInfo);
     return renderPass;
 }
 

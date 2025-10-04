@@ -79,11 +79,12 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
             vertShader->second,
             fragShader->second,
             vertexInputState,
-            SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
+            SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST
         };
 
         pipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
-        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPUCompareOp::SDL_GPU_COMPAREOP_GREATER;
+        pipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
+        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER;
 
         pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
@@ -93,7 +94,12 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
                 services->GraphicsLayer->GetWindow()
             )
         };
-        pipelineCreateInfo.target_info = {&colorTarget, 1};
+        pipelineCreateInfo.target_info = {
+            &colorTarget, 
+            1, 
+            SDL_GPU_TEXTUREFORMAT_D32_FLOAT, 
+            true
+        };
 
         SDL_GPUGraphicsPipeline *newPipeline = SDL_CreateGPUGraphicsPipeline(
             services->GraphicsLayer->GetDevice(), 
