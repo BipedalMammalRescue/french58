@@ -151,7 +151,7 @@
                     "Type": "SpatialRelation",
                     "Fields": {
                         "Translation": {
-                            "Vec3": [0, 0, 200]
+                            "Vec3": [0, 0, 100]
                         },
                         "Scale": {
                             "Vec3": [1, 1, 1]

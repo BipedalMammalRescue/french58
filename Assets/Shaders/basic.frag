@@ -2,22 +2,37 @@
 
 layout(location = 0) in vec3 v_Normal;
 layout(location = 1) in vec2 v_Uv;
+layout(location = 2) in vec3 v_ViewAngle;
 
 layout(location = 0) out vec4 f_color;
 
-// TODO: add in a texture sampler
-
 void main()
 {
+    vec3 normal = normalize(v_Normal);
+    vec3 viewAngle = normalize(v_ViewAngle);
+
+    // phong reflection parameters
+    float kSpecular = 1.0;
+    float kDiffuse = 1.0;
+    float kAmbient = 0;
+    float shininess = 3.0;
+    vec4 ambientColor = vec4(0, 1, 0, 1);
+
     // define these in world space (same as the vertex normals)
     vec3 lightDirection = vec3(0.0, 1, 0.0);
     vec4 lightColor = vec4(1, 1, 1, 1.0);
-    vec4 surfaceColor = vec4(0.0, 1.0, 0.0, 1.0);
+
+    // diffuse switch
+    float diffuseStrength = dot(lightDirection, normal);
+    float diffuseSwitch = step(0.0, diffuseStrength);
     
     // light model
-    float lightIntensity = max(dot(lightDirection, normalize(v_Normal)), 0);
-    vec4 shadedColor = lightColor * surfaceColor * lightIntensity;
+    vec4 ambientShade = kAmbient * ambientColor;
+    vec4 diffuseShade = kDiffuse * max(diffuseStrength, 0) * (lightColor * ambientColor);
 
-    // use the input vertex color
-    f_color = shadedColor;
+    vec3 reflectedLight = normalize(2 * dot(lightDirection, normal) * normal - lightDirection);
+    vec4 specularShade = diffuseSwitch * kSpecular * pow(max(dot(reflectedLight, viewAngle), 0), shininess) * (lightColor * ambientColor);
+
+    // add the components up
+    f_color = ambientShade + diffuseShade + specularShade;
 }

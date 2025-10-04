@@ -7,6 +7,7 @@
 #include "RendererModule/Assets/vertex_shader.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
+#include "glm/ext/vector_float3.hpp"
 
 #include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Pipeline/module_definition.h>
@@ -121,6 +122,9 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
         // insert MVP
         glm::mat4 mvp = pvMatrix * modelMatrix;
         SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &mvp, sizeof(mvp));
+
+        // insert camera position
+        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &foundCameraTransform->second.Translation, sizeof(glm::vec3));
 
         // bind mesh (VB and IB)
         SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
