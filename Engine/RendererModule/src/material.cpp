@@ -82,7 +82,10 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
             SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
         };
 
-        pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+        pipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPUCompareOp::SDL_GPU_COMPAREOP_GREATER;
+
+        pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
         SDL_GPUColorTargetDescription colorTarget {
             SDL_GetGPUSwapchainTextureFormat(
