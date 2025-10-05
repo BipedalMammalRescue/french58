@@ -44,7 +44,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadVertexShader(Engine::Core::Pip
                                               0,
                                               0,
                                               0,
-                                              1};
+                                              2};
 
         SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
         

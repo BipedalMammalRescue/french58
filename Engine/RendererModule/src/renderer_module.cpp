@@ -23,6 +23,8 @@
 #include <md5.h>
 #include <glm/mat4x4.hpp>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
+
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
