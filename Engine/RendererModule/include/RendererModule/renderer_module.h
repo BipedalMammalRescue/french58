@@ -1,9 +1,10 @@
 #pragma once
 
-#include "EngineCore/Runtime/root_module.h"
 #include "RendererModule/Assets/mesh.h"
+#include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 
+#include <EngineCore/Runtime/root_module.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Pipeline/hash_id.h>
 
@@ -24,10 +25,11 @@ struct ModuleState
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> VertexShaders;
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUGraphicsPipeline*> Materials;
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::GpuMesh> Meshes;
-
+    
     std::vector<Components::MeshRenderer> MeshRendererComponents;
 
-    SDL_GPUTexture* DepthBuffer;
+    std::vector<RendererModule::Components::DirectionalLight> DirectionalLights;
+    SDL_GPUBuffer* DirectionalLightBuffer;
 };
 
 Engine::Core::Pipeline::ModuleDefinition GetModuleDefinition();
