@@ -2,6 +2,44 @@
     "Name": "root_game_entity",
     "Children": [
         {
+            "Name": "light",
+            "Children": [],
+            "Components": [
+                {
+                    "Name": "direction_light",
+                    "Module": "RendererModule",
+                    "Type": "DirectionalLight",
+                    "Fields": {
+                        "Direction": {
+                            "Vec3": [1, 1, 0]
+                        },
+                        "Color": {
+                            "Vec3": [1, 1, 1]
+                        }
+                    }
+                }
+            ]
+        },
+                {
+            "Name": "light2",
+            "Children": [],
+            "Components": [
+                {
+                    "Name": "direction_light",
+                    "Module": "RendererModule",
+                    "Type": "DirectionalLight",
+                    "Fields": {
+                        "Direction": {
+                            "Vec3": [0, 1, 1]
+                        },
+                        "Color": {
+                            "Vec3": [1, 1, 1]
+                        }
+                    }
+                }
+            ]
+        },
+        {
             "Name": "teapot",
             "Children": [],
             "Components": [

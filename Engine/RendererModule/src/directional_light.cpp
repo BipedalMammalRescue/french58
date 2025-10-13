@@ -43,9 +43,9 @@ bool Components::CompileDirectionalLight(Core::Pipeline::RawComponent input, std
         Core::Pipeline::Field field = input.FieldV[i];
         if (field.Name == Core::Pipeline::HashId(md5::compute("Color")))
         {
-            if (field.Payload.Type != Core::Pipeline::VariantType::Vec4)
+            if (field.Payload.Type != Core::Pipeline::VariantType::Vec3)
                 return false;
-            result.Color = field.Payload.Data.Vec4;
+            result.Color = field.Payload.Data.Vec3;
             break;
         }
     }

@@ -20,6 +20,7 @@ namespace Engine::Extension::RendererModule {
 struct ModuleState 
 {
     const Core::Runtime::RootModuleState* RootModule;
+    SDL_GPUBuffer* EmptyStorageBuffer;
 
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> FragmentShaders;
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> VertexShaders;

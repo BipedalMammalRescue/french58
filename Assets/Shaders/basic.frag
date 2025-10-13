@@ -11,15 +11,15 @@ struct DirectionalLight
     vec3 Color;
 };
 
-layout(std140, set = 2, binding = 0) readlonly buffer t_DirectionalLights
+layout(std140, set = 2, binding = 0) readonly buffer t_DirectionalLights
 {
     DirectionalLight b_DirectionalLights[];
-}
+};
 
 layout(set = 3, binding = 0) uniform t_DirectionalLightCount
 {
     uint u_DirectionalLightCount;
-}
+};
 
 layout(location = 0) out vec4 f_color;
 
@@ -28,7 +28,8 @@ void main()
     vec3 normal = normalize(v_Normal);
     vec3 viewAngle = normalize(v_ViewAngle);
 
-    // phong reflection parameters
+    // phong reflection parameters 
+    // TODO: move all these into material editor
     float kSpecular = 1.0;
     float kDiffuse = 1.0;
     float kAmbient = 0;
@@ -40,7 +41,7 @@ void main()
     // define these in world space (same as the vertex normals)
     for (uint i = 0; i < u_DirectionalLightCount; i++)
     {
-        vec3 lightDirection = b_DirectionalLights[i].Direction;
+        vec3 lightDirection = normalize(b_DirectionalLights[i].Direction);
         vec4 lightColor = vec4(b_DirectionalLights[i].Color, 1.0);
 
         // diffuse switch
