@@ -1,0 +1,13 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangVertexShader",
+    "Data":
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "Shaders/basic.vert.slang"
+        }
+    }
+}

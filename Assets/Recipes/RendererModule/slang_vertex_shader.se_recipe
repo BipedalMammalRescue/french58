@@ -1,0 +1,22 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangVertexShader",
+    "Action": {
+        "$type": "command",
+        "Process": "slangc",
+        "Arguments": [
+            "-stage",
+            "vertex",
+            "-entry",
+            "main",
+            "-target",
+            "spirv",
+            "#(Source)"
+        ],
+        "OutputComponents": [
+            {
+                "$type": "prepend_length"
+            }
+        ]
+    }
+}

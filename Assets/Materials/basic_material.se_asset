@@ -6,12 +6,12 @@
         "$type": "obj",
         "VertexShader": {
             "$type": "leaf",
-            "Path": "Shaders/basic_vertex_shader.se_asset"
+            "Path": "Shaders/slang_vertex_shader.se_asset"
         },
         "FragmentShader": 
         {
             "$type": "leaf",
-            "Path": "Shaders/basic_fragment_shader.se_asset"
+            "Path": "Shaders/slang_fragment_shader.se_asset"
         }
     }
 }

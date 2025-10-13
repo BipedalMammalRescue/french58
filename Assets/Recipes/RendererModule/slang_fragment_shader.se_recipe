@@ -1,0 +1,22 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangFragmentShader",
+    "Action": {
+        "$type": "command",
+        "Process": "slangc",
+        "Arguments": [
+            "-stage",
+            "fragment",
+            "-entry",
+            "main",
+            "-target",
+            "spirv",
+            "#(Source)"
+        ],
+        "OutputComponents": [
+            {
+                "$type": "prepend_length"
+            }
+        ]
+    }
+}

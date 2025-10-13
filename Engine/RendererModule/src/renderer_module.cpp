@@ -33,7 +33,7 @@ static void* InitRendererModule(Core::Runtime::ServiceTable* services)
 {
     SDL_GPUBufferCreateInfo createInfo {
         SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
-        0
+        8
     };
 
     SDL_GPUBuffer* emptyBuffer = SDL_CreateGPUBuffer(services->GraphicsLayer->GetDevice(), &createInfo);
@@ -178,6 +178,16 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         },
         {
             md5::compute("FragmentShader"),
+            Assets::LoadFragmentShader,
+            Assets::UnloadFragmentShader
+        },
+        {
+            md5::compute("SlangVertexShader"),
+            Assets::LoadVertexShader,
+            Assets::UnloadVertexShader
+        },
+        {
+            md5::compute("SlangFragmentShader"),
             Assets::LoadFragmentShader,
             Assets::UnloadFragmentShader
         },
