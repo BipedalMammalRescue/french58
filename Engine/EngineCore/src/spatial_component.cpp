@@ -1,6 +1,7 @@
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
+#include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "EngineCore/Pipeline/variant.h"
@@ -74,5 +75,5 @@ Engine::Core::Runtime::CallbackResult Components::LoadSpatialComponent(size_t co
 glm::mat4 Components::SpatialRelation::Transform() const
 {
     // apply order: TRANSLATION * ROTATION * SCALE
-    return glm::translate(glm::mat4_cast(Rotation) * glm::scale(glm::mat4(1.0), Scale), Translation);
+    return glm::scale(glm::translate(glm::mat4(1.0), Translation) * glm::mat4_cast(Rotation), Scale);
 }

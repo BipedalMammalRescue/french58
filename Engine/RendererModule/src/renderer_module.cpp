@@ -5,8 +5,10 @@
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
 #include "RendererModule/Assets/vertex_shader.h"
+#include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
+#include "glm/ext/vector_float3.hpp"
 
 #include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Pipeline/module_definition.h>
@@ -22,18 +24,30 @@
 #include <md5.h>
 #include <glm/mat4x4.hpp>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
+
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
 static void* InitRendererModule(Core::Runtime::ServiceTable* services)
 {
-    return new ModuleState { services->ModuleManager->GetRootModule() };
+    SDL_GPUBufferCreateInfo createInfo {
+        SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+        0
+    };
+
+    SDL_GPUBuffer* emptyBuffer = SDL_CreateGPUBuffer(services->GraphicsLayer->GetDevice(), &createInfo);
+
+    return new ModuleState { services->ModuleManager->GetRootModule(), emptyBuffer };
 }
 
 // TODO: need a better way to collect
 static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
+
+    SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), state->EmptyStorageBuffer);
+    SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), state->DirectionalLightBuffer);
 
     for (const auto& shader : state->FragmentShaders)
     {
@@ -84,7 +98,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
     // calculate projection matrix
     glm::mat4 projectMatrix =
         glm::perspective(glm::radians<float>(Configuration::FieldOfView),
-                         960.0f / 720.0f, 0.1f, 10000000.0f);
+                         960.0f / 720.0f, 0.1f, 500.0f);
 
     // pre-calculate the first part of MVP
     glm::mat4 pvMatrix = projectMatrix * viewMatrix;
@@ -115,12 +129,29 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
         if (foundMesh == state->Meshes.end())
             continue;
 
+        // bind the light buffer
+        if (state->DirectionalLightBuffer != nullptr)
+        {
+            SDL_BindGPUFragmentStorageBuffers(pass, 0, &state->DirectionalLightBuffer, 1);
+        }
+        else 
+        {
+            SDL_BindGPUFragmentStorageBuffers(pass, 0, &state->EmptyStorageBuffer, 1);
+        }
+
+        // count lights
+        uint32_t directionalLightCount = (uint32_t)state->DirectionalLights.size();
+        SDL_PushGPUFragmentUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &directionalLightCount, sizeof(directionalLightCount));
+
         // bind pipeline
         SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
 
         // insert MVP
         glm::mat4 mvp = pvMatrix * modelMatrix;
         SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &mvp, sizeof(mvp));
+
+        // insert camera position
+        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &foundCameraTransform->second.Translation, sizeof(glm::vec3));
 
         // bind mesh (VB and IB)
         SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
@@ -176,6 +207,11 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
             md5::compute("MeshRenderer"),
             Components::CompileMeshRenderer,
             Components::LoadMeshRenderer
+        },
+        {
+            md5::compute("DirectionalLight"),
+            Components::CompileDirectionalLight,
+            Components::LoadDirectionalLight
         }
     };
 

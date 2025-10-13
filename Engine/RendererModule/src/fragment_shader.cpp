@@ -43,8 +43,8 @@ Engine::Core::Runtime::CallbackResult Assets::LoadFragmentShader(Engine::Core::P
                                               shaderStage,
                                               0,
                                               0,
-                                              0,
-                                              0};
+                                              1,
+                                              1};
 
         SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
         
