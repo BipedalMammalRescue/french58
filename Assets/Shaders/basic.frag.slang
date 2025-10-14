@@ -12,9 +12,9 @@ float4 main(VertexStageOutput input)
     // phong reflection parameters
     // TODO: move all these into material editor
     float kSpecular = 1.0;
-    float kDiffuse = 1.0;
+    float kDiffuse = 0.5;
     float kAmbient = 0;
-    float shininess = 3.0;
+    float shininess = 10;
     float4 ambientColor = float4(0, 1, 0, 1);
 
     float4 outputColor = float4(0, 0, 0, 1);

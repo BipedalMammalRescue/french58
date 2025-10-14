@@ -84,7 +84,7 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
 
         pipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
         pipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
-        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER;
+        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
 
         pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 

@@ -7,7 +7,7 @@
         "Source": 
         {
             "$type": "leaf",
-            "Path": "Meshes/teapot.obj"
+            "Path": "Meshes/teapot_blender.obj"
         }
     }
 }
