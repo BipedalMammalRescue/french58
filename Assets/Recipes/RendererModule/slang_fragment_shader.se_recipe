@@ -5,12 +5,12 @@
         "$type": "command",
         "Process": "slangc",
         "Arguments": [
-            "-stage",
-            "fragment",
-            "-entry",
-            "main",
-            "-target",
-            "spirv",
+            "-stage", "fragment",
+            "-emit-spirv-via-glsl",
+            "-target", "spirv",
+            "-profile", "spirv_1_0",
+            "-capability", "GLSL_150",
+            "-entry", "main",
             "#(Source)"
         ],
         "OutputComponents": [

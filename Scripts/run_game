@@ -1,0 +1,6 @@
+#!/bin/bash
+project_root=$(dirname $(dirname "$0"))
+
+cd $project_root
+cd built_data
+Game
