@@ -8,7 +8,6 @@
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
-#include "SDL3/SDL_camera.h"
 #include "glm/ext/vector_float3.hpp"
 
 #include <EngineCore/Pipeline/asset_definition.h>
