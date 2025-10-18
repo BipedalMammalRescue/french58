@@ -1,8 +1,8 @@
 import data;
 
-layout(binding = 0, set = 1) ConstantBuffer<float4x4> ModelMatrix;
-layout(binding = 1, set = 1) ConstantBuffer<float4x4> PvMatrix;
-layout(binding = 2, set = 1) ConstantBuffer<float3> CameraPosition;
+layout(set = 1, binding = 0) ConstantBuffer<float4x4> ModelMatrix;
+layout(set = 1, binding = 1) ConstantBuffer<float4x4> PvMatrix;
+layout(set = 1, binding = 2) ConstantBuffer<float3> CameraPosition;
 
 [shader("vertex")]
 VertexStageOutput main(VertexStageInput input)

@@ -1,0 +1,93 @@
+{
+    "Module": "RendererModule",
+    "Type": "Pipeline",
+    "Data":
+    {
+        "$type": "obj",
+        "VertexUniforms":
+        {
+            "$type": "arr",
+            "Data": [
+            ]
+        },
+        "FragmentUniforms":
+        {
+            "$type": "arr",
+            "Data": [
+                {
+                    "$type": "obj",
+                    "Alias": 
+                    {
+                        "$type": "leaf",
+                        "Path": "kSpecular"
+                    },
+                    "Defaul": 
+                    {
+                        "$type": "leaf",
+                        "Float": 0.0
+                    }
+                },
+                {
+                    "$type": "obj",
+                    "Alias": 
+                    {
+                        "$type": "leaf",
+                        "Path": "kDiffuse"
+                    },
+                    "Default": 
+                    {
+                        "$type": "leaf",
+                        "Float": 0.0
+                    }
+                },
+                {
+                    "$type": "obj",
+                    "Alias": 
+                    {
+                        "$type": "leaf",
+                        "Path": "kAmbient"
+                    },
+                    "Default": 
+                    {
+                        "$type": "leaf",
+                        "Float": 0.0
+                    }
+                },
+                {
+                    "$type": "obj",
+                    "Alias": 
+                    {
+                        "$type": "leaf",
+                        "Path": "shininess"
+                    },
+                    "Default": 
+                    {
+                        "$type": "leaf",
+                        "Float": 1.0
+                    }
+                },
+                {
+                    "$type": "obj",
+                    "Alias": 
+                    {
+                        "$type": "leaf",
+                        "Path": "ambientColor"
+                    },
+                    "Default": 
+                    {
+                        "$type": "leaf",
+                        "Vec3": [1.0, 0.0, 0.0]
+                    }
+                }
+            ]
+        },
+        "VertexShader": {
+            "$type": "leaf",
+            "Path": "Shaders/slang_vertex_shader.se_asset"
+        },
+        "FragmentShader": {
+            "$type": "leaf",
+            "Path": "Shaders/slang_fragment_shader.se_asset"
+        }
+    }
+}

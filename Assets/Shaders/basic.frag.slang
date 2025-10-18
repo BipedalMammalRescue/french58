@@ -3,6 +3,13 @@ import data;
 // storage buffers
 layout(std140, set = 2, binding = 0) StructuredBuffer<DirectionalLight> DirectionalLightBuffer;
 
+// uniforms (feed these from the material)
+layout(set = 3, binding = 0) ConstantBuffer<float> kSpecular;
+layout(set = 3, binding = 1) ConstantBuffer<float> kDiffuse;
+layout(set = 3, binding = 2) ConstantBuffer<float> kAmbient;
+layout(set = 3, binding = 3) ConstantBuffer<float> kShininess;
+layout(set = 3, binding = 4) ConstantBuffer<float3> ambientColor;
+
 [shader("fragment")]
 float4 main(VertexStageOutput input)
 {
@@ -10,13 +17,6 @@ float4 main(VertexStageOutput input)
     float3 viewAngle = normalize(input.ViewAngle);
 
     // phong reflection parameters
-    // TODO: move all these into material editor
-    float kSpecular = 1.0;
-    float kDiffuse = 0.5;
-    float kAmbient = 0;
-    float shininess = 10;
-    float3 ambientColor = float3(0, 1, 0);
-
     float3 outputColor = float3(0, 0, 0);
 
     for (uint i = 0; i < DirectionalLightBuffer.getCount(); i++)
@@ -33,7 +33,7 @@ float4 main(VertexStageOutput input)
         float3 diffuseShade = kDiffuse * max(diffuseStrength, 0) * (lightColor * ambientColor);
 
         float3 reflectedLight = normalize(2 * dot(lightDirection, normal) * normal - lightDirection);
-        float3 specularShade = diffuseSwitch * kSpecular * pow(max(dot(reflectedLight, viewAngle), 0), shininess) * (lightColor * ambientColor);
+        float3 specularShade = diffuseSwitch * kSpecular * pow(max(dot(reflectedLight, viewAngle), 0), kShininess) * (lightColor * ambientColor);
 
         // add the components up
         outputColor += ambientShade + diffuseShade + specularShade;
