@@ -139,10 +139,6 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
             SDL_BindGPUFragmentStorageBuffers(pass, 0, &state->EmptyStorageBuffer, 1);
         }
 
-        // count lights
-        uint32_t directionalLightCount = (uint32_t)state->DirectionalLights.size();
-        SDL_PushGPUFragmentUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &directionalLightCount, sizeof(directionalLightCount));
-
         // bind pipeline
         SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
 
