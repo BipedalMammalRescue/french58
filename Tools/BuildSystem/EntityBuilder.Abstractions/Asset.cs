@@ -19,11 +19,13 @@ public interface IAssetData : IDataPoint
     IEnumerable<string> AssetReferences { get; }
 }
 
-public class AssetArrayData : List<IAssetData>, IAssetData, IArrayDataPoint
+public class AssetArrayData : IAssetData, IArrayDataPoint
 {
-    public IEnumerable<string> AssetReferences => this.SelectMany(d => d.AssetReferences);
+    public required IAssetData[] Data { get; set; }
 
-    public IDataPoint[] Get() => [.. this];
+    public IEnumerable<string> AssetReferences => Data.SelectMany(d => d.AssetReferences);
+
+    public IDataPoint[] Get() => [.. Data];
 }
 
 public class AssetObjData : Dictionary<string, IAssetData>, IAssetData, IObjDataPoint
