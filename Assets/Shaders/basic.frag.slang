@@ -1,9 +1,11 @@
 import data;
 
-// storage buffers
+// storage buffers are injected
 layout(std140, set = 2, binding = 0) StructuredBuffer<DirectionalLight> DirectionalLightBuffer;
 
-// uniforms (feed these from the material)
+// uniforms that are fed through injection are reserved in the 0x00-0xFF range
+
+// uniforms that are fed through the material
 layout(set = 3, binding = 0) ConstantBuffer<float> kSpecular;
 layout(set = 3, binding = 1) ConstantBuffer<float> kDiffuse;
 layout(set = 3, binding = 2) ConstantBuffer<float> kAmbient;
