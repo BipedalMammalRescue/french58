@@ -3,18 +3,22 @@ import data;
 // storage buffers are injected
 layout(std140, set = 2, binding = 0) StructuredBuffer<DirectionalLight> DirectionalLightBuffer;
 
-// uniforms that are fed through injection are reserved in the 0x00-0xFF range
-
-// uniforms that are fed through the material
-layout(set = 3, binding = 0) ConstantBuffer<float> kSpecular;
-layout(set = 3, binding = 1) ConstantBuffer<float> kDiffuse;
-layout(set = 3, binding = 2) ConstantBuffer<float> kAmbient;
-layout(set = 3, binding = 3) ConstantBuffer<float> kShininess;
-layout(set = 3, binding = 4) ConstantBuffer<float3> ambientColor;
+// // uniforms that are fed through the material
+// layout(set = 3, binding = 0) ConstantBuffer<float> kSpecular;
+// layout(set = 3, binding = 1) ConstantBuffer<float> kDiffuse;
+// layout(set = 3, binding = 2) ConstantBuffer<float> kAmbient;
+// layout(set = 3, binding = 3) ConstantBuffer<float> kShininess;
+// layout(set = 3, binding = 4) ConstantBuffer<float3> ambientColor;
 
 [shader("fragment")]
 float4 main(VertexStageOutput input)
 {
+    float kSpecular = 1.0;
+    float kDiffuse = 0.5;
+    float kAmbient = 0.0;
+    float kShininess = 10.0;
+    float3 ambientColor = float3(1, 0, 1);
+
     float3 normal = normalize(input.Normal);
     float3 viewAngle = normalize(input.ViewAngle);
 

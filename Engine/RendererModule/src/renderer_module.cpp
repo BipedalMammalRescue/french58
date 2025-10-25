@@ -144,8 +144,11 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
 
         // insert model matrix
         SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &modelMatrix, sizeof(modelMatrix));
-        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &pvMatrix, sizeof(pvMatrix));
-        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 2, &foundCameraTransform->second.Translation, sizeof(glm::vec3));
+        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &viewMatrix, sizeof(viewMatrix));
+        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 2, &projectMatrix, sizeof(projectMatrix));
+
+        // SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &pvMatrix, sizeof(pvMatrix));
+        // SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 2, &foundCameraTransform->second.Translation, sizeof(glm::vec3));
 
         // bind mesh (VB and IB)
         SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};

@@ -8,6 +8,8 @@ layout(set = 1, binding = 2) ConstantBuffer<float4x4> ProjectionMatrix;
 [shader("vertex")]
 VertexStageOutput main(VertexStageInput input)
 {
+    var CameraPosition = transpose(ViewMatrix)[3].xyz;
+
     VertexStageOutput output;
 
     float4x4 pvMatrix = mul(ProjectionMatrix, ViewMatrix);
