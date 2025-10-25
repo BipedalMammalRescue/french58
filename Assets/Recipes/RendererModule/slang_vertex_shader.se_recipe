@@ -15,7 +15,20 @@
         ],
         "OutputComponents": [
             {
-                "$type": "prepend_length"
+                "$type": "concat",
+                "Sources": [
+                    {
+                        "$type": "binary",
+                        "SourcePath": "UniformCount"
+                    },
+                    {
+                        "$type": "binary",
+                        "SourcePath": "StorageBufferCount"
+                    },
+                    {
+                        "$type": "prepend_length"
+                    }
+                ]
             }
         ]
     }

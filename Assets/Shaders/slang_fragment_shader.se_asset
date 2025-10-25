@@ -8,6 +8,16 @@
         {
             "$type": "leaf",
             "Path": "Shaders/basic.frag.slang"
+        },
+        "UniformCount": 
+        {
+            "$type": "leaf",
+            "Uint32": 0
+        },
+        "StorageBufferCount":
+        {
+            "$type": "leaf",
+            "Uint32": 1
         }
     }
 }

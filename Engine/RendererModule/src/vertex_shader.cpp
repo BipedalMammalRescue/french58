@@ -27,6 +27,12 @@ Engine::Core::Runtime::CallbackResult Assets::LoadVertexShader(Engine::Core::Pip
     {
         Engine::Core::Pipeline::RawAsset rawAsset = inputStreams->GetCurrent();
 
+        // load prefixed reflection information
+        uint32_t uniformCount = 0;
+        uint32_t stroageBufferCount = 0;
+        rawAsset.Storage->read((char*)&uniformCount, sizeof(uint32_t));
+        rawAsset.Storage->read((char*)&stroageBufferCount, sizeof(uint32_t));
+
         // load a prefixed length
         size_t codeLength = 0;
         rawAsset.Storage->read((char*)&codeLength, sizeof(size_t));
@@ -43,8 +49,8 @@ Engine::Core::Runtime::CallbackResult Assets::LoadVertexShader(Engine::Core::Pip
                                               shaderStage,
                                               0,
                                               0,
-                                              0,
-                                              3};
+                                              stroageBufferCount,
+                                              uniformCount};
 
         SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
         
