@@ -1,6 +1,8 @@
 #pragma once
 
 #include "RendererModule/Assets/mesh.h"
+#include "RendererModule/Assets/new_material.h"
+#include "RendererModule/Assets/render_pipeline.h"
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 
@@ -24,8 +26,17 @@ struct ModuleState
 
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> FragmentShaders;
     std::unordered_map<Core::Pipeline::HashId, SDL_GPUShader*> VertexShaders;
-    std::unordered_map<Core::Pipeline::HashId, SDL_GPUGraphicsPipeline*> Materials;
+    std::unordered_map<Core::Pipeline::HashId, SDL_GPUGraphicsPipeline*> LegacyMaterials;
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::GpuMesh> Meshes;
+
+    // baked-in pipeline information
+    std::unordered_map<Core::Pipeline::HashId, Assets::RenderPipeline> RenderPipelines;
+    std::vector<Assets::InjectedUniform> InjectedUniforms;
+    std::vector<Assets::InjectedStorageBuffer> InjectedStorageBuffers;
+
+    // materials define configured parameters on top of the pipeline-baked parameters
+    std::unordered_map<Core::Pipeline::HashId, Assets::Material> Materials;
+    std::vector<Assets::ConfiguredUniform> ConfiguredUniforms;
     
     std::vector<Components::MeshRenderer> MeshRendererComponents;
 

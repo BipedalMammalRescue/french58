@@ -59,7 +59,7 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
         SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
     }
 
-    for (const auto& material : state->Materials)
+    for (const auto& material : state->LegacyMaterials)
     {
         SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), material.second);
     }
@@ -120,8 +120,8 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
 
         // find the material
         // TODO: default material when it's not found
-        auto foundMaterial = state->Materials.find(renderTarget.Material);
-        if (foundMaterial == state->Materials.end())
+        auto foundMaterial = state->LegacyMaterials.find(renderTarget.Material);
+        if (foundMaterial == state->LegacyMaterials.end())
             continue;
 
         // find the mesh, abort if there's no mesh
@@ -190,8 +190,8 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         },
         {
             md5::compute("Material"),
-            Assets::LoadMaterial,
-            Assets::UnloadMaterial
+            Assets::LoadLegacyMaterial,
+            Assets::UnloadLegacyMaterial
         },
         {
             md5::compute("Mesh"),

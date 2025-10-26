@@ -1,24 +1,26 @@
 #include "RendererModule/Assets/material.h"
-#include "EngineCore/Pipeline/hash_id.h"
-#include "EngineCore/Runtime/crash_dump.h"
-#include "EngineUtils/ErrorHandling/exceptions.h"
 #include "RendererModule/renderer_module.h"
+#include "RendererModule/Assets/new_material.h"
 
-#include "EngineCore/Pipeline/asset_enumerable.h"
-#include "EngineCore/Runtime/graphics_layer.h"
-#include "EngineCore/Runtime/service_table.h"
+#include <EngineCore/Pipeline/hash_id.h>
+#include <EngineCore/Runtime/crash_dump.h>
+#include <EngineUtils/ErrorHandling/exceptions.h>
+
+#include <EngineCore/Pipeline/asset_enumerable.h>
+#include <EngineCore/Runtime/graphics_layer.h>
+#include <EngineCore/Runtime/service_table.h>
 
 #include <SDL3/SDL_gpu.h>
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
+Core::Runtime::CallbackResult Assets::LoadLegacyMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
                   Core::Runtime::ServiceTable *services,
                   void *moduleState) 
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
-    state->Materials.reserve(state->Materials.size() + inputStreams->Count());
+    state->LegacyMaterials.reserve(state->LegacyMaterials.size() + inputStreams->Count());
 
     while (inputStreams->MoveNext())
     {
@@ -108,25 +110,37 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
         if (newPipeline == nullptr)
             SE_THROW_GRAPHICS_EXCEPTION;
 
-        state->Materials[asset.ID] = newPipeline;
+        state->LegacyMaterials[asset.ID] = newPipeline;
     }
 
     return Core::Runtime::CallbackSuccess();
 }
             
-Core::Runtime::CallbackResult Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
+Core::Runtime::CallbackResult Assets::UnloadLegacyMaterial(Core::Pipeline::HashId *ids, size_t count,
                           Core::Runtime::ServiceTable *services, void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     
     for (size_t i = 0; i < count; i++)
     {
-        auto foundPipeline = state->Materials.find(ids[i]);
-        if (foundPipeline == state->Materials.end())
+        auto foundPipeline = state->LegacyMaterials.find(ids[i]);
+        if (foundPipeline == state->LegacyMaterials.end())
             continue;
 
         SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), foundPipeline->second);
-        state->Materials.erase(foundPipeline);
+        state->LegacyMaterials.erase(foundPipeline);
+    }
+
+    return Core::Runtime::CallbackSuccess();
+}
+
+Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
+                  Core::Runtime::ServiceTable *services,
+                  void *moduleState)
+{
+    while (inputStreams->MoveNext())
+    {
+        
     }
 
     return Core::Runtime::CallbackSuccess();
