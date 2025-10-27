@@ -11,7 +11,6 @@ Core::Runtime::CallbackResult LoadMeshRenderer(size_t count, std::istream* input
 struct MeshRenderer
 {
     int Entity;
-    Core::Pipeline::HashId Material;
     Core::Pipeline::HashId Mesh;
 };
 

@@ -1,13 +1,19 @@
 #include "RendererModule/renderer_module.h"
 
+#include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
+#include "RendererModule/Assets/material.h"
+#include "RendererModule/Assets/render_pipeline.h"
 #include "RendererModule/Assets/vertex_shader.h"
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
+#include "glm/ext/matrix_float2x2.hpp"
+#include "glm/ext/matrix_float4x4.hpp"
+#include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 
 #include <EngineCore/Pipeline/asset_definition.h>
@@ -59,9 +65,9 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
         SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
     }
 
-    for (const auto& material : state->LegacyMaterials)
+    for (const auto& pipeline : state->Pipelines)
     {
-        SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), material.second);
+        SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), pipeline.Pipeline.GraphicsPipeline);
     }
 
     for (const auto& mesh : state->Meshes)
@@ -69,7 +75,7 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
         Assets::DisposeMesh(services, mesh.second);
     }
 
-    delete static_cast<ModuleState*>(moduleState);
+    delete state;
 }
 
 static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* services, void* moduleState) 
@@ -107,57 +113,121 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     SDL_GPUDevice* device = services->GraphicsLayer->GetDevice();
     SDL_GPURenderPass* pass = services->GraphicsLayer->AddRenderPass();
+    SDL_GPUCommandBuffer* commandBuffer = services->GraphicsLayer->GetCurrentCommandBuffer();
 
-    for (const Components::MeshRenderer& renderTarget : state->MeshRendererComponents)
+    for (const IndexedPipeline& pipeline : state->Pipelines)
     {
-        // load the MVP, skip if the renderer has no spatial relation
-        auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
-        if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
-            continue;
+        // set up pipeline
+        SDL_BindGPUGraphicsPipeline(pass, pipeline.Pipeline.GraphicsPipeline);
 
-        // compute MVP from scene components
-        glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
-
-        // find the material
-        // TODO: default material when it's not found
-        auto foundMaterial = state->LegacyMaterials.find(renderTarget.Material);
-        if (foundMaterial == state->LegacyMaterials.end())
-            continue;
-
-        // find the mesh, abort if there's no mesh
-        auto foundMesh = state->Meshes.find(renderTarget.Mesh);
-        if (foundMesh == state->Meshes.end())
-            continue;
-
-        // bind the light buffer
-        if (state->DirectionalLightBuffer != nullptr)
+        // static injections
+        // TODO: we currently don't inject any static uniforms
+        for (uint32_t i = pipeline.Pipeline.StaticVertex.StorageBufferStart; i < pipeline.Pipeline.StaticVertex.StorageBufferEnd; i++)
         {
-            SDL_BindGPUFragmentStorageBuffers(pass, 0, &state->DirectionalLightBuffer, 1);
+            Assets::InjectedStorageBuffer buffer = state->InjectedStorageBuffers[i];
+        
+            switch (buffer.Identifier)
+            {
+            case Assets::StorageBufferInjectionIdentifier::DirectionalLightBuffer:
+                SDL_BindGPUVertexStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
+                break;
+            }
         }
-        else 
+        for (uint32_t i = pipeline.Pipeline.StaticFragment.StorageBufferStart; i < pipeline.Pipeline.StaticFragment.StorageBufferEnd; i++)
         {
-            SDL_BindGPUFragmentStorageBuffers(pass, 0, &state->EmptyStorageBuffer, 1);
+            Assets::InjectedStorageBuffer buffer = state->InjectedStorageBuffers[i];
+        
+            switch (buffer.Identifier)
+            {
+            case Assets::StorageBufferInjectionIdentifier::DirectionalLightBuffer:
+                SDL_BindGPUFragmentStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
+                break;
+            }
         }
 
-        // bind pipeline
-        SDL_BindGPUGraphicsPipeline(pass, foundMaterial->second);
+        // per-material information
+        for (const IndexedMaterial& material : pipeline.Materials)
+        {
+            // fill in material uniforms
+            for (uint32_t i = material.Material.VertexUniformStart; i < material.Material.VertexUniformEnd; i++)
+            {
+                Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
+                SDL_PushGPUVertexUniformData(
+                    commandBuffer, 
+                    materialUniform.Binding, 
+                    &materialUniform.Data.Data, 
+                    (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+            }
 
-        // insert model matrix
-        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 0, &modelMatrix, sizeof(modelMatrix));
-        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &viewMatrix, sizeof(viewMatrix));
-        SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 2, &projectMatrix, sizeof(projectMatrix));
+            for (uint32_t i = material.Material.FragmentUniformStart; i < material.Material.FragmentUniformEnd; i++)
+            {
+                Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
+                SDL_PushGPUFragmentUniformData(
+                    commandBuffer, 
+                    materialUniform.Binding, 
+                    &materialUniform.Data.Data, 
+                    (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+            }
 
-        // SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 1, &pvMatrix, sizeof(pvMatrix));
-        // SDL_PushGPUVertexUniformData(services->GraphicsLayer->GetCurrentCommandBuffer(), 2, &foundCameraTransform->second.Translation, sizeof(glm::vec3));
+            for (const Components::MeshRenderer &renderTarget : material.Meshes) 
+            {
+                // gather mesh information
+                auto foundMesh = state->Meshes.find(renderTarget.Mesh);
+                if (foundMesh == state->Meshes.end())
+                    continue;
 
-        // bind mesh (VB and IB)
-        SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
-        SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
-        SDL_GPUBufferBinding iboBinding{foundMesh->second.IndexBuffer, 0};
-        SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                // load the MVP, skip if the renderer has no spatial relation
+                auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
+                if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
+                    continue;
 
-        // draw
-        SDL_DrawGPUIndexedPrimitives(pass, foundMesh->second.IndexCount, 1, 0, 0, 0);
+                // compute MVP from scene components
+                glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
+
+                // bind dynamic injections (only uniforms rn)
+                for (uint32_t i = pipeline.Pipeline.DynamicVertex.UniformStart; i < pipeline.Pipeline.DynamicVertex.UniformEnd; i++)
+                {
+                    Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                    switch (uniform.Identifier)
+                    {
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ModelTransform:
+                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
+                        break;
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ProjectionTransform:
+                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
+                        break;
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ViewTransform:
+                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
+                        break;
+                    }
+                }
+                for (uint32_t i = pipeline.Pipeline.DynamicFragment.UniformStart; i < pipeline.Pipeline.DynamicFragment.UniformEnd; i++)
+                {
+                    Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                    switch (uniform.Identifier)
+                    {
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ModelTransform:
+                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
+                        break;
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ProjectionTransform:
+                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
+                        break;
+                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ViewTransform:
+                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
+                        break;
+                    }
+                }
+
+                // bind the mesh
+                SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
+                SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
+                SDL_GPUBufferBinding iboBinding{foundMesh->second.IndexBuffer, 0};
+                SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                
+                // draw
+                SDL_DrawGPUIndexedPrimitives(pass, foundMesh->second.IndexCount, 1, 0, 0, 0);
+            }
+        }
     }
 
     services->GraphicsLayer->CommitRenderPass(pass);
@@ -190,8 +260,8 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         },
         {
             md5::compute("Material"),
-            Assets::LoadLegacyMaterial,
-            Assets::UnloadLegacyMaterial
+            Assets::LoadMaterial,
+            Assets::UnloadMaterial
         },
         {
             md5::compute("Mesh"),

@@ -1,7 +1,9 @@
 #include "RendererModule/Components/mesh_renderer.h"
+#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "RendererModule/renderer_module.h"
 #include <md5.h>
 
@@ -42,19 +44,32 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
 Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
-    state->MeshRendererComponents.reserve(state->MeshRendererComponents.size() + count);
+
+    const char* logChannels[] = {"MeshRendererLoader"};
+    Core::Logging::Logger logger = services->LoggerService->CreateLogger(logChannels, 1);
 
     for (size_t i = 0; i < count; i++) 
     {
         int entity;
-        Core::Pipeline::HashId material;
+        Core::Pipeline::HashId materialId;
         Core::Pipeline::HashId mesh;
 
         input->read((char*)&entity, sizeof(int));
-        input->read((char*)material.Hash.data(), 16);
+        input->read((char*)materialId.Hash.data(), 16);
         input->read((char*)mesh.Hash.data(), 16);
 
-        state->MeshRendererComponents.push_back({ entity, material, mesh });
+        // find the material
+        auto materialLocation = state->MaterialIndex.find(materialId);
+        if (materialLocation == state->MaterialIndex.end())
+        {
+            // TODO: need some more readable notation for mesh renderer component locations
+            logger.Error("Failed to load mesh renderer component for entity {entityId}, material ({materialId}) not found.", {entity, materialId});
+            continue;
+        }
+
+        // add mesh renderer to the material
+        IndexedMaterial& material = state->Pipelines[materialLocation->second.Pipeline].Materials[materialLocation->second.Material];
+        material.Meshes.push_back({ entity, mesh });
     }
 
     return Core::Runtime::CallbackSuccess();

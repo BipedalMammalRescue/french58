@@ -69,4 +69,6 @@ struct Variant
     Variant(const HashId& path) : Type(VariantType::Path), Data({.Path=path.Hash}) {}
 };
 
+size_t GetVariantPayloadSize(const Variant& source);
+
 }

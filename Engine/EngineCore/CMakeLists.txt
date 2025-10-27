@@ -8,6 +8,7 @@ add_library(EngineCore STATIC
     src/module_manager.cpp
     src/camera_component.cpp
     src/game_loop.cpp
+    src/variant.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

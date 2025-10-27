@@ -32,27 +32,32 @@ enum class StorageBufferInjectionIdentifier : unsigned char
 
 struct InjectedUniform
 {
-    uint32_t Set;
     uint32_t Binding;
     UniformInjectionIdentifier Identifier;
 };
 
 struct InjectedStorageBuffer
 {
-    uint32_t Set;
     uint32_t Binding;
     StorageBufferInjectionIdentifier Identifier;
+};
+
+struct InjectedDataSet
+{
+    uint32_t UniformStart;
+    uint32_t UniformEnd;
+    uint32_t StorageBufferStart;
+    uint32_t StorageBufferEnd;
 };
 
 struct RenderPipeline
 {
     SDL_GPUGraphicsPipeline* GraphicsPipeline;
 
-    uint32_t UniformStart;
-    uint32_t UniformEnd;
-
-    uint32_t StorageBufferStart;
-    uint32_t StorageBufferEnd;
+    InjectedDataSet StaticVertex;
+    InjectedDataSet StaticFragment;
+    InjectedDataSet DynamicVertex;
+    InjectedDataSet DynamicFragment;
 };
 
 } // namespace Engine::Extension::RendererModule::Assets
