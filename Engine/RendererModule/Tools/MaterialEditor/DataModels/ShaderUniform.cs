@@ -5,10 +5,10 @@ namespace DataModels;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(ConfigurableShaderUniform), typeDiscriminator: "configurable")]
-[JsonDerivedType(typeof(InjectedShaderUniform), typeDiscriminator: "injected")]
+[JsonDerivedType(typeof(DynamicInjectedShaderUniform), typeDiscriminator: "dynamic")]
+[JsonDerivedType(typeof(StaticInjectedShaderUniform), typeDiscriminator: "static")]
 public abstract class ShaderUniform
 {
-    public required int Set { get; set; }
     public required int Binding { get; set; }
 }
 
@@ -18,7 +18,12 @@ public class ConfigurableShaderUniform : ShaderUniform
     public required Variant Default { get; set; }
 }
 
-public class InjectedShaderUniform : ShaderUniform
+public class DynamicInjectedShaderUniform : ShaderUniform
 {
-    public required string Identifier { get; set; }
+    public required DynamicUniformIdentifier Identifier { get; set; }
+}
+
+public class StaticInjectedShaderUniform : ShaderUniform
+{
+    public required StaticUniformIdentifier Identifier { get; set; }
 }

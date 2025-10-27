@@ -4,7 +4,6 @@ public class ShaderStage
 {
     public ShaderUniform[] Uniforms { get; set; } = [];
     public ShaderStorageBuffer[] StorageBuffers { get; set; } = [];
-    public required string Path { get; set; }
 }
 
 public class Pipeline

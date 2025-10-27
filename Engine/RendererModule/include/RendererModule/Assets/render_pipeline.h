@@ -18,14 +18,14 @@ Core::Runtime::CallbackResult UnloadRenderPipeline(Core::Pipeline::HashId *ids, 
 
 void DisposeRenderPipeline(Core::Runtime::ServiceTable *services, SDL_GPUShader* shader);
 
-enum class UniformInjectionIdentifier : unsigned char
+enum class DynamicUniformIdentifier : unsigned char
 {
     ModelTransform,
     ViewTransform,
     ProjectionTransform
 };
 
-enum class StorageBufferInjectionIdentifier : unsigned char
+enum class StaticStorageBufferIdentifier : unsigned char
 {
     DirectionalLightBuffer
 };
@@ -33,13 +33,13 @@ enum class StorageBufferInjectionIdentifier : unsigned char
 struct InjectedUniform
 {
     uint32_t Binding;
-    UniformInjectionIdentifier Identifier;
+    unsigned char Identifier;
 };
 
 struct InjectedStorageBuffer
 {
     uint32_t Binding;
-    StorageBufferInjectionIdentifier Identifier;
+    unsigned char Identifier;
 };
 
 struct InjectedDataSet

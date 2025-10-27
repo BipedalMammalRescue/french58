@@ -11,10 +11,7 @@
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
-#include "glm/ext/matrix_float2x2.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
-#include "glm/ext/vector_float2.hpp"
-#include "glm/ext/vector_float3.hpp"
 
 #include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Pipeline/module_definition.h>
@@ -128,7 +125,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
         
             switch (buffer.Identifier)
             {
-            case Assets::StorageBufferInjectionIdentifier::DirectionalLightBuffer:
+            case (unsigned char)Assets::StaticStorageBufferIdentifier::DirectionalLightBuffer:
                 SDL_BindGPUVertexStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
                 break;
             }
@@ -139,7 +136,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
         
             switch (buffer.Identifier)
             {
-            case Assets::StorageBufferInjectionIdentifier::DirectionalLightBuffer:
+            case (unsigned char)Assets::StaticStorageBufferIdentifier::DirectionalLightBuffer:
                 SDL_BindGPUFragmentStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
                 break;
             }
@@ -190,13 +187,13 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
                     Assets::InjectedUniform uniform = state->InjectedUniforms[i];
                     switch (uniform.Identifier)
                     {
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ModelTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
                         SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
                         break;
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ProjectionTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
                         SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
                         break;
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ViewTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
                         SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
                         break;
                     }
@@ -206,13 +203,13 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
                     Assets::InjectedUniform uniform = state->InjectedUniforms[i];
                     switch (uniform.Identifier)
                     {
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ModelTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
                         SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
                         break;
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ProjectionTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
                         SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
                         break;
-                    case Engine::Extension::RendererModule::Assets::UniformInjectionIdentifier::ViewTransform:
+                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
                         SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
                         break;
                     }
@@ -257,6 +254,11 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
             md5::compute("SlangFragmentShader"),
             Assets::LoadFragmentShader,
             Assets::UnloadFragmentShader
+        },
+        {
+            md5::compute("RenderPipeline"),
+            Assets::LoadRenderPipeline,
+            Assets::UnloadRenderPipeline
         },
         {
             md5::compute("Material"),
