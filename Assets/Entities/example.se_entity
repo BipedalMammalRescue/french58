@@ -49,7 +49,121 @@
                             "Path": "Meshes/teapot_blender.se_asset"
                         },
                         "Material": {
-                            "Path": "Materials/basic_material.se_asset"
+                            "Path": "Materials/green_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "Name": "teapot2",
+            "Children": [],
+            "Components": [
+                {
+                    "Name": "transform",
+                    "Module": "EngineRootModule",
+                    "Type": "SpatialRelation",
+                    "Fields": {
+                        "Translation": {
+                            "Vec3": [-100, 100, -300]
+                        },
+                        "Scale": {
+                            "Vec3": [1, 1, 1]
+                        },
+                        "Rotation": {
+                            "Vec3": [0, 0, 0]
+                        }
+                    }
+                },
+                {
+                    "Name": "mesh",
+                    "Module": "RendererModule",
+                    "Type": "MeshRenderer",
+                    "Fields": {
+                        "Mesh": {
+                            "Path": "Meshes/teapot_blender.se_asset"
+                        },
+                        "Material": {
+                            "Path": "Materials/purple_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "Name": "teapot3",
+            "Children": [],
+            "Components": [
+                {
+                    "Name": "transform",
+                    "Module": "EngineRootModule",
+                    "Type": "SpatialRelation",
+                    "Fields": {
+                        "Translation": {
+                            "Vec3": [100, -100, -300]
+                        },
+                        "Scale": {
+                            "Vec3": [1, 1, 1]
+                        },
+                        "Rotation": {
+                            "Vec3": [0, 0, 0]
+                        }
+                    }
+                },
+                {
+                    "Name": "mesh",
+                    "Module": "RendererModule",
+                    "Type": "MeshRenderer",
+                    "Fields": {
+                        "Mesh": {
+                            "Path": "Meshes/teapot_blender.se_asset"
+                        },
+                        "Material": {
+                            "Path": "Materials/blue_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "Name": "teapot4",
+            "Children": [],
+            "Components": [
+                {
+                    "Name": "transform",
+                    "Module": "EngineRootModule",
+                    "Type": "SpatialRelation",
+                    "Fields": {
+                        "Translation": {
+                            "Vec3": [-100, -100, -300]
+                        },
+                        "Scale": {
+                            "Vec3": [1, 1, 1]
+                        },
+                        "Rotation": {
+                            "Vec3": [0, 0, 0]
+                        }
+                    }
+                },
+                {
+                    "Name": "mesh",
+                    "Module": "RendererModule",
+                    "Type": "MeshRenderer",
+                    "Fields": {
+                        "Mesh": {
+                            "Path": "Meshes/teapot_blender.se_asset"
+                        },
+                        "Material": {
+                            "Path": "Materials/red_phong.se_asset"
                         },
                         "Pipeline": {
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
