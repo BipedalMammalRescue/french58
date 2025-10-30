@@ -85,6 +85,26 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
             vertexInputState,
             SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST
         };
+
+        pipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+        pipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
+        pipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
+
+        pipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+
+        SDL_GPUColorTargetDescription colorTarget {
+            SDL_GetGPUSwapchainTextureFormat(
+                services->GraphicsLayer->GetDevice(), 
+                services->GraphicsLayer->GetWindow()
+            )
+        };
+        pipelineCreateInfo.target_info = {
+            &colorTarget, 
+            1, 
+            SDL_GPU_TEXTUREFORMAT_D32_FLOAT, 
+            true
+        };
+
         pipeline.GraphicsPipeline = SDL_CreateGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), &pipelineCreateInfo);
 
         // static vertex uniform

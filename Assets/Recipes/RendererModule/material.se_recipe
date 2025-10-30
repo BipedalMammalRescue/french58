@@ -15,6 +15,9 @@
                     {
                         "$type": "binary",
                         "SourcePath": "Prototype"
+                    },
+                    {
+                        "$type": "pass_through"
                     }
                 ]
             }
