@@ -11,6 +11,7 @@
 #include <EngineCore/Pipeline/hash_id.h>
 
 #include <SDL3/SDL_gpu.h>
+#include <cstddef>
 #include <unordered_map>
 
 namespace Engine::Core::Runtime {
@@ -19,16 +20,10 @@ struct RootModuleState;
 
 namespace Engine::Extension::RendererModule {
 
-struct IndexedMaterial
-{
-    Assets::Material Material;
-    std::vector<Components::MeshRenderer> Meshes;
-};
-
 struct IndexedPipeline
 {
     Assets::RenderPipeline Pipeline;
-    std::vector<IndexedMaterial> Materials;
+    std::vector<Components::MeshRenderer> Objects;
 };
 
 struct MaterialLocation
@@ -47,8 +42,8 @@ struct ModuleState
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::GpuMesh> Meshes;
 
     std::unordered_map<Core::Pipeline::HashId, size_t> PipelineIndex;
-    std::unordered_map<Core::Pipeline::HashId, MaterialLocation> MaterialIndex;
     std::vector<IndexedPipeline> Pipelines;
+    std::unordered_map<Core::Pipeline::HashId, Assets::Material> Materials;
 
     // TODO: allow storage buffers to be configured
     std::vector<Assets::InjectedUniform> InjectedUniforms;

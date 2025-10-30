@@ -27,7 +27,7 @@ struct ConfiguredUniform
 
 struct Material 
 {
-    Core::Pipeline::HashId Pipeline;
+    Core::Pipeline::HashId PrototypeId;
 
     uint32_t VertexUniformStart;
     uint32_t VertexUniformEnd;

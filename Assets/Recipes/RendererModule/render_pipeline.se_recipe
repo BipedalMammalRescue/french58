@@ -1,0 +1,43 @@
+{
+    "Module": "RendererModule",
+    "Type": "RenderPipeline",
+    "Action": {
+        "$type": "command",
+        "Process": "PipelineBuilder",
+        "Arguments": [
+            "#(Prototype)"
+        ],
+        "ChildTasks": [
+            {
+                "$type": "derive",
+                "SourcePath": "VertexShader"
+            },
+            {
+                "$type": "derive",
+                "SourcePath": "FragmentShader"
+            }
+        ],
+        "OutputComponents": [
+            {
+                "$type": "concat",
+                "Sources": [
+                    {
+                        "$type": "binary",
+                        "SourcePath": "VertexShader"
+                    },
+                    {
+                        "$type": "binary",
+                        "SourcePath": "FragmentShader"
+                    },
+                    {
+                        "$type": "binary",
+                        "SourcePath": "Prototype"
+                    },
+                    {
+                        "$type": "pass_through"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -20,10 +20,12 @@ public class ConfigurableShaderUniform : ShaderUniform
 
 public class DynamicInjectedShaderUniform : ShaderUniform
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public required DynamicUniformIdentifier Identifier { get; set; }
 }
 
 public class StaticInjectedShaderUniform : ShaderUniform
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public required StaticUniformIdentifier Identifier { get; set; }
 }

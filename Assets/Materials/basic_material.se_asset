@@ -1,17 +1,15 @@
 {
     "Module": "RendererModule",
     "Type": "Material",
-    "Data":
-    {
+    "Data": {
         "$type": "obj",
-        "VertexShader": {
+        "Prototype": {
             "$type": "leaf",
-            "Path": "Shaders/slang_vertex_shader.se_asset"
+            "Path": "PipelinePrototypes/monochrome_phong.json"
         },
-        "FragmentShader": 
-        {
+        "Source": {
             "$type": "leaf",
-            "Path": "Shaders/slang_fragment_shader.se_asset"
+            "Path": "Materials/green_phong.json"
         }
     }
 }

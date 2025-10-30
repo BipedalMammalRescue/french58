@@ -53,6 +53,7 @@ struct InjectedDataSet
 struct RenderPipeline
 {
     SDL_GPUGraphicsPipeline* GraphicsPipeline;
+    Core::Pipeline::HashId PrototypeId;
 
     InjectedDataSet StaticVertex;
     InjectedDataSet StaticFragment;

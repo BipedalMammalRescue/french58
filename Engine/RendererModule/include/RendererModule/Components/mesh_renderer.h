@@ -1,7 +1,8 @@
 #pragma once
 
 #include "EngineCore/Pipeline/component_definition.h"
-#include "EngineCore/Pipeline/hash_id.h"
+#include "RendererModule/Assets/material.h"
+#include "RendererModule/Assets/mesh.h"
 
 namespace Engine::Extension::RendererModule::Components {
 
@@ -11,7 +12,8 @@ Core::Runtime::CallbackResult LoadMeshRenderer(size_t count, std::istream* input
 struct MeshRenderer
 {
     int Entity;
-    Core::Pipeline::HashId Mesh;
+    Assets::GpuMesh Mesh;
+    Assets::Material Material;
 };
 
 }

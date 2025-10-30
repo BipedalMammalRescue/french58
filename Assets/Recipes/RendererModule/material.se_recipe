@@ -2,16 +2,11 @@
     "Module": "RendererModule",
     "Type": "Material",
     "Action": {
-        "$type": "bypass",
-        "ChildTasks": [
-            {
-                "$type": "derive",
-                "SourcePath": "VertexShader"
-            },
-            {
-                "$type": "derive",
-                "SourcePath": "FragmentShader"
-            }
+        "$type": "command",
+        "Process": "MaterialBuilder",
+        "Arguments": [
+            "#(Prototype)",
+            "#(Source)"
         ],
         "OutputComponents": [
             {
@@ -19,11 +14,7 @@
                 "Sources": [
                     {
                         "$type": "binary",
-                        "SourcePath": "VertexShader"
-                    },
-                    {
-                        "$type": "binary",
-                        "SourcePath": "FragmentShader"
+                        "SourcePath": "Prototype"
                     }
                 ]
             }

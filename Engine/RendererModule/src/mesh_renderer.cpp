@@ -12,32 +12,41 @@ using namespace Engine::Extension::RendererModule;
 bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::ostream* output)
 {
     // verify the structure is good
-    if (input.FieldC != 2
+    if (input.FieldC != 3
         || input.FieldV[0].Payload.Type != Core::Pipeline::VariantType::Path 
-        || input.FieldV[1].Payload.Type != Core::Pipeline::VariantType::Path)
+        || input.FieldV[1].Payload.Type != Core::Pipeline::VariantType::Path
+        || input.FieldV[2].Payload.Type != Core::Pipeline::VariantType::Path)
         return false;
 
-    // write out the two asset references to the output
+    // write out the three asset references
+    std::array<unsigned char, 16>* pipelinePath = nullptr;
     std::array<unsigned char, 16>* materialPath = nullptr;
     std::array<unsigned char, 16>* meshPath = nullptr;
-    for (int i = 0; i < 2; i++) 
+    for (int i = 0; i < 3; i++) 
     {
-        if (input.FieldV[i].Name == md5::compute("Material")) 
+        if (input.FieldV[i].Name == md5::compute("Pipeline"))
+        {
+            pipelinePath = &input.FieldV[i].Payload.Data.Path;
+        }
+        else if (input.FieldV[i].Name == md5::compute("Material")) 
         {
             materialPath = &input.FieldV[i].Payload.Data.Path;
         }
-        if (input.FieldV[i].Name == md5::compute("Mesh")) 
+        else if (input.FieldV[i].Name == md5::compute("Mesh")) 
         {
             meshPath = &input.FieldV[i].Payload.Data.Path;
         }
+
     }
 
-    if (materialPath == nullptr || meshPath == nullptr)
+    if (materialPath == nullptr || meshPath == nullptr || pipelinePath == nullptr)
         return false;
 
     output->write((char*)&input.Entity, sizeof(int));
+    output->write((char*)pipelinePath->data(), 16);
     output->write((char*)materialPath->data(), 16);
     output->write((char*)meshPath->data(), 16);
+
     return true;
 }
 
@@ -51,25 +60,49 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
     for (size_t i = 0; i < count; i++) 
     {
         int entity;
+        Core::Pipeline::HashId pipelineId;
         Core::Pipeline::HashId materialId;
-        Core::Pipeline::HashId mesh;
+        Core::Pipeline::HashId meshId;
 
         input->read((char*)&entity, sizeof(int));
+        input->read((char*)pipelineId.Hash.data(), 16);
         input->read((char*)materialId.Hash.data(), 16);
-        input->read((char*)mesh.Hash.data(), 16);
+        input->read((char*)meshId.Hash.data(), 16);
+
+        // find the mesh
+        auto mesh = state->Meshes.find(meshId);
+        if (mesh == state->Meshes.end())
+        {
+            logger.Error("Failed to load mesh renderer component for entity {entityId}, mesh ({meshId}) not found.", {entity, meshId});
+            continue;
+        }
 
         // find the material
-        auto materialLocation = state->MaterialIndex.find(materialId);
-        if (materialLocation == state->MaterialIndex.end())
+        auto material = state->Materials.find(materialId);
+        if (material == state->Materials.end())
         {
-            // TODO: need some more readable notation for mesh renderer component locations
             logger.Error("Failed to load mesh renderer component for entity {entityId}, material ({materialId}) not found.", {entity, materialId});
             continue;
         }
 
-        // add mesh renderer to the material
-        IndexedMaterial& material = state->Pipelines[materialLocation->second.Pipeline].Materials[materialLocation->second.Material];
-        material.Meshes.push_back({ entity, mesh });
+        // find the pipeline
+        auto pipelineLocation = state->PipelineIndex.find(pipelineId);
+        if (pipelineLocation == state->PipelineIndex.end())
+        {
+            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline ({pipelineId}) not found.", {entity, pipelineId});
+            continue;
+        }
+        IndexedPipeline& pipeline = state->Pipelines[pipelineLocation->second];
+
+        // verify the pipeline and material are compatible
+        if (pipeline.Pipeline.PrototypeId != material->second.PrototypeId)
+        {
+            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline prototype ({pipelinePrototype}) and material prototype ({materialPrototype}) do not match.", {entity, pipeline.Pipeline.PrototypeId, material->second.PrototypeId});
+            continue;
+        }
+
+        // add mesh to pipeline
+        pipeline.Objects.push_back({ entity, mesh->second, material->second });
     }
 
     return Core::Runtime::CallbackSuccess();

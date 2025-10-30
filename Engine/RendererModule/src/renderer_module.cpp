@@ -142,11 +142,12 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
             }
         }
 
-        // per-material information
-        for (const IndexedMaterial& material : pipeline.Materials)
+        // per-object information
+        for (const Components::MeshRenderer& renderTarget : pipeline.Objects)
         {
-            // fill in material uniforms
-            for (uint32_t i = material.Material.VertexUniformStart; i < material.Material.VertexUniformEnd; i++)
+            // load material uniforms
+            // TODO: eventually materials should include more information
+            for (uint32_t i = renderTarget.Material.VertexUniformStart; i < renderTarget.Material.VertexUniformEnd; i++)
             {
                 Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
                 SDL_PushGPUVertexUniformData(
@@ -155,8 +156,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
                     &materialUniform.Data.Data, 
                     (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
             }
-
-            for (uint32_t i = material.Material.FragmentUniformStart; i < material.Material.FragmentUniformEnd; i++)
+            for (uint32_t i = renderTarget.Material.FragmentUniformStart; i < renderTarget.Material.FragmentUniformEnd; i++)
             {
                 Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
                 SDL_PushGPUFragmentUniformData(
@@ -166,64 +166,56 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
                     (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
             }
 
-            for (const Components::MeshRenderer &renderTarget : material.Meshes) 
+            // load the MVP, skip if the renderer has no spatial relation
+            auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
+            if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
+                continue;
+
+            // compute MVP from scene components
+            glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
+
+            // bind dynamic injections (only uniforms rn)
+            for (uint32_t i = pipeline.Pipeline.DynamicVertex.UniformStart; i < pipeline.Pipeline.DynamicVertex.UniformEnd; i++)
             {
-                // gather mesh information
-                auto foundMesh = state->Meshes.find(renderTarget.Mesh);
-                if (foundMesh == state->Meshes.end())
-                    continue;
-
-                // load the MVP, skip if the renderer has no spatial relation
-                auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
-                if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
-                    continue;
-
-                // compute MVP from scene components
-                glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
-
-                // bind dynamic injections (only uniforms rn)
-                for (uint32_t i = pipeline.Pipeline.DynamicVertex.UniformStart; i < pipeline.Pipeline.DynamicVertex.UniformEnd; i++)
+                Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                switch (uniform.Identifier)
                 {
-                    Assets::InjectedUniform uniform = state->InjectedUniforms[i];
-                    switch (uniform.Identifier)
-                    {
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
-                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
-                        break;
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
-                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
-                        break;
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
-                        SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
-                        break;
-                    }
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
+                    SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
+                    break;
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
+                    SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
+                    break;
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
+                    SDL_PushGPUVertexUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
+                    break;
                 }
-                for (uint32_t i = pipeline.Pipeline.DynamicFragment.UniformStart; i < pipeline.Pipeline.DynamicFragment.UniformEnd; i++)
-                {
-                    Assets::InjectedUniform uniform = state->InjectedUniforms[i];
-                    switch (uniform.Identifier)
-                    {
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
-                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
-                        break;
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
-                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
-                        break;
-                    case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
-                        SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
-                        break;
-                    }
-                }
-
-                // bind the mesh
-                SDL_GPUBufferBinding vboBinding{foundMesh->second.VertexBuffer, 0};
-                SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
-                SDL_GPUBufferBinding iboBinding{foundMesh->second.IndexBuffer, 0};
-                SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-                
-                // draw
-                SDL_DrawGPUIndexedPrimitives(pass, foundMesh->second.IndexCount, 1, 0, 0, 0);
             }
+            for (uint32_t i = pipeline.Pipeline.DynamicFragment.UniformStart; i < pipeline.Pipeline.DynamicFragment.UniformEnd; i++)
+            {
+                Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                switch (uniform.Identifier)
+                {
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
+                    SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &modelMatrix, sizeof(modelMatrix));
+                    break;
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ProjectionTransform:
+                    SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &viewMatrix, sizeof(viewMatrix));
+                    break;
+                case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ViewTransform:
+                    SDL_PushGPUFragmentUniformData(commandBuffer, uniform.Binding, &projectMatrix, sizeof(projectMatrix));
+                    break;
+                }
+            }
+
+            // bind the mesh
+            SDL_GPUBufferBinding vboBinding{renderTarget.Mesh.VertexBuffer, 0};
+            SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
+            SDL_GPUBufferBinding iboBinding{renderTarget.Mesh.IndexBuffer, 0};
+            SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+            
+            // draw
+            SDL_DrawGPUIndexedPrimitives(pass, renderTarget.Mesh.IndexCount, 1, 0, 0, 0);
         }
     }
 

@@ -67,6 +67,9 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
         inputStreams->GetCurrent().Storage->read((char*)&vertexShaderId, sizeof(vertexShaderId));
         inputStreams->GetCurrent().Storage->read((char*)&fragmentShaderId, sizeof(fragmentShaderId));
 
+        // notify the prototype id
+        inputStreams->GetCurrent().Storage->read((char*)&pipeline.PrototypeId, sizeof(pipeline.PrototypeId));
+
         auto foundVertShader = state->VertexShaders.find(vertexShaderId);
         auto foundFragShader = state->FragmentShaders.find(fragmentShaderId);
         if (foundVertShader == state->VertexShaders.end() || foundFragShader == state->FragmentShaders.end())
@@ -147,7 +150,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
             inputStreams->GetCurrent().Storage->read((char*)&newInjectedBuffer.Identifier, sizeof(newInjectedBuffer.Identifier));
             state->InjectedStorageBuffers.push_back(newInjectedBuffer);
         }
-        pipeline.StaticVertex.StorageBufferStart = state->InjectedStorageBuffers.size();
+        pipeline.StaticVertex.StorageBufferEnd = state->InjectedStorageBuffers.size();
 
         // static fragment storage buffer
         pipeline.StaticFragment.StorageBufferStart = state->InjectedStorageBuffers.size();
@@ -160,7 +163,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
             inputStreams->GetCurrent().Storage->read((char*)&newInjectedBuffer.Identifier, sizeof(newInjectedBuffer.Identifier));
             state->InjectedStorageBuffers.push_back(newInjectedBuffer);
         }
-        pipeline.StaticFragment.StorageBufferStart = state->InjectedStorageBuffers.size();
+        pipeline.StaticFragment.StorageBufferEnd = state->InjectedStorageBuffers.size();
 
         // dynamic vertex storage buffer
         pipeline.DynamicVertex.StorageBufferStart = state->InjectedStorageBuffers.size();
@@ -173,7 +176,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
             inputStreams->GetCurrent().Storage->read((char*)&newInjectedBuffer.Identifier, sizeof(newInjectedBuffer.Identifier));
             state->InjectedStorageBuffers.push_back(newInjectedBuffer);
         }
-        pipeline.DynamicVertex.StorageBufferStart = state->InjectedStorageBuffers.size();
+        pipeline.DynamicVertex.StorageBufferEnd = state->InjectedStorageBuffers.size();
 
         // dynamic fragment storage buffer
         pipeline.DynamicFragment.StorageBufferStart = state->InjectedStorageBuffers.size();
@@ -186,7 +189,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
             inputStreams->GetCurrent().Storage->read((char*)&newInjectedBuffer.Identifier, sizeof(newInjectedBuffer.Identifier));
             state->InjectedStorageBuffers.push_back(newInjectedBuffer);
         }
-        pipeline.DynamicFragment.StorageBufferStart = state->InjectedStorageBuffers.size();
+        pipeline.DynamicFragment.StorageBufferEnd = state->InjectedStorageBuffers.size();
 
         state->PipelineIndex[inputStreams->GetCurrent().ID] = state->Pipelines.size();
         state->Pipelines.push_back({pipeline});

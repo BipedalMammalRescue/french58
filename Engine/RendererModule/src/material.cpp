@@ -29,15 +29,8 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
     {
         Material material;
 
-        // read pipeline
-        inputStreams->GetCurrent().Storage->read((char*)&material.Pipeline, sizeof(material.Pipeline));
-        auto pipelineIndex = state->PipelineIndex.find(material.Pipeline);
-        if (pipelineIndex == state->PipelineIndex.end())
-        {
-            logger.Error("Failed to load material {materialId}, pipeline ({pipelineId}) not found.", {inputStreams->GetCurrent().ID, material.Pipeline});
-            continue;
-        }
-        IndexedPipeline& pipeline = state->Pipelines[pipelineIndex->second];
+        // read prototype
+        inputStreams->GetCurrent().Storage->read((char*)&material.PrototypeId, sizeof(material.PrototypeId));
 
         // read material data
         ConfiguredUniform nextUniform;
@@ -64,8 +57,7 @@ Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumera
         }
         material.FragmentUniformEnd = state->ConfiguredUniforms.size();
 
-        state->MaterialIndex[inputStreams->GetCurrent().ID] = { pipelineIndex->second, pipeline.Materials.size() };
-        pipeline.Materials.push_back({material});
+        state->Materials[inputStreams->GetCurrent().ID] = material;
     }
 
     return Core::Runtime::CallbackSuccess();
