@@ -1,13 +1,13 @@
 {
     "Module": "RendererModule",
-    "Type": "FragmentShader",
+    "Type": "Mesh",
     "Data":
     {
         "$type": "obj",
         "Source": 
         {
             "$type": "leaf",
-            "Path": "Shaders/basic.frag"
+            "Path": "Meshes/teapot_blender.obj"
         }
     }
 }

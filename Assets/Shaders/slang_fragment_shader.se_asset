@@ -1,0 +1,23 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangFragmentShader",
+    "Data":
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "Shaders/basic.frag.slang"
+        },
+        "UniformCount": 
+        {
+            "$type": "leaf",
+            "Uint32": 5
+        },
+        "StorageBufferCount":
+        {
+            "$type": "leaf",
+            "Uint32": 1
+        }
+    }
+}

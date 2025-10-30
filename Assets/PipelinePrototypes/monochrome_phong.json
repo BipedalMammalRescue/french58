@@ -1,0 +1,72 @@
+{
+    "VertexShader": {
+        "Uniforms": [
+            {
+                "$type": "dynamic",
+                "Binding": 0,
+                "Identifier": "ModelTransform"
+            },
+            {
+                "$type": "dynamic",
+                "Binding": 1,
+                "Identifier": "ViewTransform"
+            },
+            {
+                "$type": "dynamic",
+                "Binding": 2,
+                "Identifier": "ProjectionTransform"
+            }
+        ]
+    },
+    "FragmentShader": {
+        "StorageBuffers": [
+            {
+                "$type": "static",
+                "Binding": 0,
+                "Identifier": "DirectionalLightBuffer"
+            }
+        ],
+        "Uniforms": [
+            {
+                "$type": "configurable",
+                "Binding": 0,
+                "Name": "kSpecular",
+                "Default": {
+                    "Float": 0.0
+                }
+            },
+            {
+                "$type": "configurable",
+                "Binding": 1,
+                "Name": "kDiffuse",
+                "Default": {
+                    "Float": 0.0
+                }
+            },
+            {
+                "$type": "configurable",
+                "Binding": 2,
+                "Name": "kAmbient",
+                "Default": {
+                    "Float": 0.0
+                }
+            },
+            {
+                "$type": "configurable",
+                "Binding": 3,
+                "Name": "kShininess",
+                "Default": {
+                    "Float": 1.0
+                }
+            },
+            {
+                "$type": "configurable",
+                "Binding": 4,
+                "Name": "ambientColor",
+                "Default": {
+                    "Vec3": [1, 0, 0]
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangFragmentShader",
+    "Action": {
+        "$type": "command",
+        "Process": "slangc",
+        "Arguments": [
+            "-stage", "fragment",
+            "-emit-spirv-via-glsl",
+            "-target", "spirv",
+            "-profile", "spirv_1_0",
+            "-capability", "GLSL_150",
+            "-entry", "main",
+            "#(Source)"
+        ],
+        "OutputComponents": [
+            {
+                "$type": "concat",
+                "Sources": [
+                    {
+                        "$type": "binary",
+                        "SourcePath": "UniformCount"
+                    },
+                    {
+                        "$type": "binary",
+                        "SourcePath": "StorageBufferCount"
+                    },
+                    {
+                        "$type": "prepend_length"
+                    }
+                ]
+            }
+        ]
+    }
+}

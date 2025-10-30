@@ -1,0 +1,23 @@
+{
+    "ConfiguredUniforms": {
+        "kSpecular": {
+            "Float": 1.0
+        },
+        "kDiffuse": {
+            "Float": 0.5
+        },
+        "kAmbient": {
+            "Float": 0.0
+        },
+        "kShininess": {
+            "Float": 10.0
+        },
+        "ambientColor": {
+            "Vec3": [
+                0,
+                1,
+                0
+            ]
+        }
+    }
+}

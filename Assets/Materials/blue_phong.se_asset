@@ -1,0 +1,15 @@
+{
+    "Module": "RendererModule",
+    "Type": "Material",
+    "Data": {
+        "$type": "obj",
+        "Prototype": {
+            "$type": "leaf",
+            "Path": "PipelinePrototypes/monochrome_phong.json"
+        },
+        "Source": {
+            "$type": "leaf",
+            "Path": "Materials/blue_phong.json"
+        }
+    }
+}

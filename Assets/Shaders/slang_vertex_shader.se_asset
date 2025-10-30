@@ -1,0 +1,23 @@
+{
+    "Module": "RendererModule",
+    "Type": "SlangVertexShader",
+    "Data":
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "Shaders/basic.vert.slang"
+        },
+        "UniformCount": 
+        {
+            "$type": "leaf",
+            "Uint32": 3
+        },
+        "StorageBufferCount":
+        {
+            "$type": "leaf",
+            "Uint32": 0
+        }
+    }
+}

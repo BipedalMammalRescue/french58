@@ -11,26 +11,7 @@
                     "Type": "DirectionalLight",
                     "Fields": {
                         "Direction": {
-                            "Vec3": [1, 1, 0]
-                        },
-                        "Color": {
                             "Vec3": [1, 1, 1]
-                        }
-                    }
-                }
-            ]
-        },
-                {
-            "Name": "light2",
-            "Children": [],
-            "Components": [
-                {
-                    "Name": "direction_light",
-                    "Module": "RendererModule",
-                    "Type": "DirectionalLight",
-                    "Fields": {
-                        "Direction": {
-                            "Vec3": [0, 1, 1]
                         },
                         "Color": {
                             "Vec3": [1, 1, 1]
@@ -55,7 +36,7 @@
                             "Vec3": [1, 1, 1]
                         },
                         "Rotation": {
-                            "Vec3": [1, 0, 0]
+                            "Vec3": [0, 0, 0]
                         }
                     }
                 },
@@ -65,17 +46,20 @@
                     "Type": "MeshRenderer",
                     "Fields": {
                         "Mesh": {
-                            "Path": "Meshes/teapot.se_asset"
+                            "Path": "Meshes/teapot_blender.se_asset"
                         },
                         "Material": {
-                            "Path": "Materials/basic_material.se_asset"
+                            "Path": "Materials/green_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
                 }
             ]
         },
         {
-            "Name": "teapot",
+            "Name": "teapot2",
             "Children": [],
             "Components": [
                 {
@@ -100,17 +84,20 @@
                     "Type": "MeshRenderer",
                     "Fields": {
                         "Mesh": {
-                            "Path": "Meshes/teapot.se_asset"
+                            "Path": "Meshes/teapot_blender.se_asset"
                         },
                         "Material": {
-                            "Path": "Materials/basic_material.se_asset"
+                            "Path": "Materials/purple_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
                 }
             ]
         },
         {
-            "Name": "teapot",
+            "Name": "teapot3",
             "Children": [],
             "Components": [
                 {
@@ -135,17 +122,20 @@
                     "Type": "MeshRenderer",
                     "Fields": {
                         "Mesh": {
-                            "Path": "Meshes/teapot.se_asset"
+                            "Path": "Meshes/teapot_blender.se_asset"
                         },
                         "Material": {
-                            "Path": "Materials/basic_material.se_asset"
+                            "Path": "Materials/blue_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
                 }
             ]
         },
         {
-            "Name": "teapot",
+            "Name": "teapot4",
             "Children": [],
             "Components": [
                 {
@@ -170,10 +160,13 @@
                     "Type": "MeshRenderer",
                     "Fields": {
                         "Mesh": {
-                            "Path": "Meshes/teapot.se_asset"
+                            "Path": "Meshes/teapot_blender.se_asset"
                         },
                         "Material": {
-                            "Path": "Materials/basic_material.se_asset"
+                            "Path": "Materials/red_phong.se_asset"
+                        },
+                        "Pipeline": {
+                            "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
                 }

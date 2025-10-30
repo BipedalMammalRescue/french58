@@ -1,4 +1,0 @@
-{
-	"VertShader": "Shaders/basic.vert.spv",
-	"FragShader": "Shaders/basic.frag.spv"
-}

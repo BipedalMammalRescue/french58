@@ -110,7 +110,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
     SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo = {0};
-    depthStencilTargetInfo.clear_depth = 0.0f;
+    depthStencilTargetInfo.clear_depth = 1.0f;
     depthStencilTargetInfo.texture = m_DepthBuffer;
     depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
