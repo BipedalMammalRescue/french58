@@ -14,8 +14,9 @@
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineUtils/String/hex_strings.h"
-#include "SDL3/SDL_init.h"
+#include "EngineCore/Runtime/event_manager.h"
 
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <fstream>
@@ -69,6 +70,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
+    EventManager eventManager(&loggerService);
 
     // initialize a local logger
     static const char* topLevelChannels[] = { "GameLoop" };
@@ -112,7 +114,10 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 
         // pre update
 
-        // script update
+        // event update
+        CallbackResult eventUpdateResult = eventManager.ExecuteAllSystems(&services);
+        if (eventUpdateResult.has_value())
+            return eventUpdateResult;
 
         // module update
 

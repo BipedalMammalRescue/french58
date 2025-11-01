@@ -32,6 +32,7 @@ private:
     CallbackResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
 public:
     GameLoop(Pipeline::ModuleAssembly modules);
+    
     int Run(Pipeline::HashId initialEntity);
 };
 

@@ -48,7 +48,7 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
                 switch (callback.Stage)
                 {
                     case Pipeline::EngineCallbackStage::Preupdate:
-                    case Pipeline::EngineCallbackStage::ScriptUpdate:
+                    case Pipeline::EngineCallbackStage::EventUpdate:
                     case Pipeline::EngineCallbackStage::ModuleUpdate:
                         break;
                     case Pipeline::EngineCallbackStage::Render:

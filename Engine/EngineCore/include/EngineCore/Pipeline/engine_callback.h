@@ -10,7 +10,7 @@ namespace Engine::Core::Pipeline {
 enum class EngineCallbackStage
 {
     Preupdate,
-    ScriptUpdate,
+    EventUpdate,
     ModuleUpdate,
     Render
 };
