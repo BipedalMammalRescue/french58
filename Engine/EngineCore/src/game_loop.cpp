@@ -81,7 +81,8 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         &loggerService,
         &graphicsLayer,
         &worldState,
-        &moduleManager
+        &moduleManager,
+        &eventManager
     };
     CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
     if (serviceInitResult.has_value())
@@ -115,9 +116,15 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         // pre update
 
         // event update
-        CallbackResult eventUpdateResult = eventManager.ExecuteAllSystems(&services);
-        if (eventUpdateResult.has_value())
-            return eventUpdateResult;
+        while (eventManager.ExecuteAllSystems(&services))
+        {
+            for (auto& callback : moduleManager.m_EventCallbacks)
+            {
+                CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState);
+                if (callbackResult.has_value())
+                    return callbackResult;
+            }
+        }
 
         // module update
 

@@ -37,6 +37,7 @@ private:
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
     std::vector<InstancedCallback> m_RenderCallbacks;
+    std::vector<InstancedCallback> m_EventCallbacks;
 
 private:
     friend class GameLoop;
