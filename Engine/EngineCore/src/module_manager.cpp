@@ -1,4 +1,5 @@
 #include "EngineCore/Runtime/module_manager.h"
+#include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
@@ -53,6 +54,15 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
                         m_RenderCallbacks.push_back({ callback.Callback, newState });
                         break;
                 }
+            }
+        }
+
+        if (moduleDef.EventCallbackCount > 0)
+        {
+            for (size_t j = 0; j < moduleDef.EventCallbackCount; j++) 
+            {
+                Pipeline::EventCallback callback = moduleDef.EventCallbacks[j];
+                m_EventCallbacks.push_back({ callback.Callback, newState });
             }
         }
 

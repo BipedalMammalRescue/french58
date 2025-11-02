@@ -21,6 +21,7 @@
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <fstream>
+#include <md5.h>
 #include <string>
 
 #define IoCrashOut(error) Engine::Core::Runtime::Crash(__FILE__, __LINE__, )
@@ -56,6 +57,22 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules) :
     }
 }
 
+bool GameLoop::AddEventSystem(EventSystemDelegate delegate, const char* userName)
+{
+    Pipeline::HashId inId = md5::compute(userName);
+    return m_EventSystems.try_emplace(inId, EventSystemInstance{delegate, userName}).second;
+}
+
+bool GameLoop::RemoveEventSystem(const char* userName)
+{
+    auto iterator = m_EventSystems.find(md5::compute(userName));
+    if (iterator == m_EventSystems.end())
+        return false;
+
+    m_EventSystems.erase(iterator);
+    return true;
+}
+
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
     // initialize sdl
@@ -72,6 +89,12 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
     EventManager eventManager(&loggerService);
+
+    // insert systems
+    for (auto pair : m_EventSystems)
+    {
+        eventManager.RegisterEventSystem(&pair.second, 1);
+    }
 
     // initialize a local logger
     static const char* topLevelChannels[] = { "GameLoop" };
@@ -122,13 +145,11 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         {
             for (auto& callback : moduleManager.m_EventCallbacks)
             {
-                CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState);
+                CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState, &writer.m_Stream);
                 if (callbackResult.has_value())
                     return callbackResult;
             }
         }
-
-        // module update
 
         // render pass
         for (auto& callback : moduleManager.m_RenderCallbacks)

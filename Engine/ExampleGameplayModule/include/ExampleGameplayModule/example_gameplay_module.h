@@ -1,3 +1,5 @@
+#pragma once
+
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/event_manager.h"

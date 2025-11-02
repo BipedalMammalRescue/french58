@@ -32,9 +32,14 @@ static void DisposeModule(Core::Runtime::ServiceTable *services, void *moduleSta
 static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, void* moduleState, Core::Runtime::EventStream* events)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
-    for (const Core::Runtime::AnnotatedEvent<YellEvent>& e : state->YellEvents)
+
+    while (events->MoveNext())
     {
-        state->Logger.Information(e.Data.Content);
+        if (events->GetCurrentHeader().Owner != &state->YellOwner)
+            continue;
+
+        auto eventPtr = (YellEvent*)events->GetCurrentData();
+        state->Logger.Information(eventPtr->Content);
     }
 
     return Core::Runtime::CallbackSuccess();
@@ -42,9 +47,9 @@ static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTab
 
 Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDefinition()
 {
-    Core::Pipeline::EventCallback callbacks[] = {
+    static Core::Pipeline::EventCallback callbacks[] = {
         {
-            &EventUpdate
+            EventUpdate
         }
     };
 

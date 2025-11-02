@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <vector>
 
 namespace Engine::Core::Runtime 
@@ -27,7 +28,15 @@ private:
 public:
     inline void ResetWriter() 
     {
-        m_Data.clear();
+        // clear the data stream to just a init block
+        m_Data.resize(sizeof(EventHeader));
+        EventHeader initialBlockHeader {
+            nullptr,
+            0,
+            nullptr,
+            0
+        };
+        memcpy(m_Data.data(), &initialBlockHeader, sizeof(EventHeader));
     }
 
     inline void ResetReader()

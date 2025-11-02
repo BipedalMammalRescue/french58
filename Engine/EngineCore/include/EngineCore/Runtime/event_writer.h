@@ -15,12 +15,12 @@ private:
     const char* m_UserName = nullptr;
     EventStream m_Stream;
 
-public:
     inline void Initialize()
     {
         m_Stream.ResetWriter();
     }
 
+public:
     template <typename TEvent>
     void WriteInputEvent(EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
     {

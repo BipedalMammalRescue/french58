@@ -34,17 +34,19 @@ struct AnnotatedEvent
     int AuthorPath;
 };
 
+struct EventSystemInstance
+{
+    EventSystemDelegate Delegate;
+    const char* Name;
+};
+
 class EventManager 
 {
 private:
     friend class EventWriter;
     friend class GameLoop;
 
-    struct EventSystemInstance
-    {
-        EventSystemDelegate Delegate;
-        const char* Name;
-    };
+    EventManager(Logging::LoggerService* loggerService);
 
     int m_Registra = 0;
     std::vector<EventSystemInstance> m_Systems;
@@ -52,9 +54,10 @@ private:
 
     bool ExecuteAllSystems(ServiceTable* services, EventWriter& writer);
 
-public:
-    EventManager(Logging::LoggerService* loggerService);
+    // event systems are stateless functions executed that transforms input events to output events
+    void RegisterEventSystem(const EventSystemInstance* systems, size_t systemCount);
 
+public:
     // input events needs to be registered so event systems can access them
     template <typename TEvent>
     EventOwner<TEvent> RegisterInputEvent(std::vector<AnnotatedEvent<TEvent>>* storage)
@@ -65,9 +68,6 @@ public:
         owner.m_ID = id;
         return owner;
     }
-
-    // event systems are stateless functions executed that transforms input events to output events
-    void RegisterEventSystem(EventSystemDelegate system, const char* displayName);
 };
 
 }

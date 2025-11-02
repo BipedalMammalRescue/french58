@@ -13,9 +13,12 @@ EventManager::EventManager(Engine::Core::Logging::LoggerService* loggerService)
 {
 }
 
-void EventManager::RegisterEventSystem(EventSystemDelegate system, const char* displayName)
+void EventManager::RegisterEventSystem(const EventSystemInstance* systems, size_t systemCount)
 {
-    m_Systems.push_back({system, displayName});
+    for (size_t i = 0; i < systemCount; i++)
+    {
+        m_Systems.push_back(systems[i]);
+    }
 }
 
 bool EventManager::ExecuteAllSystems(ServiceTable* services, EventWriter& writer)
