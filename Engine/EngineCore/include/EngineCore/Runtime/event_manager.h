@@ -1,3 +1,5 @@
+#pragma once
+
 #include "EngineCore/Logging/logger.h"
 #include <vector>
 
@@ -44,9 +46,11 @@ private:
         const char* Name;
     };
 
-    std::vector<void*> m_EventStorageList;
+    int m_Registra = 0;
     std::vector<EventSystemInstance> m_Systems;
     Logging::Logger m_Logger;
+
+    bool ExecuteAllSystems(ServiceTable* services, EventWriter& writer);
 
 public:
     EventManager(Logging::LoggerService* loggerService);
@@ -55,8 +59,8 @@ public:
     template <typename TEvent>
     EventOwner<TEvent> RegisterInputEvent(std::vector<AnnotatedEvent<TEvent>>* storage)
     {
-        int id = m_EventStorageList.size();
-        m_EventStorageList.push_back(storage);
+        int id = m_Registra;
+        m_Registra++;
         EventOwner<TEvent> owner;
         owner.m_ID = id;
         return owner;
@@ -64,28 +68,6 @@ public:
 
     // event systems are stateless functions executed that transforms input events to output events
     void RegisterEventSystem(EventSystemDelegate system, const char* displayName);
-
-    bool ExecuteAllSystems(ServiceTable* services);
-};
-
-class EventWriter
-{
-private:
-    friend class EventManager;
-    
-    EventManager* m_Manager;
-    const char* m_UserName;
-
-    EventWriter(EventManager* manager) : m_Manager(manager), m_UserName(nullptr) {}
-
-public:
-    template <typename TEvent>
-    void WriteInputEvent(EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
-    {
-        // TODO: temporary implementation, when the engine goes multi-threaded we'll need thread-local storage for the event writers; it'll be fairly easy to generate some headers and just store everything in a binary stream
-        std::vector<AnnotatedEvent<TEvent>>* storage = static_cast<std::vector<AnnotatedEvent<TEvent>>*>(m_Manager->m_EventStorageList[owner->m_ID]);
-        storage->push_back({ eventData, m_UserName, authorPath });
-    }
 };
 
 }

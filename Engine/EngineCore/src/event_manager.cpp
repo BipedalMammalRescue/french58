@@ -1,4 +1,5 @@
 #include "EngineCore/Runtime/event_manager.h"
+#include "EngineCore/Runtime/event_writer.h"
 
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -17,11 +18,11 @@ void EventManager::RegisterEventSystem(EventSystemDelegate system, const char* d
     m_Systems.push_back({system, displayName});
 }
 
-bool EventManager::ExecuteAllSystems(ServiceTable* services)
+bool EventManager::ExecuteAllSystems(ServiceTable* services, EventWriter& writer)
 {
     bool hasEvent = false;
 
-    EventWriter writer(this);
+    writer.Initialize();
 
     for (const EventSystemInstance& system : m_Systems)
     {

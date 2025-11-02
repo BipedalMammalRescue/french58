@@ -9,6 +9,7 @@
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
@@ -116,7 +117,8 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         // pre update
 
         // event update
-        while (eventManager.ExecuteAllSystems(&services))
+        EventWriter writer;
+        while (eventManager.ExecuteAllSystems(&services, writer))
         {
             for (auto& callback : moduleManager.m_EventCallbacks)
             {

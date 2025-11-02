@@ -2,6 +2,7 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/event_stream.h"
 
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Runtime/service_table.h>
@@ -27,7 +28,8 @@ static void DisposeModule(Core::Runtime::ServiceTable *services, void *moduleSta
     delete state;
 }
 
-static Core::Runtime::CallbackResult EventUpdate(Core::Runtime::ServiceTable* services, void* moduleState)
+// TODO: need to fix the function header
+static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, void* moduleState, Core::Runtime::EventStream* events)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     for (const Core::Runtime::AnnotatedEvent<YellEvent>& e : state->YellEvents)
@@ -40,9 +42,8 @@ static Core::Runtime::CallbackResult EventUpdate(Core::Runtime::ServiceTable* se
 
 Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDefinition()
 {
-    Core::Pipeline::EngineCallback callbacks[] = {
+    Core::Pipeline::EventCallback callbacks[] = {
         {
-            Core::Pipeline::EngineCallbackStage::EventUpdate,
             &EventUpdate
         }
     };
@@ -52,6 +53,8 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
         md5::compute("ExampleGameplayModule"),
         InitModule,
         DisposeModule,
+        nullptr,
+        0,
         nullptr,
         0,
         callbacks,

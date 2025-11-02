@@ -40,18 +40,14 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
         m_LoadedModules[moduleDef.Name] = {moduleDef, newState};
 
         // set up callback table
-        if (moduleDef.CallbackCount > 0)
+        if (moduleDef.SynchronousCallbackCount > 0)
         {
-            for (size_t j = 0; j < moduleDef.CallbackCount; j++) 
+            for (size_t j = 0; j < moduleDef.SynchronousCallbackCount; j++) 
             {
-                Pipeline::EngineCallback callback = moduleDef.Callbacks[j];
+                Pipeline::SynchronousCallback callback = moduleDef.SynchronousCallbacks[j];
                 switch (callback.Stage)
                 {
                     case Pipeline::EngineCallbackStage::Preupdate:
-                    case Pipeline::EngineCallbackStage::EventUpdate:
-                        m_EventCallbacks.push_back({ callback.Callback, newState });
-                        break;
-                    case Pipeline::EngineCallbackStage::ModuleUpdate:
                         break;
                     case Pipeline::EngineCallbackStage::Render:
                         m_RenderCallbacks.push_back({ callback.Callback, newState });
