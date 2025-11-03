@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Ecs/entity.h"
+#include "SDL3/SDL_timer.h"
 
 using namespace Engine::Core::Runtime;
 
@@ -30,4 +31,10 @@ bool WorldState::LoadEntities(std::istream* input)
     }
 
     return true;
+}
+
+void WorldState::Tick()
+{
+    m_DeltaTime = (SDL_GetTicksNS() - m_TotalTime * 1000000) / 1000000;
+    m_TotalTime = (float)SDL_GetTicksNS() / 1000000;
 }

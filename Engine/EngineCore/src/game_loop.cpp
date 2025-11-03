@@ -84,8 +84,13 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         return Crash(__FILE__, __LINE__, error);
 	}
 
-    // create services
+    // create logger
     Logging::LoggerService loggerService(m_ConfigurationProvider);
+    CallbackResult loggerStartResult = loggerService.StartLogger();
+    if (loggerStartResult.has_value())
+        return loggerStartResult;
+
+    // create other services
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
@@ -132,6 +137,9 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     SDL_Event e;
     while (!quit)
     {
+        // tick the timer
+        worldState.Tick();
+
         // Handle events on queue
         while (SDL_PollEvent(&e) != 0)
         {
@@ -143,8 +151,6 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         CallbackResult beginFrameResult = graphicsLayer.BeginFrame();
         if (beginFrameResult.has_value())
             return beginFrameResult;
-
-        // pre update
 
         // task-based event update
         while (eventManager.ExecuteAllSystems(&services, eventWriter))
