@@ -2,7 +2,6 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/engine_callback.h"
-#include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
