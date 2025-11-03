@@ -20,30 +20,12 @@ class EventStream
 private:
     friend class EventWriter;
 
-    std::vector<unsigned char> m_Data;
+    const std::vector<unsigned char>* m_Data;
     size_t m_Cursor = 0;
 
-    void Write(void* owner, const void* data, size_t length, const char* authorName, int authorPath);
+    EventStream(const std::vector<unsigned char>* data) : m_Data(data) {}
 
 public:
-    inline void ResetWriter() 
-    {
-        // clear the data stream to just a init block
-        m_Data.resize(sizeof(EventHeader));
-        EventHeader initialBlockHeader {
-            nullptr,
-            0,
-            nullptr,
-            0
-        };
-        memcpy(m_Data.data(), &initialBlockHeader, sizeof(EventHeader));
-    }
-
-    inline void ResetReader()
-    {
-        m_Cursor = 0;
-    }
-
     bool MoveNext();
     EventHeader GetCurrentHeader() const;
     const void* GetCurrentData() const;

@@ -13,18 +13,34 @@ private:
     friend class GameLoop;
 
     const char* m_UserName = nullptr;
-    EventStream m_Stream;
+
+    std::vector<unsigned char> m_Data;
+
+    void Write(void* owner, const void* data, size_t length, const char* authorName, int authorPath);
 
     inline void Initialize()
     {
-        m_Stream.ResetWriter();
+        // clear the data stream to just a init block
+        m_Data.resize(sizeof(EventHeader));
+        EventHeader initialBlockHeader {
+            nullptr,
+            0,
+            nullptr,
+            0
+        };
+        memcpy(m_Data.data(), &initialBlockHeader, sizeof(EventHeader));
     }
 
 public:
     template <typename TEvent>
     void WriteInputEvent(EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
     {
-        m_Stream.Write((void*)owner, &eventData, sizeof(TEvent), m_UserName, authorPath);
+        Write((void*)owner, &eventData, sizeof(TEvent), m_UserName, authorPath);
+    }
+
+    inline EventStream OpenReadStream()
+    {
+        return EventStream(&m_Data);
     }
 };
 

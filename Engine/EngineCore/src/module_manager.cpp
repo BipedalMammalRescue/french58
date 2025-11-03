@@ -57,15 +57,6 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
             }
         }
 
-        if (moduleDef.EventCallbackCount > 0)
-        {
-            for (size_t j = 0; j < moduleDef.EventCallbackCount; j++) 
-            {
-                Pipeline::EventCallback callback = moduleDef.EventCallbacks[j];
-                m_EventCallbacks.push_back({ callback.Callback, newState });
-            }
-        }
-
         m_Logger.Information("Loaded module {moduleId}", { moduleDef.Name });
     }
 

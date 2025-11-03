@@ -28,17 +28,16 @@ static void DisposeModule(Core::Runtime::ServiceTable *services, void *moduleSta
     delete state;
 }
 
-// TODO: need to fix the function header
-static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, void* moduleState, Core::Runtime::EventStream* events)
+static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, void* moduleState, Core::Runtime::EventStream events)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
 
-    while (events->MoveNext())
+    while (events.MoveNext())
     {
-        if (events->GetCurrentHeader().Owner != &state->YellOwner)
+        if (events.GetCurrentHeader().Owner != &state->YellOwner)
             continue;
 
-        auto eventPtr = (YellEvent*)events->GetCurrentData();
+        auto eventPtr = (YellEvent*)events.GetCurrentData();
         state->Logger.Information(eventPtr->Content);
     }
 

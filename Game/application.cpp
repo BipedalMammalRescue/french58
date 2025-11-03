@@ -11,14 +11,14 @@
 
 static Engine::Core::Pipeline::HashId ExampleModuleName = Engine::Extension::ExampleGameplayModule::GetDefinition().Name;
 
-static bool s_ShouldRun = true;
+static int s_ShouldRun = 0;
 
 bool FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, Engine::Core::Runtime::EventWriter* writer)
 {
-    if (!s_ShouldRun)
+    if (s_ShouldRun > 2)
         return false;
 
-    s_ShouldRun = false;
+    s_ShouldRun++;
     auto exampleModuleState = (Engine::Extension::ExampleGameplayModule::ModuleState*)services->ModuleManager->FindModule(ExampleModuleName);
     writer->WriteInputEvent<Engine::Extension::ExampleGameplayModule::YellEvent>(&exampleModuleState->YellOwner, { "your mom!!!" }, 0);
     return true;

@@ -26,7 +26,7 @@ struct SynchronousCallback
 
 struct EventCallback
 {
-    Runtime::CallbackResult (*Callback)(const Runtime::ServiceTable* services, void* moduleState, Runtime::EventStream* events);
+    Runtime::CallbackResult (*Callback)(const Runtime::ServiceTable* services, void* moduleState, Runtime::EventStream eventStreams);
 };
 
 }

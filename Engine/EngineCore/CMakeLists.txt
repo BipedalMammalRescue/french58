@@ -11,6 +11,8 @@ add_library(EngineCore STATIC
     src/variant.cpp
     src/event_manager.cpp
     src/event_stream.cpp
+    src/event_writer.cpp
+    src/module_thread_worker.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

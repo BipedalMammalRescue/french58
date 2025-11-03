@@ -11,10 +11,6 @@
 #include <unordered_map>
 #include <vector>
 
-namespace Engine::Core::Pipeline {
-struct ModuleDefinition;
-}
-
 namespace Engine::Core::Runtime {
 
 struct RootModuleState;
@@ -31,12 +27,6 @@ struct InstancedSynchronousCallback
     void* InstanceState;
 };
 
-struct InstancedEventCallback
-{
-    Runtime::CallbackResult (*Callback)(const Runtime::ServiceTable* services, void* moduleState, Runtime::EventStream* events);
-    void* InstanceState;
-};
-
 class ModuleManager
 {
 private:
@@ -44,7 +34,6 @@ private:
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
     std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
-    std::vector<InstancedEventCallback> m_EventCallbacks;
 
 private:
     friend class GameLoop;
