@@ -264,7 +264,7 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         }
     };
 
-    static const Core::Pipeline::EngineCallback Callbacks[]
+    static const Core::Pipeline::SynchronousCallback Callbacks[]
     {
         {
             Core::Pipeline::EngineCallbackStage::Render,
@@ -294,7 +294,9 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
         Assets,
         sizeof(Assets) / sizeof(Core::Pipeline::AssetDefinition),
         Callbacks,
-        sizeof(Callbacks) / sizeof(Core::Pipeline::EngineCallback),
+        sizeof(Callbacks) / sizeof(Core::Pipeline::SynchronousCallback),
+        nullptr,
+        0,
         Components,
         sizeof(Components) / sizeof(Core::Pipeline::ComponentDefinition)
     };

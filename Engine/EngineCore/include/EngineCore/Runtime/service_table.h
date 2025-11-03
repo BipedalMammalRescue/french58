@@ -6,6 +6,7 @@ namespace Engine::Core::Runtime {
 class GraphicsLayer;
 class WorldState;
 class ModuleManager;
+class EventManager;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 
@@ -14,6 +15,7 @@ struct ServiceTable
     GraphicsLayer* GraphicsLayer;
     WorldState* WorldState;
     ModuleManager* ModuleManager;
+    EventManager* EventManager;
 };
 
 }

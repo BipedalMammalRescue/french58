@@ -31,6 +31,7 @@ target_link_libraries(Engine PUBLIC EngineCore)
 
 # define extension modules here; they should all depend on at least the engine core target
 add_subdirectory(RendererModule)
+add_subdirectory(ExampleGameplayModule)
 
 # tools
 add_subdirectory(BuildComponent)

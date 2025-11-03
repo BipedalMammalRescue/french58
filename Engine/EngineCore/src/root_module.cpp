@@ -40,6 +40,8 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
         0,
         nullptr,
         0,
+        nullptr,
+        0,
         rootComponents,
         sizeof(rootComponents) / sizeof(Pipeline::ComponentDefinition)
     };

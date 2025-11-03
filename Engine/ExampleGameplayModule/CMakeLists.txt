@@ -1,0 +1,5 @@
+add_library(ExampleGameplayModule src/example_gameplay_module.cpp)
+
+target_include_directories(ExampleGameplayModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ExampleGameplayModule PUBLIC EngineCore)
+target_link_libraries(Engine PUBLIC ExampleGameplayModule)

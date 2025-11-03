@@ -9,16 +9,21 @@
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineUtils/String/hex_strings.h"
-#include "SDL3/SDL_init.h"
+#include "EngineCore/Runtime/event_manager.h"
+#include "EngineCore/Runtime/Multithreading/module_thread_worker.h"
 
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <fstream>
+#include <md5.h>
+#include <memory>
 #include <string>
 
 #define IoCrashOut(error) Engine::Core::Runtime::Crash(__FILE__, __LINE__, )
@@ -54,6 +59,22 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules) :
     }
 }
 
+bool GameLoop::AddEventSystem(EventSystemDelegate delegate, const char* userName)
+{
+    Pipeline::HashId inId = md5::compute(userName);
+    return m_EventSystems.try_emplace(inId, EventSystemInstance{delegate, userName}).second;
+}
+
+bool GameLoop::RemoveEventSystem(const char* userName)
+{
+    auto iterator = m_EventSystems.find(md5::compute(userName));
+    if (iterator == m_EventSystems.end())
+        return false;
+
+    m_EventSystems.erase(iterator);
+    return true;
+}
+
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
     // initialize sdl
@@ -69,6 +90,13 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
+    EventManager eventManager(&loggerService);
+
+    // insert systems
+    for (auto pair : m_EventSystems)
+    {
+        eventManager.RegisterEventSystem(&pair.second, 1);
+    }
 
     // initialize a local logger
     static const char* topLevelChannels[] = { "GameLoop" };
@@ -79,11 +107,14 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         &loggerService,
         &graphicsLayer,
         &worldState,
-        &moduleManager
+        &moduleManager,
+        &eventManager
     };
+
     CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
     if (serviceInitResult.has_value())
         return serviceInitResult;
+
     serviceInitResult = moduleManager.LoadModules(Pipeline::ListModules(), &services);
     if (serviceInitResult.has_value())
         return serviceInitResult;
@@ -92,6 +123,19 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     CallbackResult loadResult = LoadEntity(initialEntityId, services, &topLevelLogger);
     if (loadResult.has_value())
         return loadResult;
+
+    // create a series of module thread workers for every module
+    std::unique_ptr<MultiThreading::ModuleThreadWorker[]> moduleThreadWorkers = std::make_unique<MultiThreading::ModuleThreadWorker[]>(moduleManager.m_LoadedModules.size());
+    {
+        size_t moduleIndex = 0;
+        for (auto& moduleInstance : moduleManager.m_LoadedModules)
+        {
+            CallbackResult result = moduleThreadWorkers[moduleIndex].Start(&services, moduleInstance.second.State, &moduleInstance.second.Definition);
+            if (result.has_value())
+                return result;
+            moduleIndex++;
+        }
+    }
 
     // game loop
     bool quit = false;
@@ -112,9 +156,32 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 
         // pre update
 
-        // script update
+        // parallel event update
+        EventWriter writer;
+        while (eventManager.ExecuteAllSystems(&services, writer))
+        {
+            MultiThreading::ModuleWork work {MultiThreading::ModuleWorkType::ProcessInputEvents};
+            work.Payload.ProcessInputEvents.EventWriterCount = 1;
+            work.Payload.ProcessInputEvents.EventWriters = &writer;
 
-        // module update
+            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+            {
+                moduleThreadWorkers[i].ScheduleWork(work);
+            }
+
+            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+            {
+                moduleThreadWorkers[i].FinishWork();
+            }
+
+            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+            {
+                if (moduleThreadWorkers[i].GetWorkResult()->has_value())
+                {
+                    return *moduleThreadWorkers[i].GetWorkResult();
+                }
+            }
+        }
 
         // render pass
         for (auto& callback : moduleManager.m_RenderCallbacks)
@@ -130,6 +197,11 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
             return endFrameResult;
     }
     topLevelLogger.Information("Game exiting without error.");
+
+    for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+    {
+        moduleThreadWorkers[i].Join();
+    }
 
     return CallbackSuccess();
 }

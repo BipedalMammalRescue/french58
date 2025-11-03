@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Pipeline/module_definition.h"
@@ -9,10 +10,6 @@
 
 #include <unordered_map>
 #include <vector>
-
-namespace Engine::Core::Pipeline {
-struct ModuleDefinition;
-}
 
 namespace Engine::Core::Runtime {
 
@@ -24,7 +21,7 @@ struct ModuleInstance
     void* State;
 };
 
-struct InstancedCallback
+struct InstancedSynchronousCallback
 {
     CallbackResult (*Callback)(ServiceTable* services, void* moduleState);
     void* InstanceState;
@@ -36,7 +33,7 @@ private:
     ServiceTable* m_Services;
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
-    std::vector<InstancedCallback> m_RenderCallbacks;
+    std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
 
 private:
     friend class GameLoop;
