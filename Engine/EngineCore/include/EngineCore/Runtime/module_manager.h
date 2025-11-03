@@ -27,6 +27,12 @@ struct InstancedSynchronousCallback
     void* InstanceState;
 };
 
+struct InstancedEventCallback
+{
+    Runtime::CallbackResult (*Callback)(const Runtime::ServiceTable* services, void* moduleState, Runtime::EventStream eventStreams);
+    void* InstanceState;
+};
+
 class ModuleManager
 {
 private:
@@ -34,6 +40,7 @@ private:
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
     std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
+    std::vector<InstancedEventCallback> m_EventCallbacks;
 
 private:
     friend class GameLoop;

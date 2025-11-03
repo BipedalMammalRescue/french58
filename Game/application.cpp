@@ -20,7 +20,7 @@ bool FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, Engi
 
     s_ShouldRun++;
     auto exampleModuleState = (Engine::Extension::ExampleGameplayModule::ModuleState*)services->ModuleManager->FindModule(ExampleModuleName);
-    writer->WriteInputEvent<Engine::Extension::ExampleGameplayModule::YellEvent>(&exampleModuleState->YellOwner, { "your mom!!!" }, 0);
+    writer->WriteInputEvent<Engine::Extension::ExampleGameplayModule::YellEvent>(&exampleModuleState->YellOwner, { "TEST TEXT" }, 0);
     return true;
 }
 

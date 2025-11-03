@@ -41,20 +41,23 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
         m_LoadedModules[moduleDef.Name] = {moduleDef, newState};
 
         // set up callback table
-        if (moduleDef.SynchronousCallbackCount > 0)
+        for (size_t j = 0; j < moduleDef.SynchronousCallbackCount; j++) 
         {
-            for (size_t j = 0; j < moduleDef.SynchronousCallbackCount; j++) 
+            Pipeline::SynchronousCallback callback = moduleDef.SynchronousCallbacks[j];
+            switch (callback.Stage)
             {
-                Pipeline::SynchronousCallback callback = moduleDef.SynchronousCallbacks[j];
-                switch (callback.Stage)
-                {
-                    case Pipeline::EngineCallbackStage::Preupdate:
-                        break;
-                    case Pipeline::EngineCallbackStage::Render:
-                        m_RenderCallbacks.push_back({ callback.Callback, newState });
-                        break;
-                }
+                case Pipeline::EngineCallbackStage::Preupdate:
+                    break;
+                case Pipeline::EngineCallbackStage::Render:
+                    m_RenderCallbacks.push_back({ callback.Callback, newState });
+                    break;
             }
+        }
+
+        for (size_t j = 0; j < moduleDef.EventCallbackCount; j++) 
+        {
+            Pipeline::EventCallback callback = moduleDef.EventCallbacks[j];
+            m_EventCallbacks.push_back({ callback.Callback, newState });
         }
 
         m_Logger.Information("Loaded module {moduleId}", { moduleDef.Name });
