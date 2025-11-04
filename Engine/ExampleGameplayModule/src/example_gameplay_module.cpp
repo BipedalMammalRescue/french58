@@ -1,11 +1,16 @@
 #include "ExampleGameplayModule/example_gameplay_module.h"
-#include "EngineCore/Logging/logger.h"
-#include "EngineCore/Pipeline/engine_callback.h"
-#include "EngineCore/Runtime/crash_dump.h"
-#include "EngineCore/Runtime/event_stream.h"
+#include "EngineCore/Runtime/task_scheduler.h"
+#include "ExampleGameplayModule/auto_rotate_marker.h"
 
+#include <EngineCore/Logging/logger.h>
+#include <EngineCore/Pipeline/component_definition.h>
+#include <EngineCore/Pipeline/engine_callback.h>
+#include <EngineCore/Runtime/crash_dump.h>
+#include <EngineCore/Runtime/event_stream.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Runtime/service_table.h>
+
+#include <md5.h>
 
 using namespace Engine;
 using namespace Engine::Extension::ExampleGameplayModule;
@@ -17,7 +22,7 @@ static void* InitModule(Core::Runtime::ServiceTable* services)
     // register event
     ModuleState* newState = new ModuleState();
     newState->Logger = services->LoggerService->CreateLogger(LogChannels, 1);
-    newState->YellOwner = services->EventManager->RegisterInputEvent(&newState->YellEvents);
+    newState->YellOwner = services->EventManager->RegisterInputEvent<YellEvent>();
 
     return newState;
 }
@@ -28,7 +33,7 @@ static void DisposeModule(Core::Runtime::ServiceTable *services, void *moduleSta
     delete state;
 }
 
-static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, void* moduleState, Core::Runtime::EventStream events)
+static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTable* services, Core::Runtime::ITaskScheduler* scheduler, void* moduleState, Core::Runtime::EventStream events)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
 
@@ -46,9 +51,17 @@ static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTab
 
 Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDefinition()
 {
-    static Core::Pipeline::EventCallback callbacks[] = {
+    static Core::Pipeline::EventCallback callbacks[] {
         {
             EventUpdate
+        }
+    };
+
+    static Core::Pipeline::ComponentDefinition componentDefinitions[] {
+        {
+            md5::compute("AutoRotateMarker"),
+            CompileMarker,
+            LoadMarker
         }
     };
 
@@ -63,7 +76,7 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
         0,
         callbacks,
         1,
-        nullptr,
-        0
+        componentDefinitions,
+        1
     };
 }

@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/game_loop.h"
 
+#include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/asset_definition.h"
@@ -16,22 +17,21 @@
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineUtils/String/hex_strings.h"
 #include "EngineCore/Runtime/event_manager.h"
-#include "EngineCore/Runtime/Multithreading/module_thread_worker.h"
+#include "EngineCore/Runtime/task_manager.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <fstream>
 #include <md5.h>
-#include <memory>
 #include <string>
 
 #define IoCrashOut(error) Engine::Core::Runtime::Crash(__FILE__, __LINE__, )
 
 using namespace Engine::Core::Runtime;
 
-GameLoop::GameLoop(Pipeline::ModuleAssembly modules) : 
-    m_ConfigurationProvider(),
+GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::ConfigurationProvider& configs) : 
+    m_ConfigurationProvider(configs),
     m_Modules(modules)
 {
     // build component table
@@ -85,8 +85,13 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         return Crash(__FILE__, __LINE__, error);
 	}
 
-    // create services
+    // create logger
     Logging::LoggerService loggerService(m_ConfigurationProvider);
+    CallbackResult loggerStartResult = loggerService.StartLogger();
+    if (loggerStartResult.has_value())
+        return loggerStartResult;
+
+    // create other services
     GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
@@ -124,24 +129,18 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     if (loadResult.has_value())
         return loadResult;
 
-    // create a series of module thread workers for every module
-    std::unique_ptr<MultiThreading::ModuleThreadWorker[]> moduleThreadWorkers = std::make_unique<MultiThreading::ModuleThreadWorker[]>(moduleManager.m_LoadedModules.size());
-    {
-        size_t moduleIndex = 0;
-        for (auto& moduleInstance : moduleManager.m_LoadedModules)
-        {
-            CallbackResult result = moduleThreadWorkers[moduleIndex].Start(&services, moduleInstance.second.State, &moduleInstance.second.Definition);
-            if (result.has_value())
-                return result;
-            moduleIndex++;
-        }
-    }
+    TaskManager taskManager(&services, m_ConfigurationProvider.WorkerCount);
+
+    EventWriter eventWriter;
 
     // game loop
     bool quit = false;
     SDL_Event e;
     while (!quit)
     {
+        // tick the timer
+        worldState.Tick();
+
         // Handle events on queue
         while (SDL_PollEvent(&e) != 0)
         {
@@ -154,32 +153,31 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         if (beginFrameResult.has_value())
             return beginFrameResult;
 
-        // pre update
-
-        // parallel event update
-        EventWriter writer;
-        while (eventManager.ExecuteAllSystems(&services, writer))
+        // pre-update
+        for (InstancedSynchronousCallback callback : moduleManager.m_PreupdateCallbacks) 
         {
-            MultiThreading::ModuleWork work {MultiThreading::ModuleWorkType::ProcessInputEvents};
-            work.Payload.ProcessInputEvents.EventWriterCount = 1;
-            work.Payload.ProcessInputEvents.EventWriters = &writer;
+            callback.Callback(&services, callback.InstanceState);
+        }
 
-            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+        // task-based event update
+        while (eventManager.ExecuteAllSystems(&services, eventWriter))
+        {
+            for (const InstancedEventCallback& routine : moduleManager.m_EventCallbacks)
             {
-                moduleThreadWorkers[i].ScheduleWork(work);
+                Task task { TaskType::ProcessInputEvents };
+                task.Payload.ProcessInputEventsTask = { routine, &eventWriter, 1 };
+                taskManager.ScheduleWork(task);
             }
 
-            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
-            {
-                moduleThreadWorkers[i].FinishWork();
-            }
+            size_t tasksLeft = moduleManager.m_EventCallbacks.size();
 
-            for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
+            while (tasksLeft > 0)
             {
-                if (moduleThreadWorkers[i].GetWorkResult()->has_value())
-                {
-                    return *moduleThreadWorkers[i].GetWorkResult();
-                }
+                TaskResult nextResult = taskManager.WaitOne();
+                tasksLeft += nextResult.AdditionalTasks - 1;
+
+                if (nextResult.Result.has_value())
+                    return nextResult.Result;
             }
         }
 
@@ -196,13 +194,8 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         if (endFrameResult.has_value())
             return endFrameResult;
     }
+
     topLevelLogger.Information("Game exiting without error.");
-
-    for (size_t i = 0; i < moduleManager.m_LoadedModules.size(); i++)
-    {
-        moduleThreadWorkers[i].Join();
-    }
-
     return CallbackSuccess();
 }
 

@@ -23,7 +23,13 @@ struct ModuleInstance
 
 struct InstancedSynchronousCallback
 {
-    CallbackResult (*Callback)(ServiceTable* services, void* moduleState);
+    Pipeline::SynchronousCallbackDelegate Callback;
+    void* InstanceState;
+};
+
+struct InstancedEventCallback
+{
+    Pipeline::EventCallbackDelegate Callback;
     void* InstanceState;
 };
 
@@ -33,7 +39,9 @@ private:
     ServiceTable* m_Services;
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
+    std::vector<InstancedSynchronousCallback> m_PreupdateCallbacks;
     std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
+    std::vector<InstancedEventCallback> m_EventCallbacks;
 
 private:
     friend class GameLoop;

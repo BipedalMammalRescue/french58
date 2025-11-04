@@ -16,8 +16,8 @@ struct YellEvent
 
 struct ModuleState 
 {
-    std::vector<Core::Runtime::AnnotatedEvent<YellEvent>> YellEvents;
     Core::Runtime::EventOwner<YellEvent> YellOwner;
+    std::vector<int> SpinningEntities;
     Core::Logging::Logger Logger;
 };
 

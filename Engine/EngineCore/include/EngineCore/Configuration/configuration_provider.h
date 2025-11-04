@@ -19,6 +19,8 @@ struct ConfigurationProvider
 
     size_t LoggerBufferSize = 1024 * 32;
     Logging::LogLevel MinimumLogLevel = Logging::LogLevel::Information;
+
+    size_t WorkerCount = 2;
 };
 
 constexpr size_t EntityLoadBatchSize = 1024;

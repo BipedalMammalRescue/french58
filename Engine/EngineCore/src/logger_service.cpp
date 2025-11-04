@@ -1,6 +1,9 @@
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/crash_dump.h"
+#include "SDL3/SDL_error.h"
+#include "SDL3/SDL_thread.h"
 #include "SDL3/SDL_timer.h"
 
 #include <cmath>
@@ -48,10 +51,12 @@ public:
     }
 };
 
-void LoggerService::LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue)
+int LoggerService::LoggerRoutine(void* state)
 {
     LogEvent event;
     SleepCounter counter;
+
+    auto queue = (moodycamel::ConcurrentQueue<LogEvent>*)state;
 
     while (true)
     {
@@ -217,12 +222,22 @@ void LoggerService::LoggerRoutine(moodycamel::ConcurrentQueue<LogEvent>* queue)
 
         printf("\n");
     }
+
+    return 0;
 }
 
 LoggerService::LoggerService(Configuration::ConfigurationProvider configs) 
-    : m_Queue(configs.LoggerBufferSize), m_Thread(LoggerRoutine, &m_Queue), m_MinLevel(configs.MinimumLogLevel)
+    : m_Queue(configs.LoggerBufferSize), m_Thread(nullptr), m_MinLevel(configs.MinimumLogLevel)
 {
     m_Sequencer.store(0);
+}
+
+Engine::Core::Runtime::CallbackResult LoggerService::StartLogger()
+{
+    m_Thread = SDL_CreateThread(LoggerRoutine, "Logger Thread", &m_Queue);
+    if (m_Thread == nullptr)
+        return Runtime::Crash(__FILE__, __LINE__, std::string("Failed to create logger thread, details: ") + SDL_GetError());
+    return Runtime::CallbackSuccess();
 }
 
 LoggerService::~LoggerService()
@@ -233,7 +248,7 @@ LoggerService::~LoggerService()
     // wait until the queue accepts this terminator event
     while (!m_Queue.try_enqueue(terminator)) {}
 
-    m_Thread.join();
+    SDL_WaitThread(m_Thread, nullptr);
 }
 
 bool LoggerService::Write(const LogEvent& event)

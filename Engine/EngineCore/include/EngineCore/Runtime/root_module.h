@@ -3,7 +3,9 @@
 #include "EngineCore/Ecs/Components/camera_component.h"
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Runtime/event_manager.h"
 
+#include <optional>
 #include <vector>
 
 namespace Engine::Core::Runtime {
@@ -14,6 +16,12 @@ struct TransformUpdateEvent
     int EntityId;
 };
 
+struct TickEvent
+{
+    float TotalTime = 0;
+    float DeltaTime = 0;
+};
+
 // The root module authors data and manages states for part of the engine meant to be shared to other modules, but itself protected from them.
 struct RootModuleState
 {
@@ -22,7 +30,11 @@ struct RootModuleState
     std::unordered_map<int, Ecs::Components::SpatialRelation> SpatialComponents;
     std::vector<Ecs::Components::Camera> CameraComponents;
 
-    std::vector<TransformUpdateEvent> TransformUpdateEvents;
+    // output events
+    std::optional<TickEvent> TickEvent;
+
+    // input events
+    EventOwner<TransformUpdateEvent> TransformUpdateEventOwner;
 };
 
 }

@@ -17,6 +17,3 @@ add_subdirectory(Engine)
 
 # game executable and its dependencies
 add_subdirectory(Game)
-
-# prototyping
-add_subdirectory(Playground)

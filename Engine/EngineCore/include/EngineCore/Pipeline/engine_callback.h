@@ -7,6 +7,7 @@ namespace Engine::Core::Runtime {
 
 struct ServiceTable;
 class EventStream;
+class ITaskScheduler;
 
 }
 
@@ -18,15 +19,19 @@ enum class EngineCallbackStage
     Render
 };
 
+using SynchronousCallbackDelegate = Runtime::CallbackResult (*)(Runtime::ServiceTable* services, void* moduleState);
+
 struct SynchronousCallback
 {
     EngineCallbackStage Stage;
-    Runtime::CallbackResult (*Callback)(Runtime::ServiceTable* services, void* moduleState);
+    SynchronousCallbackDelegate Callback;
 };
+
+using EventCallbackDelegate = Runtime::CallbackResult (*)(const Runtime::ServiceTable* services, Runtime::ITaskScheduler* scheduler, void* moduleState, Runtime::EventStream eventStreams);
 
 struct EventCallback
 {
-    Runtime::CallbackResult (*Callback)(const Runtime::ServiceTable* services, void* moduleState, Runtime::EventStream eventStreams);
+    EventCallbackDelegate Callback;
 };
 
 }

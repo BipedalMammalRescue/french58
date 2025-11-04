@@ -36,7 +36,7 @@ private:
     CallbackResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
 
 public:
-    GameLoop(Pipeline::ModuleAssembly modules);
+    GameLoop(Pipeline::ModuleAssembly modules, const Configuration::ConfigurationProvider& configs);
     int Run(Pipeline::HashId initialEntity);
 
     bool AddEventSystem(EventSystemDelegate delegate, const char* userName);
