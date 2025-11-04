@@ -14,17 +14,17 @@ cp -r Tools/BuildSystem/EntityBuilder/bin/Release/net9.0/publish/* bin/src/Entit
 ln -s src/EntityBuilder/EntityBuilder bin/EntityBuilder
 
 # renderer module: material builder
-cd $project_root/Engine/RendererModule/Tools/MaterialEditor/MaterialBuilder
+cd $project_root/Tools/MaterialEditor/MaterialBuilder
 dotnet publish
 cd $project_root
 mkdir -p bin/src/MaterialBuilder
-cp -r Engine/RendererModule/Tools/MaterialEditor/MaterialBuilder/bin/Release/net9.0/publish/* bin/src/MaterialBuilder
+cp -r Tools/MaterialEditor/MaterialBuilder/bin/Release/net9.0/publish/* bin/src/MaterialBuilder
 ln -s src/MaterialBuilder/MaterialBuilder bin/MaterialBuilder
 
 # renderer module: pipeline builder
-cd $project_root/Engine/RendererModule/Tools/MaterialEditor/PipelineBuilder
+cd $project_root/Tools/MaterialEditor/PipelineBuilder
 dotnet publish
 cd $project_root
 mkdir -p bin/src/PipelineBuilder
-cp -r Engine/RendererModule/Tools/MaterialEditor/PipelineBuilder/bin/Release/net9.0/publish/* bin/src/PipelineBuilder
+cp -r Tools/MaterialEditor/PipelineBuilder/bin/Release/net9.0/publish/* bin/src/PipelineBuilder
 ln -s src/PipelineBuilder/PipelineBuilder bin/PipelineBuilder

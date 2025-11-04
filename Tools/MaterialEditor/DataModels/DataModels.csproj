@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../../../Tools/BuildSystem/EntityBuilder.Abstractions/EntityBuilder.Abstractions.csproj" />
+    <ProjectReference Include="../../BuildSystem/EntityBuilder.Abstractions/EntityBuilder.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
