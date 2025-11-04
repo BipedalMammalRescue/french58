@@ -1,7 +1,5 @@
 #include "RendererModule/renderer_module.h"
 
-#include "EngineCore/Pipeline/variant.h"
-#include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
@@ -11,8 +9,9 @@
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
-#include "glm/ext/matrix_float4x4.hpp"
 
+#include <EngineCore/Pipeline/variant.h>
+#include <EngineCore/Runtime/crash_dump.h>
 #include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Runtime/service_table.h>
@@ -26,6 +25,7 @@
 #include <SDL3/SDL_gpu.h>
 #include <md5.h>
 #include <glm/mat4x4.hpp>
+#include <glm/ext/matrix_float4x4.hpp>
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
 
@@ -101,7 +101,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
     // calculate projection matrix
     glm::mat4 projectMatrix =
         glm::perspective(glm::radians<float>(Configuration::FieldOfView),
-                         960.0f / 720.0f, 0.1f, 500.0f);
+                         960.0f / 720.0f, 0.1f, 10000.0f);
 
     // pre-calculate the first part of MVP
     glm::mat4 pvMatrix = projectMatrix * viewMatrix;

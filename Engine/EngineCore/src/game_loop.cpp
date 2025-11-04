@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/game_loop.h"
 
+#include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/asset_definition.h"
@@ -29,8 +30,8 @@
 
 using namespace Engine::Core::Runtime;
 
-GameLoop::GameLoop(Pipeline::ModuleAssembly modules) : 
-    m_ConfigurationProvider(),
+GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::ConfigurationProvider& configs) : 
+    m_ConfigurationProvider(configs),
     m_Modules(modules)
 {
     // build component table
@@ -151,6 +152,12 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         CallbackResult beginFrameResult = graphicsLayer.BeginFrame();
         if (beginFrameResult.has_value())
             return beginFrameResult;
+
+        // pre-update
+        for (InstancedSynchronousCallback callback : moduleManager.m_PreupdateCallbacks) 
+        {
+            callback.Callback(&services, callback.InstanceState);
+        }
 
         // task-based event update
         while (eventManager.ExecuteAllSystems(&services, eventWriter))

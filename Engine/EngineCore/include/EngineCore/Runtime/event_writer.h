@@ -33,7 +33,7 @@ private:
 
 public:
     template <typename TEvent>
-    void WriteInputEvent(EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
+    void WriteInputEvent(const EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
     {
         Write((void*)owner, &eventData, sizeof(TEvent), m_UserName, authorPath);
     }

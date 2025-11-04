@@ -6,6 +6,7 @@
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 
+#include "EngineCore/Runtime/task_scheduler.h"
 #include "SDL3/SDL_thread.h"
 #include "blockingconcurrentqueue.h"
 #include "lightweightsemaphore.h"
@@ -17,7 +18,8 @@ class EventWriter;
 enum class TaskType 
 {
     ShutDown,
-    ProcessInputEvents
+    ProcessInputEvents,
+    GenericTask
 };
 
 struct Task 
@@ -30,6 +32,11 @@ struct Task
             EventWriter* EventWriters; 
             size_t EventWriterCount;
         } ProcessInputEventsTask;
+
+        struct {
+            GenericTaskDelegate Routine;
+            void* State;
+        } GenericTask;
     } Payload;
 };
 

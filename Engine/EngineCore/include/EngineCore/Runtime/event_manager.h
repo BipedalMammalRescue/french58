@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
+#include <complex>
 #include <vector>
 
 namespace Engine::Core::Logging {
@@ -23,15 +24,6 @@ private:
     friend class EventWriter;
     friend class EventManager;
     int m_ID = -1;
-};
-
-// annotated events are event + author information
-template <typename TEvent>
-struct AnnotatedEvent
-{
-    TEvent Data;
-    const char* AuthorSystem;
-    int AuthorPath;
 };
 
 struct EventSystemInstance
@@ -60,7 +52,7 @@ private:
 public:
     // input events needs to be registered so event systems can access them
     template <typename TEvent>
-    EventOwner<TEvent> RegisterInputEvent(std::vector<AnnotatedEvent<TEvent>>* storage)
+    EventOwner<TEvent> RegisterInputEvent()
     {
         int id = m_Registra;
         m_Registra++;

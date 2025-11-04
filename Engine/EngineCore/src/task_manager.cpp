@@ -3,6 +3,7 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
+#include "EngineCore/Runtime/task_scheduler.h"
 #include "SDL3/SDL_thread.h"
 
 using namespace Engine::Core::Runtime;
@@ -39,17 +40,45 @@ TaskManager::~TaskManager()
     m_Logger.Information("Worker threads exited.");
 }
 
-static CallbackResult ProcessInputEvent(const ServiceTable* services, void* moduleState, CallbackResult (*callback)(const ServiceTable* services, void* moduleState, EventStream eventStreams), EventWriter* eventWriters, size_t eventWriterCount)
+static CallbackResult ProcessInputEvent(const ServiceTable* services, ITaskScheduler* scheduler, void* moduleState, Engine::Core::Pipeline::EventCallbackDelegate callback, EventWriter* eventWriters, size_t eventWriterCount)
 {
     for (size_t i = 0; i < eventWriterCount; i++)
     {
-        CallbackResult result = callback(services, moduleState, eventWriters[i].OpenReadStream());
+        CallbackResult result = callback(services, scheduler, moduleState, eventWriters[i].OpenReadStream());
         if (result.has_value())
             return result;
     }
 
     return CallbackSuccess();
 }
+
+class TaskLocalScheduler : public ITaskScheduler
+{
+private:
+    Engine::Core::Logging::Logger* m_Logger;
+    TaskManager* m_TaskManager;
+    size_t m_ScheduleCount;
+
+public:
+    TaskLocalScheduler(Engine::Core::Logging::Logger* logger, TaskManager* taskManager) 
+        : m_Logger(logger), m_TaskManager(taskManager), m_ScheduleCount(0) 
+    {
+    }
+
+    void ScheduleTask(GenericTaskDelegate routine, void *state) override 
+    {
+        Task task;
+        task.Type = Engine::Core::Runtime::TaskType::GenericTask;
+        task.Payload.GenericTask = { routine, state };
+        m_TaskManager->ScheduleWork(task);
+        m_ScheduleCount++;
+    }
+
+    size_t GetSchedulCount() const
+    {
+        return m_ScheduleCount;
+    }
+};
 
 int TaskManager::ThreadRoutine(void* state)
 {
@@ -76,13 +105,23 @@ int TaskManager::ThreadRoutine(void* state)
             break;
         case TaskType::ProcessInputEvents:
             {
+                TaskLocalScheduler localScheduler(&logger, taskManager);
+
                 CallbackResult result = ProcessInputEvent(
-                    taskManager->m_ServiceTable, 
+                    taskManager->m_ServiceTable,
+                    &localScheduler,
                     task.Payload.ProcessInputEventsTask.Routine.InstanceState, 
                     task.Payload.ProcessInputEventsTask.Routine.Callback,
                     task.Payload.ProcessInputEventsTask.EventWriters,
                     task.Payload.ProcessInputEventsTask.EventWriterCount
                 );
+
+                taskManager->m_ResultQueue.enqueue({ result, localScheduler.GetSchedulCount() });
+            }
+            break;
+        case TaskType::GenericTask:
+            {
+                CallbackResult result = task.Payload.GenericTask.Routine(task.Payload.GenericTask.State);
                 taskManager->m_ResultQueue.enqueue({ result, 0 });
             }
             break;

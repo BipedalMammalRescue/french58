@@ -93,6 +93,12 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
+                },
+                {
+                    "Name": "spinner",
+                    "Module": "ExampleGameplayModule",
+                    "Type": "AutoRotateMarker",
+                    "Fields": {}
                 }
             ]
         },
@@ -131,6 +137,12 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
+                },
+                {
+                    "Name": "spinner",
+                    "Module": "ExampleGameplayModule",
+                    "Type": "AutoRotateMarker",
+                    "Fields": {}
                 }
             ]
         },
@@ -169,6 +181,12 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
+                },
+                {
+                    "Name": "spinner",
+                    "Module": "ExampleGameplayModule",
+                    "Type": "AutoRotateMarker",
+                    "Fields": {}
                 }
             ]
         },
@@ -182,7 +200,7 @@
                     "Type": "SpatialRelation",
                     "Fields": {
                         "Translation": {
-                            "Vec3": [0, 0, 100]
+                            "Vec3": [0, 0, 200]
                         },
                         "Scale": {
                             "Vec3": [1, 1, 1]
