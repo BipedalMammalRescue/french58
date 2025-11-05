@@ -3,4 +3,4 @@
 entity_path=$(realpath -m --relative-to=$ASSET_ROOT $1)
 
 cd $ASSET_ROOT
-EntityBuilder build-entity --out=../built_data --recipe-root=Recipes $entity_path
+EntityBuilder build-entity --log-path=../logs --out=../built_data --recipe-root=Recipes $entity_path
