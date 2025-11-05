@@ -13,9 +13,11 @@ class ITaskScheduler;
 
 namespace Engine::Core::Pipeline {
 
-enum class EngineCallbackStage
+enum class SynchronousCallbackStage
 {
     Preupdate,
+    MidUpdate,
+    PostUpdate,
     Render
 };
 
@@ -23,7 +25,7 @@ using SynchronousCallbackDelegate = Runtime::CallbackResult (*)(Runtime::Service
 
 struct SynchronousCallback
 {
-    EngineCallbackStage Stage;
+    SynchronousCallbackStage Stage;
     SynchronousCallbackDelegate Callback;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Runtime/input_manager.h"
 namespace Engine::Core::Runtime {
 
 class GraphicsLayer;
@@ -16,6 +17,7 @@ struct ServiceTable
     WorldState* WorldState;
     ModuleManager* ModuleManager;
     EventManager* EventManager;
+    InputManager* InputManager;
 };
 
 }

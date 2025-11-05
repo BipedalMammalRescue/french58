@@ -1,0 +1,13 @@
+{
+    "Module": "InputModule",
+    "Type": "InputAction",
+    "Data": 
+    {
+        "$type": "obj",
+        "Source": 
+        {
+            "$type": "leaf",
+            "Path": "InputActions/up_emission.json"
+        }
+    }
+}

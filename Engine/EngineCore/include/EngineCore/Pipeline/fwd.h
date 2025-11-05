@@ -3,5 +3,6 @@
 namespace Engine::Core::Pipeline {
 
 class IAssetEnumerator;
+struct HashId;
 
 }

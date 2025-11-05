@@ -40,17 +40,32 @@ private:
     Logging::Logger m_Logger;
     std::unordered_map<Pipeline::HashId, ModuleInstance> m_LoadedModules;
     std::vector<InstancedSynchronousCallback> m_PreupdateCallbacks;
+    std::vector<InstancedSynchronousCallback> m_MidupdateCallbacks;
+    std::vector<InstancedSynchronousCallback> m_PostupdateCallbacks;
     std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
     std::vector<InstancedEventCallback> m_EventCallbacks;
 
 private:
     friend class GameLoop;
     CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules, ServiceTable* services);
+    const void* FindModule(const Pipeline::HashId& name) const;
+    const void* FindModule(const Pipeline::HashId&& name) const;
 
 public:
     ~ModuleManager();
-    const void* FindModule(const Pipeline::HashId& name) const;
-    const void* FindModule(const Pipeline::HashId&& name) const;
+
+    template <typename TModule>
+    const TModule* FindModule(const Pipeline::HashId& name) const
+    {
+        return static_cast<const TModule*>(FindModule(name));
+    }
+
+    template <typename TModule>
+    const TModule* FindModule(const Pipeline::HashId&& name) const
+    {
+        return static_cast<const TModule*>(FindModule(name));
+    }
+
     const RootModuleState* GetRootModule() const;
 };
 

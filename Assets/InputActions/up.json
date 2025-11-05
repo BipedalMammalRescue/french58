@@ -1,0 +1,8 @@
+{
+    "$type": "discrete", 
+    "Name": "Up",
+    "Trigger": {
+        "$type": "keyboard",
+        "ScanCode": 26
+    }
+}

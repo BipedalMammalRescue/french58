@@ -98,7 +98,11 @@
                     "Name": "spinner",
                     "Module": "ExampleGameplayModule",
                     "Type": "AutoRotateMarker",
-                    "Fields": {}
+                    "Fields": {
+                        "InputMethod": {
+                            "Path": "InputActions/up_emission.se_asset"
+                        }
+                    }
                 }
             ]
         },
@@ -137,12 +141,6 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
-                },
-                {
-                    "Name": "spinner",
-                    "Module": "ExampleGameplayModule",
-                    "Type": "AutoRotateMarker",
-                    "Fields": {}
                 }
             ]
         },
@@ -181,12 +179,6 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
-                },
-                {
-                    "Name": "spinner",
-                    "Module": "ExampleGameplayModule",
-                    "Type": "AutoRotateMarker",
-                    "Fields": {}
                 }
             ]
         },

@@ -100,7 +100,7 @@ public class BuildEntityCommand : Command
     private async Task<string?> BuildComponentGroupAsync(ComponentGroup group)
     {
         using Process componentBuilder = new();
-        componentBuilder.StartInfo.FileName = "BuildComponent";
+        componentBuilder.StartInfo.FileName = "ComponentBuilder";
         componentBuilder.StartInfo.RedirectStandardInput = true;
         componentBuilder.StartInfo.RedirectStandardOutput = true;
         componentBuilder.ErrorDataReceived += (_, e) =>
