@@ -46,13 +46,19 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
             Pipeline::SynchronousCallback callback = moduleDef.SynchronousCallbacks[j];
             switch (callback.Stage)
             {
-                case Pipeline::EngineCallbackStage::Preupdate:
+                case Pipeline::SynchronousCallbackStage::Preupdate:
                     m_PreupdateCallbacks.push_back({ callback.Callback, newState });
                     break;
-                case Pipeline::EngineCallbackStage::Render:
+                case Pipeline::SynchronousCallbackStage::Render:
                     m_RenderCallbacks.push_back({ callback.Callback, newState });
                     break;
-            }
+                case Pipeline::SynchronousCallbackStage::MidUpdate:
+                    m_MidupdateCallbacks.push_back({ callback.Callback, newState });
+                    break;
+                case Pipeline::SynchronousCallbackStage::PostUpdate:
+                    m_PostupdateCallbacks.push_back({ callback.Callback, newState });
+                  break;
+                }
         }
 
         for (size_t j = 0; j < moduleDef.EventCallbackCount; j++) 

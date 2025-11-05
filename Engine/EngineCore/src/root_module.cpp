@@ -28,9 +28,6 @@ static Runtime::CallbackResult EventCallback(const Runtime::ServiceTable* servic
 {
     auto state = static_cast<RootModuleState*>(moduleState);
 
-    // clear existing output events
-    state->TickEvent.reset();
-
     while (eventStream.MoveNext())
     {
         if (eventStream.GetCurrentHeader().Owner != &state->TransformUpdateEventOwner)
@@ -62,6 +59,16 @@ static Runtime::CallbackResult PreupdateCallback(Runtime::ServiceTable* services
     return CallbackSuccess();
 }
 
+static Runtime::CallbackResult PostupdateCallback(Runtime::ServiceTable* services, void* moduleState)
+{
+    auto state = static_cast<RootModuleState*>(moduleState);
+
+    // clear existing output events
+    state->TickEvent.reset();
+
+    return CallbackSuccess();
+}
+
 Pipeline::ModuleDefinition RootModuleState::GetDefinition() 
 {
     static const Pipeline::ComponentDefinition rootComponents[] {
@@ -85,8 +92,12 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
 
     static const Pipeline::SynchronousCallback synchronousCallbacks[] {
         {
-            Pipeline::EngineCallbackStage::Preupdate,
+            Pipeline::SynchronousCallbackStage::Preupdate,
             PreupdateCallback
+        },
+        {
+            Pipeline::SynchronousCallbackStage::PostUpdate,
+            PostupdateCallback
         }
     };
 
@@ -97,7 +108,7 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
         nullptr,
         0,
         synchronousCallbacks,
-        1,
+        2,
         eventCallbacks,
         1,
         rootComponents,

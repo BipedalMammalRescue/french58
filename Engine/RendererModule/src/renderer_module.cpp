@@ -267,7 +267,7 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
     static const Core::Pipeline::SynchronousCallback Callbacks[]
     {
         {
-            Core::Pipeline::EngineCallbackStage::Render,
+            Core::Pipeline::SynchronousCallbackStage::Render,
             RenderUpdate
         }
     };

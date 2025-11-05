@@ -1,0 +1,8 @@
+{
+    "$type": "emission", 
+    "Name": "Up",
+    "Trigger": {
+        "$type": "keyboard",
+        "ScanCode": 26
+    }
+}

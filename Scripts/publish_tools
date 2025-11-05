@@ -5,15 +5,23 @@ project_root=$(pwd)
 
 rm -rf $project_root/bin
 
+echo "Building EntityBuilder ..."
 cd $project_root/Tools/BuildSystem/EntityBuilder
 dotnet publish
-
 cd $project_root
 mkdir -p bin/src/EntityBuilder
 cp -r Tools/BuildSystem/EntityBuilder/bin/Release/net9.0/publish/* bin/src/EntityBuilder
 ln -s src/EntityBuilder/EntityBuilder bin/EntityBuilder
 
-# renderer module: material builder
+echo "Building ComponentBuilder ..."
+cd $project_root
+cmake --build build --config Release --target ComponentBuilder
+
+echo "Building MeshBuilder ..."
+cd $project_root
+cmake --build build --config Release --target MeshBuilder
+
+echo "Building MaterialBuilder ..."
 cd $project_root/Tools/MaterialEditor/MaterialBuilder
 dotnet publish
 cd $project_root
@@ -21,10 +29,18 @@ mkdir -p bin/src/MaterialBuilder
 cp -r Tools/MaterialEditor/MaterialBuilder/bin/Release/net9.0/publish/* bin/src/MaterialBuilder
 ln -s src/MaterialBuilder/MaterialBuilder bin/MaterialBuilder
 
-# renderer module: pipeline builder
+echo "Building PipelineBuilder ..."
 cd $project_root/Tools/MaterialEditor/PipelineBuilder
 dotnet publish
 cd $project_root
 mkdir -p bin/src/PipelineBuilder
 cp -r Tools/MaterialEditor/PipelineBuilder/bin/Release/net9.0/publish/* bin/src/PipelineBuilder
 ln -s src/PipelineBuilder/PipelineBuilder bin/PipelineBuilder
+
+echo "Building InputActionCompiler ..."
+cd $project_root/Tools/InputActionEditor/InputActionCompiler
+dotnet publish
+cd $project_root
+mkdir -p bin/src/InputActionCompiler
+cp -r Tools/InputActionEditor/InputActionCompiler/bin/Release/net9.0/publish/* bin/src/InputActionCompiler
+ln -s src/InputActionCompiler/InputActionCompiler bin/InputActionCompiler

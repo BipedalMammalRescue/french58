@@ -1,3 +1,4 @@
+#include "InputModule/input_module.h"
 #include "RendererModule/renderer_module.h"
 #include "ExampleGameplayModule/example_gameplay_module.h"
 
@@ -12,6 +13,7 @@ using namespace Engine;
 // define modules here
 static const Core::Pipeline::ModuleDefinition Modules[] = {
     Engine::Core::Runtime::RootModuleState::GetDefinition(),
+    Extension::InputModule::GetModuleDefinition(),
     Extension::RendererModule::GetModuleDefinition(),
     Extension::ExampleGameplayModule::GetDefinition()
 };
@@ -20,5 +22,5 @@ constexpr size_t ModuleCount = sizeof(Modules) / sizeof(Core::Pipeline::ModuleDe
 
 Core::Pipeline::ModuleAssembly Core::Pipeline::ListModules() 
 {
-    return { Modules, ModuleCount };
+    return { Modules, ModuleCount };  
 }

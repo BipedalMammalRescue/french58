@@ -1,0 +1,11 @@
+{
+    "Module": "InputModule",
+    "Type": "InputAction",
+    "Action": {
+        "$type": "command",
+        "Process": "InputActionCompiler",
+        "Arguments": [
+            "#(Source)"
+        ]
+    }
+}

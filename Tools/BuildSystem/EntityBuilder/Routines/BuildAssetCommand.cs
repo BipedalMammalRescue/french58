@@ -26,7 +26,7 @@ public class BuildAssetCommand : Command
 
     private static readonly Option<string> s_assetFileExtensionOption = new("--asset-file-extension")
     {
-        Description = "File extension of each individual built asset. Default is \"*.se_bin\".",
+        Description = "File extension of each individual built asset. Default is \"*.bse_asset\".",
     };
 
     private static readonly Argument<FileInfo> s_inputFileArgument = new("asset-file", "Input asset file.");
@@ -73,7 +73,7 @@ public class BuildAssetCommand : Command
         _logger.Information("Input path: {path}", inputFile);
 
         // check file extension is valid
-        string assetFileExtension = context.ParseResult.GetValueForOption(s_assetFileExtensionOption) ?? "se_bin";
+        string assetFileExtension = context.ParseResult.GetValueForOption(s_assetFileExtensionOption) ?? "bse_asset";
         try
         {
             FileStream fs = File.Create($"{Guid.NewGuid()}.{assetFileExtension}");

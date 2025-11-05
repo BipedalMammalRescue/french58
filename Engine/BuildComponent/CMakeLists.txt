@@ -1,2 +1,2 @@
-add_executable(BuildComponent application.cpp)
-target_link_libraries(BuildComponent PUBLIC Engine)
+add_executable(ComponentBuilder application.cpp)
+target_link_libraries(ComponentBuilder PUBLIC Engine)

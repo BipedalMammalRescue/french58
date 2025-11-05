@@ -12,6 +12,7 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/input_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
@@ -96,6 +97,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     WorldState worldState(&m_ConfigurationProvider);
     ModuleManager moduleManager;
     EventManager eventManager(&loggerService);
+    InputManager inputManager;
 
     // insert systems
     for (auto pair : m_EventSystems)
@@ -113,7 +115,8 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         &graphicsLayer,
         &worldState,
         &moduleManager,
-        &eventManager
+        &eventManager,
+        &inputManager
     };
 
     CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
@@ -141,12 +144,9 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         // tick the timer
         worldState.Tick();
 
-        // Handle events on queue
-        while (SDL_PollEvent(&e) != 0)
-        {
-            //User requests quit
-            quit = e.type == SDL_EVENT_QUIT;
-        }
+        // input handling
+        inputManager.ProcessSdlEvents();
+        quit = inputManager.m_QuitRequested;
 
         // begin update loop
         CallbackResult beginFrameResult = graphicsLayer.BeginFrame();
@@ -162,6 +162,12 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         // task-based event update
         while (eventManager.ExecuteAllSystems(&services, eventWriter))
         {
+            // mid-update events
+            for (const InstancedSynchronousCallback& callback : moduleManager.m_MidupdateCallbacks) 
+            {
+                callback.Callback(&services, callback.InstanceState);
+            }
+
             for (const InstancedEventCallback& routine : moduleManager.m_EventCallbacks)
             {
                 Task task { TaskType::ProcessInputEvents };
@@ -178,6 +184,12 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 
                 if (nextResult.Result.has_value())
                     return nextResult.Result;
+            }
+
+            // post-update events
+            for (const InstancedSynchronousCallback& callback : moduleManager.m_PostupdateCallbacks) 
+            {
+                callback.Callback(&services, callback.InstanceState);
             }
         }
 
