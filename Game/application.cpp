@@ -14,8 +14,8 @@
 
 #include <md5.h>
 
-static Engine::Core::Pipeline::HashId ExampleModuleName = Engine::Extension::ExampleGameplayModule::GetDefinition().Name;
-static Engine::Core::Pipeline::HashId InputModuleName = Engine::Extension::InputModule::GetModuleDefinition().Name;
+static Engine::Core::Pipeline::HashId ExampleModuleName = Engine::Extension::ExampleGameplayModule::GetDefinition().Name.Hash;
+static Engine::Core::Pipeline::HashId InputModuleName = Engine::Extension::InputModule::GetModuleDefinition().Name.Hash;
 
 bool FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, Engine::Core::Runtime::EventWriter* writer)
 {

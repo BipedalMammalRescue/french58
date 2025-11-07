@@ -6,7 +6,7 @@
 
 namespace Engine::Extension::LuaScriptingModule {
 
-class LuaParamEnumerator : public Core::Scripting::IParamReader
+class LuaParamReader : public Core::Scripting::IParamReader
 {
 private:
     const Core::Scripting::ScriptCallable* m_Callable;
@@ -19,7 +19,7 @@ protected:
     bool GetCore(void* destination) override;
 
 public:
-    LuaParamEnumerator(const Core::Scripting::ScriptCallable* callable, lua_State* luaState, int stackOffset) : m_Callable(callable), m_LuaState(luaState), m_StackOffset(stackOffset) {}
+    LuaParamReader(const Core::Scripting::ScriptCallable* callable, lua_State* luaState, int stackOffset) : m_Callable(callable), m_LuaState(luaState), m_StackOffset(stackOffset) {}
 };
 
 }

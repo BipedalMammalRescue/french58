@@ -1,10 +1,11 @@
 #pragma once
 
-#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/fwd.h"
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/component_definition.h"
+#include "EngineCore/Scripting/script_callable.h"
 
 #include <md5.h>
 
@@ -14,7 +15,7 @@ namespace Engine::Core::Pipeline {
 struct ModuleDefinition
 {
     // static definitions
-    HashId Name;
+    NamePair Name;
 
     // module state
     void *(*Initialize)(Runtime::ServiceTable *services);
@@ -35,6 +36,10 @@ struct ModuleDefinition
     // components
     const ComponentDefinition* Components = nullptr;
     size_t ComponentCount = 0;
+
+    // api
+    const Scripting::ScriptCallable** ApiCallables = nullptr;
+    size_t ApiCallableCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

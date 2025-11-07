@@ -1,5 +1,8 @@
 #include "ExampleGameplayModule/example_gameplay_module.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/task_scheduler.h"
+#include "EngineCore/Scripting/macros.h"
+#include "EngineCore/Scripting/script_callable.h"
 #include "ExampleGameplayModule/auto_rotate_marker.h"
 
 #include <EngineCore/Logging/logger.h>
@@ -9,6 +12,7 @@
 #include <EngineCore/Runtime/event_stream.h>
 #include <EngineCore/Pipeline/module_definition.h>
 #include <EngineCore/Runtime/service_table.h>
+#include <EngineCore/Scripting/script_property.h>
 
 #include <md5.h>
 
@@ -49,6 +53,23 @@ static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTab
     return Core::Runtime::CallbackSuccess();
 }
 
+struct ExamplePayload
+{
+    int Index1;
+    int Index2;
+};
+
+DECLARE_SCRIPT_OBJECT(ExamplePayload)
+    ADD_MEMBER(Index1)
+    ADD_MEMBER(Index2)
+END_SCRIPT_OBJECT
+
+DECLARE_SCRIPT_CALLABLE(ExampleApi, int, ExamplePayload, payload)
+{
+    return payload.Index1 + payload.Index2;
+}
+END_SCRIPT_CALLABLE
+
 Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDefinition()
 {
     static Core::Pipeline::EventCallback callbacks[] {
@@ -59,15 +80,19 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
 
     static Core::Pipeline::ComponentDefinition componentDefinitions[] {
         {
-            md5::compute("AutoRotateMarker"),
+            HASH_NAME("AutoRotateMarker"),
             CompileMarker,
             LoadMarker
         }
     };
 
+    static const Core::Scripting::ScriptCallable* api[] {
+        GetExampleApiScriptCallable()
+    };
+
     return Core::Pipeline::ModuleDefinition 
     {
-        md5::compute("ExampleGameplayModule"),
+        HASH_NAME("ExampleGameplayModule"),
         InitModule,
         DisposeModule,
         nullptr,
@@ -77,6 +102,8 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
         callbacks,
         1,
         componentDefinitions,
+        1,
+        api,
         1
     };
 }

@@ -28,6 +28,8 @@ static size_t Align(size_t raw, size_t alignment)
     return raw;
 }
 
+// TODO: need to check type
+
 size_t Engine::Extension::LuaScriptingModule::PopScriptObject(const Engine::Core::Scripting::ScriptObject* reflection, void* data, lua_State* luaState, int index)
 {
     switch (reflection->ObjectType)

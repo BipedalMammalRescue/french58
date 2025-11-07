@@ -2,6 +2,8 @@
 
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Scripting/script_object.h"
+#include "EngineCore/Scripting/script_property.h"
+#include "EngineCore/Scripting/script_callable.h"
 #include "glm/ext/matrix_float2x2.hpp"
 #include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_float4x4.hpp"

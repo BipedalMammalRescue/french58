@@ -42,7 +42,7 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::Config
         for (size_t j = 0; j < module.ComponentCount; j ++)
         {
             Pipeline::ComponentDefinition component = module.Components[j];
-            Pipeline::HashIdTuple tuple { module.Name, component.Name };
+            Pipeline::HashIdTuple tuple { module.Name.Hash, component.Name.Hash };
             m_Components[tuple] = component;
         }
     }
@@ -54,7 +54,7 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::Config
         for (size_t j = 0; j < module.AssetsCount; j ++)
         {
             Pipeline::AssetDefinition asset = module.Assets[j];
-            Pipeline::HashIdTuple tuple { module.Name, asset.Name };
+            Pipeline::HashIdTuple tuple { module.Name.Hash, asset.Name.Hash };
             m_Assets[tuple] = asset;
         }
     }

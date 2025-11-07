@@ -3,7 +3,7 @@
 
 using namespace Engine::Extension::LuaScriptingModule;
 
-bool LuaParamEnumerator::GetCore(void* destination)
+bool LuaParamReader::GetCore(void* destination)
 {
     size_t readCount = PopScriptObject(m_Callable->ParamType, destination, m_LuaState, -1 - m_StackOffset);
     return readCount > 0;
