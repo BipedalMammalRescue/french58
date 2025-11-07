@@ -21,20 +21,20 @@ struct ModuleDefinition
     void (*Dispose)(Runtime::ServiceTable *services, void *moduleState);
 
     // assets
-    const AssetDefinition* Assets;
-    size_t AssetsCount;
+    const AssetDefinition* Assets = nullptr;
+    size_t AssetsCount = 0;
 
     // these callbacks are never called in parallel and are thus granted full access to every resource in the engine
-    const SynchronousCallback* SynchronousCallbacks;
-    size_t SynchronousCallbackCount;
+    const SynchronousCallback* SynchronousCallbacks = nullptr;
+    size_t SynchronousCallbackCount = 0;
 
     // event callbacks are called to handle *INPUT EVENT*, engine guarantees that ever callback itself is only called by one thread at a time, but between callbacks can be scheduled arbitrarily
-    const EventCallback* EventCallbacks;
-    size_t EventCallbackCount;
+    const EventCallback* EventCallbacks = nullptr;
+    size_t EventCallbackCount = 0;
 
     // components
-    const ComponentDefinition* Components;
-    size_t ComponentCount;
+    const ComponentDefinition* Components = nullptr;
+    size_t ComponentCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

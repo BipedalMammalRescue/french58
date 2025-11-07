@@ -8,6 +8,7 @@ add_subdirectory(lib/glm)
 add_subdirectory(lib/tinyobjloader)
 add_subdirectory(lib/constexpr-md5-cpp)
 add_subdirectory(lib/concurrentqueue)
+add_subdirectory(lib/lua-5.3.6)
 
 add_subdirectory(EngineUtils)
 
@@ -33,6 +34,7 @@ target_link_libraries(Engine PUBLIC EngineCore)
 add_subdirectory(RendererModule)
 add_subdirectory(ExampleGameplayModule)
 add_subdirectory(InputModule)
+add_subdirectory(LuaScriptingModule)
 
 # tools
 add_subdirectory(BuildComponent)

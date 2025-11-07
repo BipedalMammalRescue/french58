@@ -132,15 +132,15 @@ int LoggerService::LoggerRoutine(void* state)
             case Engine::Core::Pipeline::VariantType::Int32:
                 printf("%d", event.Payload.Parameter.Data.Int32);
                 break;
-            case Engine::Core::Pipeline::VariantType::Int64:
-                printf("%ld", event.Payload.Parameter.Data.Int64);
-                break;
+            // case Engine::Core::Pipeline::VariantType::Int64:
+            //     printf("%ld", event.Payload.Parameter.Data.Int64);
+            //     break;
             case Engine::Core::Pipeline::VariantType::Uint32:
                 printf("%u", event.Payload.Parameter.Data.Uint32);
                 break;
-            case Engine::Core::Pipeline::VariantType::Uint64:
-                printf("%lu", event.Payload.Parameter.Data.Uint64);
-                break;
+            // case Engine::Core::Pipeline::VariantType::Uint64:
+            //     printf("%lu", event.Payload.Parameter.Data.Uint64);
+            //     break;
             case Engine::Core::Pipeline::VariantType::Float:
                 printf("%.3f", event.Payload.Parameter.Data.Float);
                 break;

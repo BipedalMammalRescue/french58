@@ -14,10 +14,10 @@ size_t Engine::Core::Pipeline::GetVariantPayloadSize(const Variant& source)
     case VariantType::Float:
         dataSize = 4;
         break;
-    case VariantType::Int64:
-    case VariantType::Uint64:
-        dataSize = 8;
-        break;
+    // case VariantType::Int64:
+    // case VariantType::Uint64:
+    //     dataSize = 8;
+    //     break;
     case VariantType::Vec2:
         dataSize = sizeof(Core::Pipeline::Variant::Data.Vec2);
         break;

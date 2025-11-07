@@ -11,9 +11,9 @@ public enum VariantType : byte
     Byte,
     Bool,
     Int32,
-    Int64,
+    // Int64,
     Uint32,
-    Uint64,
+    // Uint64,
     Float,
     Vec2,
     Vec3,
@@ -68,16 +68,16 @@ public class Variant : ILeafDataPoint
         }
     }
 
-    public long Int64
-    {
-        get => (long)InternalObj; set
-        {
-            if (_internalObj != null)
-                throw new Exception("Multiple values defined for variant.");
-            Type = VariantType.Int64;
-            _internalObj = value;
-        }
-    }
+    // public long Int64
+    // {
+    //     get => (long)InternalObj; set
+    //     {
+    //         if (_internalObj != null)
+    //             throw new Exception("Multiple values defined for variant.");
+    //         Type = VariantType.Int64;
+    //         _internalObj = value;
+    //     }
+    // }
 
     public uint Uint32
     {
@@ -90,16 +90,16 @@ public class Variant : ILeafDataPoint
         }
     }
 
-    public ulong Uint64
-    {
-        get => (ulong)InternalObj; set
-        {
-            if (_internalObj != null)
-                throw new Exception("Multiple values defined for variant.");
-            Type = VariantType.Uint64;
-            _internalObj = value;
-        }
-    }
+    // public ulong Uint64
+    // {
+    //     get => (ulong)InternalObj; set
+    //     {
+    //         if (_internalObj != null)
+    //             throw new Exception("Multiple values defined for variant.");
+    //         Type = VariantType.Uint64;
+    //         _internalObj = value;
+    //     }
+    // }
 
     public float Float
     {
@@ -206,9 +206,9 @@ public class Variant : ILeafDataPoint
     {
         VariantType.Byte => 1,
         VariantType.Int32 => 4,
-        VariantType.Int64 => 8,
+        // VariantType.Int64 => 8,
         VariantType.Uint32 => 4,
-        VariantType.Uint64 => 8,
+        // VariantType.Uint64 => 8,
         VariantType.Float => 4,
         VariantType.Vec2 => 8,
         VariantType.Vec3 => 12,
@@ -233,15 +233,15 @@ public class Variant : ILeafDataPoint
             case VariantType.Int32:
                 BinaryPrimitives.WriteInt32LittleEndian(dest, Int32);
                 break;
-            case VariantType.Int64:
-                BinaryPrimitives.WriteInt64LittleEndian(dest, Int64);
-                break;
+            // case VariantType.Int64:
+            //     BinaryPrimitives.WriteInt64LittleEndian(dest, Int64);
+            //     break;
             case VariantType.Uint32:
                 BinaryPrimitives.WriteUInt32LittleEndian(dest, Uint32);
                 break;
-            case VariantType.Uint64:
-                BinaryPrimitives.WriteUInt64LittleEndian(dest, Uint64);
-                break;
+            // case VariantType.Uint64:
+            //     BinaryPrimitives.WriteUInt64LittleEndian(dest, Uint64);
+            //     break;
             case VariantType.Float:
                 BinaryPrimitives.WriteSingleLittleEndian(dest, Float);
                 break;

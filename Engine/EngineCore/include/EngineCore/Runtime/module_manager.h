@@ -6,6 +6,7 @@
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/event_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 
 #include <unordered_map>
@@ -44,6 +45,7 @@ private:
     std::vector<InstancedSynchronousCallback> m_PostupdateCallbacks;
     std::vector<InstancedSynchronousCallback> m_RenderCallbacks;
     std::vector<InstancedEventCallback> m_EventCallbacks;
+    std::vector<EventSystemDelegate> m_EventSystems;
 
 private:
     friend class GameLoop;
