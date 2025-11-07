@@ -5,6 +5,7 @@ namespace Engine::Core::Scripting {
 
 enum class ScriptObjectType : unsigned char
 {
+    Void,
     Unary,
     Struct,
     Array

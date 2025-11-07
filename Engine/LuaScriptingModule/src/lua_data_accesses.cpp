@@ -32,6 +32,8 @@ size_t Engine::Extension::LuaScriptingModule::PopScriptObject(const Engine::Core
 {
     switch (reflection->ObjectType)
     {
+    case Engine::Core::Scripting::ScriptObjectType::Void:
+        return 0;
     case Engine::Core::Scripting::ScriptObjectType::Unary:
         {
             switch (reflection->DataType.UnaryType)
@@ -71,6 +73,9 @@ size_t Engine::Extension::LuaScriptingModule::PopScriptObject(const Engine::Core
         }
     case Engine::Core::Scripting::ScriptObjectType::Struct:
         {
+            if (!lua_istable(luaState, index))
+                return 0;
+
             size_t writeCounter = 0;
             int stackDepth = 0;
             
@@ -108,6 +113,8 @@ size_t Engine::Extension::LuaScriptingModule::PushScriptObject(const Engine::Cor
 {
     switch (reflection->ObjectType)
     {
+    case Engine::Core::Scripting::ScriptObjectType::Void:
+        return 0;
     case Engine::Core::Scripting::ScriptObjectType::Unary:
         {
             switch (reflection->DataType.UnaryType)

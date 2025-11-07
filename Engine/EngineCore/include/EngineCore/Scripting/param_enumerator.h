@@ -2,16 +2,16 @@
 
 namespace Engine::Core::Scripting {
 
-class IParamEnumerator
+class IParamReader
 {
 protected:
-    virtual bool GetNextCore(void* destination) = 0;
+    virtual bool GetCore(void* destination) = 0;
 
 public:
     template <typename TData>
-    bool GetNext(TData* destination)
+    bool Get(TData* destination)
     {
-        return GetNextCore(destination);
+        return GetCore(destination);
     }
 };
 

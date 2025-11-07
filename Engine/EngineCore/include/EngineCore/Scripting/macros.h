@@ -34,29 +34,25 @@
 
 #define DECLARE_SCRIPT_CALLABLE(FuncName, ReturnType, ParamType, ParamName) \
 const Engine::Core::Scripting::ScriptCallable* Get##FuncName##ScriptCallable() \
-{\
+{ \
     using TRetType = ReturnType; \
     using TParamType = ParamType; \
     static const char* funcName = #FuncName; \
     static const auto innerCallable = [](const Engine::Core::Runtime::ServiceTable* services, const void* moduleState, ParamType ParamName)
 
 #define END_SCRIPT_CALLABLE ; \
-    static const auto wrapperCall = [](const Engine::Core::Runtime::ServiceTable* services, const void* moduleState, Engine::Core::Scripting::IParamEnumerator* params, Engine::Core::Scripting::IReturnWriter* output) \
+    static const auto wrapperCall = [](const Engine::Core::Runtime::ServiceTable* services, const void* moduleState, Engine::Core::Scripting::IParamReader* params, Engine::Core::Scripting::IReturnWriter* output) \
     { \
         TParamType param; \
-        if (!params->GetNext(&param)) \
+        if (!params->Get(&param)) \
             return Engine::Core::Scripting::ScriptCallableResult::ParamMismatch; \
         TRetType result = innerCallable(services, moduleState, param); \
         output->Write(&result); \
         return Engine::Core::Scripting::ScriptCallableResult::Success; \
     }; \
-    static const Engine::Core::Scripting::ScriptObject* paramTypes[] = { \
-        Engine::Core::Scripting::GetScriptObjectForType<TParamType>() \
-    }; \
     static const Engine::Core::Scripting::ScriptCallable callable = { \
         funcName, \
-        paramTypes, \
-        1, \
+        Engine::Core::Scripting::GetScriptObjectForType<TParamType>(), \
         Engine::Core::Scripting::GetScriptObjectForType<TRetType>(), \
         wrapperCall \
     }; \
@@ -206,6 +202,15 @@ template<> inline const Engine::Core::Scripting::ScriptObject* GetScriptObjectFo
         {
             .UnaryType = Pipeline::ToVariantType<glm::mat4>()
         }
+    };
+
+    return &obj;
+}
+
+template<> inline const Engine::Core::Scripting::ScriptObject* GetScriptObjectForType<void>() 
+{
+    static const Engine::Core::Scripting::ScriptObject obj = {
+        ScriptObjectType::Void
     };
 
     return &obj;
