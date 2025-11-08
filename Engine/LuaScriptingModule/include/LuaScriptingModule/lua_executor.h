@@ -34,6 +34,7 @@ public:
     void Initialize();
 
     Core::Runtime::CallbackResult ExecuteFile(const char* path);
+    Core::Runtime::CallbackResult ExecuteString(const char* string);
 };
 
 }

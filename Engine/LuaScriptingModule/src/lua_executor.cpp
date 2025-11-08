@@ -265,6 +265,16 @@ Engine::Core::Runtime::CallbackResult LuaExecutor::ExecuteFile(const char* path)
     return Core::Runtime::CallbackSuccess();
 }
 
+Engine::Core::Runtime::CallbackResult LuaExecutor::ExecuteString(const char* string)
+{
+    if (luaL_dostring(m_LuaState, string) != LUA_OK)
+    {
+        std::string error(lua_isstring(m_LuaState, -1) ? lua_tostring(m_LuaState, -1) : "unknown error");
+        return Core::Runtime::Crash(__FILE__, __LINE__, error);
+    }
+    return Core::Runtime::CallbackSuccess();
+}
+
 void LuaExecutor::Initialize()
 {
     // insert self into the table (this method needs to be called everytime the object moves)
