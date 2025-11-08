@@ -9,6 +9,7 @@ namespace Engine::Core::Scripting {
 class ApiQueryBase 
 {
 public:
+    virtual const char* GetName() const = 0;
     virtual size_t GetParamCount() const = 0;
     virtual ApiDataDefinition GetReturnType() const = 0;
 };
@@ -24,7 +25,7 @@ template <typename TRet>
 class ApiQuery_0 : public ApiQueryBase_0
 {
 protected:
-    virtual ReturnContainer<TRet> RunCore(const Runtime::ServiceTable* services, const void* moduleState) = 0;
+    virtual ReturnContainer<TRet> RunCore(const Runtime::ServiceTable* services, const void* moduleState) const = 0;
 
 public:
     ApiData Run(const Runtime::ServiceTable* services, const void* moduleState) const override
@@ -32,6 +33,8 @@ public:
         ReturnContainer<TRet> result = RunCore(services, moduleState);
         return ToApiData(result.Get());
     }
+
+    ApiDataDefinition GetReturnType() const override { return GetApiDataDefinition<TRet>(); }
 };
 
 class ApiQueryBase_1 : public ApiQueryBase
@@ -46,7 +49,7 @@ template <typename TRet, typename TP1>
 class ApiQuery_1 : public ApiQueryBase_1
 {
 protected:
-    virtual ReturnContainer<TRet> RunCore(const Runtime::ServiceTable* services, const void* moduleState, const TP1* p1) = 0;
+    virtual ReturnContainer<TRet> RunCore(const Runtime::ServiceTable* services, const void* moduleState, const TP1* p1) const = 0;
 
 public:
     ApiData Run(const Runtime::ServiceTable* services, const void* moduleState, ApiData p1) const override
@@ -57,6 +60,8 @@ public:
         ReturnContainer<TRet> result = RunCore(services, moduleState, FromApiData<TP1>(&p1));
         return ToApiData(result.Get());
     }
+
+    ApiDataDefinition GetReturnType() const override { return GetApiDataDefinition<TRet>(); }
 };
 
 }

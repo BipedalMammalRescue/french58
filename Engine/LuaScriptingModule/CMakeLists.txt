@@ -1,9 +1,5 @@
 add_executable(LuaInterpreter 
-    src/lua_interpreter.cpp 
-    src/lua_data_accesses.cpp
-    src/lua_return_writer.cpp
-    src/lua_param_enumerator.cpp
-    src/lua_api_builder.cpp
+    src/lua_interpreter.cpp
 )
 
 target_include_directories(LuaInterpreter PUBLIC include)
