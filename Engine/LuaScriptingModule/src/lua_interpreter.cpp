@@ -14,6 +14,7 @@ int main()
         controller->Initialize();
         controller->LoadModules();
 
+        std::cout << "*** LUA RUNTIME START ***" << std::endl;
         Engine::Extension::LuaScriptingModule::LuaExecutor executor(controller->GetServices());
 
         Engine::Core::Runtime::CallbackResult result = executor.ExecuteFile("test.lua");
@@ -22,5 +23,7 @@ int main()
             std::cout << "Lua Error: " << std::endl;
             std::cout << result->ErrorDetail << std::endl;
         }
+
+        std::cout << "*** LUA RUNTIME END ***" << std::endl;
     });
 }

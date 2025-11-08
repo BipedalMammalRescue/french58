@@ -257,7 +257,7 @@ int LuaExecutor::L1CallMultiplexer(lua_State* luaState)
 
 Engine::Core::Runtime::CallbackResult LuaExecutor::ExecuteFile(const char* path)
 {
-    if (!luaL_dofile(m_LuaState, path))
+    if (luaL_dofile(m_LuaState, path) != LUA_OK)
     {
         std::string error(lua_isstring(m_LuaState, -1) ? lua_tostring(m_LuaState, -1) : "unknown error");
         return Core::Runtime::Crash(__FILE__, __LINE__, error);
