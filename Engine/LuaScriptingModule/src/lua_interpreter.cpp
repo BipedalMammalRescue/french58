@@ -16,6 +16,7 @@ int main()
 
         std::cout << "*** LUA RUNTIME START ***" << std::endl;
         Engine::Extension::LuaScriptingModule::LuaExecutor executor(controller->GetServices());
+        executor.Initialize();
 
         Engine::Core::Runtime::CallbackResult result = executor.ExecuteFile("test.lua");
         if (result.has_value())

@@ -37,6 +37,7 @@ struct ModuleDefinition
     const ComponentDefinition* Components = nullptr;
     size_t ComponentCount = 0;
 
+    // api
     const Scripting::ApiQueryBase** ApiQueries = nullptr;
     size_t ApiQueryCount = 0;
 };

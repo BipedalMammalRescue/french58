@@ -245,7 +245,7 @@ int LuaExecutor::L1CallMultiplexer(lua_State* luaState)
     const char* moduleName = lua_tostring(luaState, -2);
     const char* apiName = lua_tostring(luaState, -1);
 
-    lua_getglobal(luaState, "SE_API_TABLE");
+    lua_getglobal(luaState, SeApiTable);
     lua_getfield(luaState, -1, moduleName);
     lua_getfield(luaState, -1, apiName);
 
