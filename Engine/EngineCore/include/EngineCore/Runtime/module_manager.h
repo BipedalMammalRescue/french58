@@ -50,6 +50,7 @@ private:
 private:
     friend class GameLoop;
     CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules, ServiceTable* services);
+    CallbackResult UnloadModules();
 
 public:
     ~ModuleManager();

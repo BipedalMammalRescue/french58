@@ -76,6 +76,188 @@ bool GameLoop::RemoveEventSystem(const char* userName)
     return true;
 }
 
+
+
+CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId, std::function<void(IGameLoopController*)> executor)
+{
+    class GameLoopController : public IGameLoopController
+    {
+    private:
+        friend class GameLoop;
+        ServiceTable* m_Services;
+        Logging::Logger* m_Logger;
+        TaskManager* m_TaskManager;
+        EventWriter m_EventWriter;
+        GameLoop* m_Owner;
+
+    public:
+        CallbackResult Initialize() override
+        {
+            if (!SDL_Init(SDL_INIT_VIDEO))
+            {
+                std::string error("SDL initialization failed, error: ");
+                error.append(SDL_GetError());
+                return Crash(__FILE__, __LINE__, error);
+            }
+
+            CallbackResult loggerStartResult = m_Services->LoggerService->StartLogger();
+            if (loggerStartResult.has_value())
+                return loggerStartResult;
+
+            CallbackResult serviceInitResult = m_Services->GraphicsLayer->InitializeSDL();
+            if (serviceInitResult.has_value())
+                return serviceInitResult;
+
+            return CallbackSuccess();
+        }
+
+        CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules) override 
+        {
+            return m_Services
+                ->ModuleManager->LoadModules(Pipeline::ListModules(), m_Services);
+        }
+
+        CallbackResult UnloadModules() override
+        {
+            return m_Services->ModuleManager->UnloadModules();
+        }
+
+        CallbackResult LoadEntity(Pipeline::HashId entityId) override 
+        {
+            // load the first scene
+            return m_Owner->LoadEntity(entityId, *m_Services, m_Logger);
+        }
+
+        CallbackResult BeginFrame() override 
+        {
+            // tick the timer
+            m_Services->WorldState->Tick();
+
+            // input handling
+            m_Services->InputManager->ProcessSdlEvents();
+
+            // begin update loop
+            return m_Services->GraphicsLayer->BeginFrame();
+        }
+
+        CallbackResult Preupdate() override 
+        {
+            // pre-update
+            for (InstancedSynchronousCallback callback : m_Services->ModuleManager->m_PreupdateCallbacks) 
+            {
+                auto result = callback.Callback(m_Services, callback.InstanceState);
+                if (result.has_value())
+                    return result;
+            }
+
+            return CallbackSuccess();
+        }
+
+        CallbackResult EventUpdate() override
+        {
+            // task-based event update
+            while (m_Services->EventManager->ExecuteAllSystems(m_Services, m_EventWriter))
+            {
+                // mid-update events
+                for (const InstancedSynchronousCallback& callback : m_Services->ModuleManager->m_MidupdateCallbacks) 
+                {
+                    callback.Callback(m_Services, callback.InstanceState);
+                }
+
+                for (const InstancedEventCallback& routine : m_Services->ModuleManager->m_EventCallbacks)
+                {
+                    Task task { TaskType::ProcessInputEvents };
+                    task.Payload.ProcessInputEventsTask = { routine, &m_EventWriter, 1 };
+                    m_TaskManager->ScheduleWork(task);
+                }
+
+                size_t tasksLeft = m_Services->ModuleManager->m_EventCallbacks.size();
+
+                while (tasksLeft > 0)
+                {
+                    TaskResult nextResult = m_TaskManager->WaitOne();
+                    tasksLeft += nextResult.AdditionalTasks - 1;
+
+                    if (nextResult.Result.has_value())
+                        return nextResult.Result;
+                }
+
+                // post-update events
+                for (const InstancedSynchronousCallback& callback : m_Services->ModuleManager->m_PostupdateCallbacks) 
+                {
+                    auto result = callback.Callback(m_Services, callback.InstanceState);
+                    if (result.has_value())
+                        return result;
+                }
+            }
+
+            return CallbackSuccess();
+        }
+
+        CallbackResult RenderPass() override 
+        {
+            // render pass
+            for (auto& callback : m_Services->ModuleManager->m_RenderCallbacks)
+            {
+                CallbackResult callbackResult = callback.Callback(m_Services, callback.InstanceState);
+                if (callbackResult.has_value())
+                    return callbackResult;
+            }
+
+            return CallbackSuccess();
+        }
+
+        CallbackResult EndFrame() override 
+        {
+            // last step in the update loop
+            return m_Services->GraphicsLayer->EndFrame();
+        }
+    };
+
+    // create logger
+    Logging::LoggerService loggerService(m_ConfigurationProvider);
+
+    // create other services
+    GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
+    WorldState worldState(&m_ConfigurationProvider);
+    ModuleManager moduleManager;
+    EventManager eventManager(&loggerService);
+    InputManager inputManager;
+
+    // insert systems
+    for (auto pair : m_EventSystems)
+    {
+        eventManager.RegisterEventSystem(&pair.second, 1);
+    }
+
+    // initialize a local logger
+    static const char* topLevelChannels[] = { "GameLoop" };
+    Logging::Logger topLevelLogger = loggerService.CreateLogger(topLevelChannels, 1);
+
+    // initialize services
+    ServiceTable services {
+        &loggerService,
+        &graphicsLayer,
+        &worldState,
+        &moduleManager,
+        &eventManager,
+        &inputManager
+    };
+
+    TaskManager taskManager(&services, m_ConfigurationProvider.WorkerCount);
+
+    GameLoopController controller;
+    controller.m_Services = &services;
+    controller.m_Logger = &topLevelLogger;
+    controller.m_Owner = this;
+    controller.m_TaskManager = &taskManager;
+
+    executor(&controller);
+
+    topLevelLogger.Information("Game exiting without error.");
+    return CallbackSuccess();
+}
+
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
     // initialize sdl

@@ -73,13 +73,20 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
     return CallbackSuccess();
 }
 
-ModuleManager::~ModuleManager()
+CallbackResult ModuleManager::UnloadModules()
 {
     for (auto module : m_LoadedModules)
     {
         module.second.Definition.Dispose(m_Services, module.second.State);
         m_Logger.Information("Unloaded module {moduleId}", { module.first });
     }
+
+    return CallbackSuccess();
+}
+
+ModuleManager::~ModuleManager()
+{
+    UnloadModules();
 }
 
 const void* ModuleManager::FindModule(const Pipeline::HashId& name) const

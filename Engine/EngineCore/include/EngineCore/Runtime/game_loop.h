@@ -18,6 +18,23 @@ class Logger;
 
 namespace Engine::Core::Runtime {
 
+class IGameLoopController
+{
+public:
+    virtual CallbackResult Initialize() = 0;
+
+    virtual CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules) = 0;
+    virtual CallbackResult UnloadModules() = 0;
+
+    virtual CallbackResult LoadEntity(Pipeline::HashId entityId) = 0;
+
+    virtual CallbackResult BeginFrame() = 0;
+    virtual CallbackResult Preupdate() = 0;
+    virtual CallbackResult EventUpdate() = 0;
+    virtual CallbackResult RenderPass() = 0;
+    virtual CallbackResult EndFrame() = 0;
+};
+
 class GameLoop
 {
 private:
@@ -31,6 +48,7 @@ private:
     std::unordered_map<Pipeline::HashId, EventSystemInstance> m_EventSystems;
 
     CallbackResult RunCore(Pipeline::HashId initialEntityId);
+    CallbackResult DiagnsoticModeRunCore(Pipeline::HashId initialEntityId, std::function<void(IGameLoopController*)> executor);
 
     // IO utilities (maybe move this to a service at sometime?)
     CallbackResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
