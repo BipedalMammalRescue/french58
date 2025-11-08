@@ -6,9 +6,10 @@
 
 namespace Engine::Core::Pipeline {
 
-struct ModuleAssembly {
-  const ModuleDefinition *Modules = nullptr;
-  size_t ModuleCount = 0;
+struct ModuleAssembly 
+{
+    const ModuleDefinition *Modules = nullptr;
+    size_t ModuleCount = 0;
 };
 
 ModuleAssembly ListModules();

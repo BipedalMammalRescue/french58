@@ -2,13 +2,17 @@
 
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
-#include "EngineCore/Runtime/service_table.h"
 #include "glm/ext/matrix_float2x2.hpp"
 #include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/ext/vector_float4.hpp"
+
+namespace Engine::Core::Runtime {
+    class ServiceTable;
+}
+
 
 namespace Engine::Core::Scripting {
 

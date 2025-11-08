@@ -5,6 +5,7 @@
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/component_definition.h"
+#include "EngineCore/Scripting/api_query.h"
 
 #include <md5.h>
 
@@ -35,6 +36,9 @@ struct ModuleDefinition
     // components
     const ComponentDefinition* Components = nullptr;
     size_t ComponentCount = 0;
+
+    const Scripting::ApiQueryBase** ApiQueries = nullptr;
+    size_t ApiQueryCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

@@ -1,8 +1,11 @@
 #pragma once
 
-#include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_data.h"
 #include <cstddef>
+
+namespace Engine::Core::Runtime {
+    class ServiceTable;
+}
 
 namespace Engine::Core::Scripting {
 

@@ -50,11 +50,12 @@ private:
 private:
     friend class GameLoop;
     CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules, ServiceTable* services);
-    const void* FindModule(const Pipeline::HashId& name) const;
-    const void* FindModule(const Pipeline::HashId&& name) const;
 
 public:
     ~ModuleManager();
+
+    const void* FindModule(const Pipeline::HashId& name) const;
+    const void* FindModule(const Pipeline::HashId&& name) const;
 
     template <typename TModule>
     const TModule* FindModule(const Pipeline::HashId& name) const
