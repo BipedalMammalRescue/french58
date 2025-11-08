@@ -19,9 +19,9 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
         return false;
 
     // write out the three asset references
-    std::array<unsigned char, 16>* pipelinePath = nullptr;
-    std::array<unsigned char, 16>* materialPath = nullptr;
-    std::array<unsigned char, 16>* meshPath = nullptr;
+    Core::Pipeline::HashId* pipelinePath = nullptr;
+    Core::Pipeline::HashId* materialPath = nullptr;
+    Core::Pipeline::HashId* meshPath = nullptr;
     for (int i = 0; i < 3; i++) 
     {
         if (input.FieldV[i].Name == md5::compute("Pipeline"))
@@ -43,9 +43,9 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
         return false;
 
     output->write((char*)&input.Entity, sizeof(int));
-    output->write((char*)pipelinePath->data(), 16);
-    output->write((char*)materialPath->data(), 16);
-    output->write((char*)meshPath->data(), 16);
+    output->write((char*)pipelinePath, 16);
+    output->write((char*)materialPath, 16);
+    output->write((char*)meshPath, 16);
 
     return true;
 }

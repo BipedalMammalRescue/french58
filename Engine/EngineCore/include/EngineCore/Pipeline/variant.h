@@ -13,7 +13,6 @@
 #include <glm/mat3x3.hpp>
 #include <glm/mat4x4.hpp>
 #include <cstdint>
-#include <array>
 
 namespace Engine::Core::Pipeline {
 
@@ -53,7 +52,7 @@ struct Variant
         glm::mat2 Mat2;
         glm::mat3 Mat3;
         glm::mat4 Mat4;
-        std::array<unsigned char, 16> Path;
+        HashId Path;
     } Data;
 
     Variant() = default;

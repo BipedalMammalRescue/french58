@@ -5,7 +5,6 @@
 #include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/component_definition.h"
-#include "EngineCore/Scripting/script_callable.h"
 
 #include <md5.h>
 
@@ -36,10 +35,6 @@ struct ModuleDefinition
     // components
     const ComponentDefinition* Components = nullptr;
     size_t ComponentCount = 0;
-
-    // api
-    const Scripting::ScriptCallable** ApiCallables = nullptr;
-    size_t ApiCallableCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

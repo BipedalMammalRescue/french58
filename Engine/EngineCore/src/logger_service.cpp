@@ -197,22 +197,22 @@ int LoggerService::LoggerRoutine(void* state)
                 break;
             case Engine::Core::Pipeline::VariantType::Path:
                 printf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-                    event.Payload.Parameter.Data.Path[0],
-                    event.Payload.Parameter.Data.Path[1],
-                    event.Payload.Parameter.Data.Path[2],
-                    event.Payload.Parameter.Data.Path[3],
-                    event.Payload.Parameter.Data.Path[4],
-                    event.Payload.Parameter.Data.Path[5],
-                    event.Payload.Parameter.Data.Path[6],
-                    event.Payload.Parameter.Data.Path[7],
-                    event.Payload.Parameter.Data.Path[8],
-                    event.Payload.Parameter.Data.Path[9],
-                    event.Payload.Parameter.Data.Path[10],
-                    event.Payload.Parameter.Data.Path[11],
-                    event.Payload.Parameter.Data.Path[12],
-                    event.Payload.Parameter.Data.Path[13],
-                    event.Payload.Parameter.Data.Path[14],
-                    event.Payload.Parameter.Data.Path[15]);
+                    event.Payload.Parameter.Data.Path.Hash[0],
+                    event.Payload.Parameter.Data.Path.Hash[1],
+                    event.Payload.Parameter.Data.Path.Hash[2],
+                    event.Payload.Parameter.Data.Path.Hash[3],
+                    event.Payload.Parameter.Data.Path.Hash[4],
+                    event.Payload.Parameter.Data.Path.Hash[5],
+                    event.Payload.Parameter.Data.Path.Hash[6],
+                    event.Payload.Parameter.Data.Path.Hash[7],
+                    event.Payload.Parameter.Data.Path.Hash[8],
+                    event.Payload.Parameter.Data.Path.Hash[9],
+                    event.Payload.Parameter.Data.Path.Hash[10],
+                    event.Payload.Parameter.Data.Path.Hash[11],
+                    event.Payload.Parameter.Data.Path.Hash[12],
+                    event.Payload.Parameter.Data.Path.Hash[13],
+                    event.Payload.Parameter.Data.Path.Hash[14],
+                    event.Payload.Parameter.Data.Path.Hash[15]);
                 break;
             case Engine::Core::Pipeline::VariantType::Invalid:
                 printf("<N/A>");    
