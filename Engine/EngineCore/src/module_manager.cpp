@@ -67,7 +67,7 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
             m_EventCallbacks.push_back({ callback.Callback, newState });
         }
 
-        m_Logger.Information("Loaded module {moduleId}", { moduleDef.Name.Hash });
+        m_Logger.Information("Loaded module {moduleName}:{moduleId}", { moduleDef.Name.DisplayName, moduleDef.Name.Hash });
     }
 
     return CallbackSuccess();

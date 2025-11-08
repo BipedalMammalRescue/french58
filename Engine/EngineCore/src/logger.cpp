@@ -8,7 +8,7 @@
 using namespace Engine::Core::Logging;
 
 // break the log message into 1 + N normalized segments and send them with distinct sequences
-bool Logger::Write(LogLevel level, const char* message, std::initializer_list<Pipeline::Variant> params)
+bool Logger::Write(LogLevel level, const char* message, std::initializer_list<LogParameter> params)
 {
     if (level < Service->m_MinLevel)
         return true;
