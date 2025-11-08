@@ -2,6 +2,7 @@
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Scripting/api_data.h"
 #include "EngineCore/Scripting/api_query.h"
+#include "EngineCore/Scripting/api_declaration.h"
 
 #include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
@@ -13,30 +14,19 @@
 #include <lua.hpp>
 #include <iostream>
 
-
-class SampleQuery : public Engine::Core::Scripting::ApiQuery_0<int>
+DECLARE_SE_API_0(GetMagicNumber, int, 
 {
-protected:
-    Engine::Core::Scripting::ReturnContainer<int> RunCore(const Engine::Core::Runtime::ServiceTable* services, const void* moduleState) const override 
-    {
-        return { 42 };
-    }
-
-public:
-    const char* GetName() const override 
-    {
-        return "GetMagicNumber";
-    }
-
-    static const Engine::Core::Scripting::ApiQueryBase* GetQuery()
-    {
-        static const SampleQuery query;
-        return &query;
-    }
-};
+    return { 42 };
+});
 
 
-static const Engine::Core::Scripting::ApiQueryBase* ApiTable[] { SampleQuery::GetQuery() };
+DECLARE_SE_API_1(MultiplyBy10, int, int,
+{
+    return { 10 * (*p1) };
+});
+
+
+static const Engine::Core::Scripting::ApiQueryBase* ApiTable[] { GetMagicNumber::GetQuery(), MultiplyBy10::GetQuery() };
 size_t ApiTableLength = sizeof(ApiTable) / sizeof(Engine::Core::Scripting::ApiQueryBase*);
 
 
@@ -128,23 +118,23 @@ static bool WriteApiData(lua_State* luaState, Engine::Core::Scripting::ApiDataDe
 }
 
 
-static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine::Core::Scripting::ApiDataDefinition type)
+static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine::Core::Scripting::ApiDataDefinition type, int index)
 {
     switch (type.Type)
     {
     case Engine::Core::Scripting::ApiDataType::Object:
-        if (!lua_islightuserdata(luaState, -1))
+        if (!lua_islightuserdata(luaState, index))
             return { Engine::Core::Scripting::ApiDataType::Invalid };
-        return { .Type = Engine::Core::Scripting::ApiDataType::Object, .Data { .Object = lua_touserdata(luaState, -1) } };
+        return { .Type = Engine::Core::Scripting::ApiDataType::Object, .Data { .Object = lua_touserdata(luaState, index) } };
     case Engine::Core::Scripting::ApiDataType::Variant:
         switch (type.SubType)
         {
         case Engine::Core::Pipeline::VariantType::Byte:
             {
-                if (!lua_isinteger(luaState, -1))
+                if (!lua_isinteger(luaState, index))
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
 
-                int tempInteger = lua_tointeger(luaState, -1);
+                int tempInteger = lua_tointeger(luaState, index);
                 if (tempInteger < 0 || tempInteger > 0xFF)
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
 
@@ -155,28 +145,28 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
         case Engine::Core::Pipeline::VariantType::Bool:
             {
-                if (!lua_isboolean(luaState, -1))
+                if (!lua_isboolean(luaState, index))
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
                 Engine::Core::Scripting::ApiData result { Engine::Core::Scripting::ApiDataType::Variant };
                 result.Data.Variant.Type = Engine::Core::Pipeline::VariantType::Bool;
-                result.Data.Variant.Data.Bool = lua_toboolean(luaState, -1);
+                result.Data.Variant.Data.Bool = lua_toboolean(luaState, index);
                 return result;
             }
         case Engine::Core::Pipeline::VariantType::Int32:
             {
-                if (!lua_isinteger(luaState, -1))
+                if (!lua_isinteger(luaState, index))
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
                 Engine::Core::Scripting::ApiData result { Engine::Core::Scripting::ApiDataType::Variant };
                 result.Data.Variant.Type = Engine::Core::Pipeline::VariantType::Int32;
-                result.Data.Variant.Data.Int32 = lua_tointeger(luaState, -1);
+                result.Data.Variant.Data.Int32 = lua_tointeger(luaState, index);
                 return result;
             }
         case Engine::Core::Pipeline::VariantType::Uint32:
             {
-                if (!lua_isinteger(luaState, -1))
+                if (!lua_isinteger(luaState, index))
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
 
-                int tempInteger = lua_tointeger(luaState, -1);
+                int tempInteger = lua_tointeger(luaState, index);
                 if (tempInteger < 0)
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
 
@@ -187,11 +177,11 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
         case Engine::Core::Pipeline::VariantType::Float:
             {
-                if (!lua_isinteger(luaState, -1))
+                if (!lua_isinteger(luaState, index))
                     return { Engine::Core::Scripting::ApiDataType::Invalid };
                 Engine::Core::Scripting::ApiData result { Engine::Core::Scripting::ApiDataType::Variant };
                 result.Data.Variant.Type = Engine::Core::Pipeline::VariantType::Byte;
-                result.Data.Variant.Data.Byte = lua_tointeger(luaState, -1);
+                result.Data.Variant.Data.Byte = lua_tointeger(luaState, index);
                 return result;
             }
 
@@ -246,7 +236,7 @@ static int LuaInvoke(lua_State* luaState)
             auto realApi = static_cast<const Engine::Core::Scripting::ApiQueryBase_1*>(api);
 
             // run
-            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, realApi->GetP1Type());
+            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, realApi->GetP1Type(), -2);
             Engine::Core::Scripting::ApiData result = realApi->Run(nullptr, nullptr, p1);
 
             // write the result
