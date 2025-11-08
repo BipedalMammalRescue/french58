@@ -1,5 +1,6 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_data.h"
 #include "EngineCore/Scripting/api_query.h"
 #include "EngineCore/Scripting/api_declaration.h"
@@ -14,17 +15,17 @@
 #include <lua.hpp>
 #include <iostream>
 
-DECLARE_SE_API_0(GetMagicNumber, int, 
+static int Delegate(const Engine::Core::Runtime::ServiceTable*, const void*)
 {
-    return { 42 };
-});
+    return 42;
+}
+DECLARE_SE_API_0(GetMagicNumber, int, Delegate);
 
-
-DECLARE_SE_API_1(MultiplyBy10, int, int,
+static int Delegate2(const Engine::Core::Runtime::ServiceTable*, const void*, const int* param)
 {
-    return { 10 * (*p1) };
-});
-
+    return (*param) * 10;
+}
+DECLARE_SE_API_1(MultiplyBy10, int, int, Delegate2);
 
 static const Engine::Core::Scripting::ApiQueryBase* ApiTable[] { GetMagicNumber::GetQuery(), MultiplyBy10::GetQuery() };
 size_t ApiTableLength = sizeof(ApiTable) / sizeof(Engine::Core::Scripting::ApiQueryBase*);
