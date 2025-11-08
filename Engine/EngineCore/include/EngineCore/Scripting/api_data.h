@@ -2,6 +2,7 @@
 
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "glm/ext/matrix_float2x2.hpp"
 #include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
@@ -300,84 +301,84 @@ inline ApiData ToApiData<Pipeline::HashId>(const Pipeline::HashId* source)
 
 
 template <typename T>
-bool CheckOpaqueObjectType(const void* source);
+bool CheckOpaqueObjectType(const Runtime::ServiceTable*, const void*, const void*);
 
 // dynamic type checking
 template <typename T>
-bool IsTypeCompiliant(const ApiData* source)
+bool IsTypeCompiliant(const Runtime::ServiceTable* services, const void* moduleState, const ApiData* source)
 {
     // default case is for generic object
-    return source->Type == ApiDataType::Object && CheckOpaqueObjectType<T>(source->Data.Object);
+    return source->Type == ApiDataType::Object && CheckOpaqueObjectType<T>(services, moduleState, source->Data.Object);
 }
 
 template <>
-inline bool IsTypeCompiliant<unsigned char>(const ApiData* source)
+inline bool IsTypeCompiliant<unsigned char>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Byte;
 }
 
 template <>
-inline bool IsTypeCompiliant<bool>(const ApiData* source)
+inline bool IsTypeCompiliant<bool>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Bool;
 }
 
 template <>
-inline bool IsTypeCompiliant<int>(const ApiData* source)
+inline bool IsTypeCompiliant<int>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Int32;
 }
 
 template <>
-inline bool IsTypeCompiliant<unsigned int>(const ApiData* source)
+inline bool IsTypeCompiliant<unsigned int>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Uint32;
 }
 
 template <>
-inline bool IsTypeCompiliant<float>(const ApiData* source)
+inline bool IsTypeCompiliant<float>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Float;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::vec2>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::vec2>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Vec2;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::vec3>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::vec3>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Vec3;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::vec4>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::vec4>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Vec4;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::mat2>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::mat2>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Mat2;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::mat3>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::mat3>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Mat3;
 }
 
 template <>
-inline bool IsTypeCompiliant<glm::mat4>(const ApiData* source)
+inline bool IsTypeCompiliant<glm::mat4>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Mat4;
 }
 
 template <>
-inline bool IsTypeCompiliant<Pipeline::HashId>(const ApiData* source)
+inline bool IsTypeCompiliant<Pipeline::HashId>(const Runtime::ServiceTable*, const void*, const ApiData* source)
 {
     return source->Type == ApiDataType::Variant && source->Data.Variant.Type == Pipeline::VariantType::Path;
 }

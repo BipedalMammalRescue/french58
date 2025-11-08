@@ -54,7 +54,7 @@ protected:
 public:
     ApiData Run(const Runtime::ServiceTable* services, const void* moduleState, ApiData p1) const override
     {
-        if (!IsTypeCompiliant<TP1>(&p1))
+        if (!IsTypeCompiliant<TP1>(services, moduleState, &p1))
             return { ApiDataType::Invalid };
 
         ReturnContainer<TRet> result = RunCore(services, moduleState, FromApiData<TP1>(&p1));

@@ -27,7 +27,35 @@ static int Delegate2(const Engine::Core::Runtime::ServiceTable*, const void*, co
 }
 DECLARE_SE_API_1(MultiplyBy10, int, int, Delegate2);
 
-static const Engine::Core::Scripting::ApiQueryBase* ApiTable[] { GetMagicNumber::GetQuery(), MultiplyBy10::GetQuery() };
+struct TestPacket
+{
+    int M1;
+    int M2;
+};
+static const TestPacket s_Data { 20, 30 };
+template<> bool Engine::Core::Scripting::CheckOpaqueObjectType<TestPacket>(const Runtime::ServiceTable*, const void*, const void* source)
+{
+    return source == (const void*)&s_Data;
+}
+
+static const TestPacket* Delegate3(const Engine::Core::Runtime::ServiceTable*, const void*)
+{
+    return &s_Data;
+}
+DECLARE_SE_API_0(FindPacket, TestPacket, Delegate3);
+
+static int Delegate4(const Engine::Core::Runtime::ServiceTable*, const void*, const TestPacket* data)
+{
+    return data->M1;
+}
+DECLARE_SE_API_1(GetPacketM1, int, TestPacket, Delegate4);
+
+static const Engine::Core::Scripting::ApiQueryBase* ApiTable[] { 
+    GetMagicNumber::GetQuery(), 
+    MultiplyBy10::GetQuery(),
+    FindPacket::GetQuery(),
+    GetPacketM1::GetQuery()
+};
 size_t ApiTableLength = sizeof(ApiTable) / sizeof(Engine::Core::Scripting::ApiQueryBase*);
 
 
