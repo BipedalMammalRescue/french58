@@ -76,9 +76,7 @@ bool GameLoop::RemoveEventSystem(const char* userName)
     return true;
 }
 
-
-
-CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId, std::function<void(IGameLoopController*)> executor)
+CallbackResult GameLoop::DiagnsoticModeCore(std::function<void(IGameLoopController*)> executor)
 {
     class GameLoopController : public IGameLoopController
     {
@@ -91,15 +89,12 @@ CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId,
         GameLoop* m_Owner;
 
     public:
+        const ServiceTable* GetServices() const override {
+            return m_Services;
+        }
+
         CallbackResult Initialize() override
         {
-            if (!SDL_Init(SDL_INIT_VIDEO))
-            {
-                std::string error("SDL initialization failed, error: ");
-                error.append(SDL_GetError());
-                return Crash(__FILE__, __LINE__, error);
-            }
-
             CallbackResult loggerStartResult = m_Services->LoggerService->StartLogger();
             if (loggerStartResult.has_value())
                 return loggerStartResult;
@@ -111,10 +106,10 @@ CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId,
             return CallbackSuccess();
         }
 
-        CallbackResult LoadModules(const Pipeline::ModuleAssembly& modules) override 
+        CallbackResult LoadModules() override 
         {
             return m_Services
-                ->ModuleManager->LoadModules(Pipeline::ListModules(), m_Services);
+                ->ModuleManager->LoadModules(m_Owner->m_Modules, m_Services);
         }
 
         CallbackResult UnloadModules() override
@@ -214,6 +209,13 @@ CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId,
         }
     };
 
+    if (!SDL_Init(SDL_INIT_VIDEO))
+    {
+        std::string error("SDL initialization failed, error: ");
+        error.append(SDL_GetError());
+        return Crash(__FILE__, __LINE__, error);
+    }
+
     // create logger
     Logging::LoggerService loggerService(m_ConfigurationProvider);
 
@@ -256,6 +258,15 @@ CallbackResult GameLoop::DiagnsoticModeRunCore(Pipeline::HashId initialEntityId,
 
     topLevelLogger.Information("Game exiting without error.");
     return CallbackSuccess();
+}
+
+CallbackResult GameLoop::DiagnsoticMode(std::function<void(IGameLoopController*)> executor)
+{
+    auto result = DiagnsoticModeCore(executor);
+
+    // quit SDL
+    SDL_Quit();
+    return result;
 }
 
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
@@ -305,7 +316,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     if (serviceInitResult.has_value())
         return serviceInitResult;
 
-    serviceInitResult = moduleManager.LoadModules(Pipeline::ListModules(), &services);
+    serviceInitResult = moduleManager.LoadModules(m_Modules, &services);
     if (serviceInitResult.has_value())
         return serviceInitResult;
 

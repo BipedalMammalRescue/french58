@@ -1,33 +1,26 @@
-#include "lauxlib.h"
-#include "lua.h"
-#include "lualib.h"
-#include <cstdio>
-#include <lua.hpp>
+#include "EngineCore/Runtime/crash_dump.h"
+#include "LuaScriptingModule/lua_executor.h"
+#include "EngineCore/Configuration/configuration_provider.h"
+#include "EngineCore/Pipeline/module_assembly.h"
+#include "EngineCore/Runtime/game_loop.h"
 #include <iostream>
 
 
-static int LuaCallable(lua_State* luaState)
-{
-    std::cout << "[C] stack count: " << lua_gettop(luaState) << std::endl;
-    return 0;
-}
-
 int main()
 {
-    // set up the runtime
-    lua_State* luaState = luaL_newstate();
-    luaL_openlibs(luaState);
-
-    // add function
-    lua_pushcfunction(luaState, LuaCallable);
-    lua_setglobal(luaState, "test_func");
-
-    // execute
-    if (!luaL_dofile(luaState, "test.lua") == LUA_OK) 
+    Engine::Core::Runtime::GameLoop gameloop(Engine::Core::Pipeline::ListModules(), Engine::Core::Configuration::ConfigurationProvider());
+    gameloop.DiagnsoticMode([](Engine::Core::Runtime::IGameLoopController* controller)
     {
-        std::cout << "[C] Error reading script\n";
-        printf("Error: %s\n", lua_tostring(luaState, -1));
-    }
+        controller->Initialize();
+        controller->LoadModules();
 
-    lua_close(luaState);
+        Engine::Extension::LuaScriptingModule::LuaExecutor executor(controller->GetServices());
+
+        Engine::Core::Runtime::CallbackResult result = executor.ExecuteFile("test.lua");
+        if (result.has_value())
+        {
+            std::cout << "Lua Error: " << std::endl;
+            std::cout << result->ErrorDetail << std::endl;
+        }
+    });
 }

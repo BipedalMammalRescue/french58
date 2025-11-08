@@ -1,9 +1,11 @@
 #include "LuaScriptingModule/lua_executor.h"
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
 #include "EngineCore/Runtime/module_manager.h"
+#include <string>
 
 using namespace Engine::Extension::LuaScriptingModule;
 
@@ -253,7 +255,17 @@ int LuaExecutor::L1CallMultiplexer(lua_State* luaState)
     return 1;
 }
 
-void LuaExecutor::Initialize(const Engine::Core::Runtime::ServiceTable* services)
+Engine::Core::Runtime::CallbackResult LuaExecutor::ExecuteFile(const char* path)
+{
+    if (!luaL_dofile(m_LuaState, path))
+    {
+        std::string error(lua_isstring(m_LuaState, -1) ? lua_tostring(m_LuaState, -1) : "unknown error");
+        return Core::Runtime::Crash(__FILE__, __LINE__, error);
+    }
+    return Core::Runtime::CallbackSuccess();
+}
+
+void LuaExecutor::Initialize()
 {
     // insert self into the table (this method needs to be called everytime the object moves)
     lua_pushlightuserdata(m_LuaState, this);
@@ -274,7 +286,7 @@ void LuaExecutor::Initialize(const Engine::Core::Runtime::ServiceTable* services
             auto api = modules.Modules[i].ApiQueries[j];
 
             // find module state (skip if not found)
-            const void* moduleState = services->ModuleManager->FindModule(modules.Modules[i].Name.Hash);
+            const void* moduleState = m_Services->ModuleManager->FindModule(modules.Modules[i].Name.Hash);
             if (moduleState == nullptr)
                 continue;
 

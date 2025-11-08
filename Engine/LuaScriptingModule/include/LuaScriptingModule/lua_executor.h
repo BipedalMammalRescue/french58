@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_query.h"
 #include "lua.h"
@@ -30,7 +31,9 @@ public:
     LuaExecutor(const Engine::Core::Runtime::ServiceTable* services);
     ~LuaExecutor();
 
-    void Initialize(const Core::Runtime::ServiceTable* services);
+    void Initialize();
+
+    Core::Runtime::CallbackResult ExecuteFile(const char* path);
 };
 
 }

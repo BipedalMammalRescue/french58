@@ -81,6 +81,7 @@ CallbackResult ModuleManager::UnloadModules()
         m_Logger.Information("Unloaded module {moduleId}", { module.first });
     }
 
+    m_LoadedModules.clear();
     return CallbackSuccess();
 }
 
