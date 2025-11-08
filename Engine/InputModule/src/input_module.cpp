@@ -1,4 +1,5 @@
 #include "InputModule/input_module.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "InputModule/Assets/input_action.h"
 
 #include <EngineCore/Pipeline/asset_definition.h>
@@ -89,7 +90,7 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::InputModule::GetModu
 {
     static const Core::Pipeline::AssetDefinition assets[] {
         {
-            md5::compute("InputAction"),
+            HASH_NAME("InputAction"),
             Assets::LoadInputAction,
             Assets::UnloadInputAction
         }
@@ -108,7 +109,7 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::InputModule::GetModu
 
     return
     {
-        md5::compute("InputModule"),
+        HASH_NAME("InputModule"),
         InitInputModule,
         DisposeInputModule,
         assets,

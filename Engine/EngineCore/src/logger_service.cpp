@@ -1,6 +1,5 @@
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Logging/logger.h"
-#include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_thread.h"
@@ -123,99 +122,108 @@ int LoggerService::LoggerRoutine(void* state)
         {
             switch (event.Payload.Parameter.Type)
             {
-            case Engine::Core::Pipeline::VariantType::Byte:
-                printf("0x%02x", event.Payload.Parameter.Data.Byte);
+            case LogParameterType::FixedSize:
+                switch (event.Payload.Parameter.Data.Fixed.Type)
+                {
+                case Engine::Core::Pipeline::VariantType::Byte:
+                    printf("0x%02x", event.Payload.Parameter.Data.Fixed.Data.Byte);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Bool:
+                    printf("%s", event.Payload.Parameter.Data.Fixed.Data.Bool ? "TRUE" : "FALSE");
+                    break;
+                case Engine::Core::Pipeline::VariantType::Int32:
+                    printf("%d", event.Payload.Parameter.Data.Fixed.Data.Int32);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Uint32:
+                    printf("%u", event.Payload.Parameter.Data.Fixed.Data.Uint32);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Float:
+                    printf("%.3f", event.Payload.Parameter.Data.Fixed.Data.Float);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Vec2:
+                    printf("<%.3f, %.3f>", event.Payload.Parameter.Data.Fixed.Data.Vec2.x, event.Payload.Parameter.Data.Fixed.Data.Vec2.y);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Vec3:
+                    printf("<%.3f, %.3f, %.3f>", event.Payload.Parameter.Data.Fixed.Data.Vec3.x, event.Payload.Parameter.Data.Fixed.Data.Vec3.y, event.Payload.Parameter.Data.Fixed.Data.Vec3.z);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Vec4:
+                    printf("<%.3f, %.3f, %.3f, %.3f>", 
+                        event.Payload.Parameter.Data.Fixed.Data.Vec4.x,
+                        event.Payload.Parameter.Data.Fixed.Data.Vec4.y,
+                        event.Payload.Parameter.Data.Fixed.Data.Vec4.z,
+                        event.Payload.Parameter.Data.Fixed.Data.Vec4.w);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Mat2:
+                    printf("{<%.3f, %.3f>, <%.3f, %.3f>}", 
+                        event.Payload.Parameter.Data.Fixed.Data.Mat2[0].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat2[0].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat2[1].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat2[1].y);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Mat3:
+                    printf("{<%.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f>}", 
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[0].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[0].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[0].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[1].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[1].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[1].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[2].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[2].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat3[2].z);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Mat4:
+                    printf("{<%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>}", 
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[0].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[0].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[0].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[0].w,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[1].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[1].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[1].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[1].w,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[2].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[2].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[2].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[2].w,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[3].x,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[3].y,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[3].z,
+                        event.Payload.Parameter.Data.Fixed.Data.Mat4[3].w);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Path:
+                    printf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[0],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[1],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[2],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[3],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[4],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[5],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[6],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[7],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[8],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[9],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[10],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[11],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[12],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[13],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[14],
+                        event.Payload.Parameter.Data.Fixed.Data.Path.Hash[15]);
+                    break;
+                case Engine::Core::Pipeline::VariantType::Invalid:
+                    printf("<N/A>");    
+                    break;
+                }
                 break;
-            case Engine::Core::Pipeline::VariantType::Bool:
-                printf("%s", event.Payload.Parameter.Data.Bool ? "TRUE" : "FALSE");
-                break;
-            case Engine::Core::Pipeline::VariantType::Int32:
-                printf("%d", event.Payload.Parameter.Data.Int32);
-                break;
-            case Engine::Core::Pipeline::VariantType::Int64:
-                printf("%ld", event.Payload.Parameter.Data.Int64);
-                break;
-            case Engine::Core::Pipeline::VariantType::Uint32:
-                printf("%u", event.Payload.Parameter.Data.Uint32);
-                break;
-            case Engine::Core::Pipeline::VariantType::Uint64:
-                printf("%lu", event.Payload.Parameter.Data.Uint64);
-                break;
-            case Engine::Core::Pipeline::VariantType::Float:
-                printf("%.3f", event.Payload.Parameter.Data.Float);
-                break;
-            case Engine::Core::Pipeline::VariantType::Vec2:
-                printf("<%.3f, %.3f>", event.Payload.Parameter.Data.Vec2.x, event.Payload.Parameter.Data.Vec2.y);
-                break;
-            case Engine::Core::Pipeline::VariantType::Vec3:
-                printf("<%.3f, %.3f, %.3f>", event.Payload.Parameter.Data.Vec3.x, event.Payload.Parameter.Data.Vec3.y, event.Payload.Parameter.Data.Vec3.z);
-                break;
-            case Engine::Core::Pipeline::VariantType::Vec4:
-                printf("<%.3f, %.3f, %.3f, %.3f>", 
-                    event.Payload.Parameter.Data.Vec4.x,
-                    event.Payload.Parameter.Data.Vec4.y,
-                    event.Payload.Parameter.Data.Vec4.z,
-                    event.Payload.Parameter.Data.Vec4.w);
-                break;
-            case Engine::Core::Pipeline::VariantType::Mat2:
-                printf("{<%.3f, %.3f>, <%.3f, %.3f>}", 
-                    event.Payload.Parameter.Data.Mat2[0].x,
-                    event.Payload.Parameter.Data.Mat2[0].y,
-                    event.Payload.Parameter.Data.Mat2[1].x,
-                    event.Payload.Parameter.Data.Mat2[1].y);
-                break;
-            case Engine::Core::Pipeline::VariantType::Mat3:
-                printf("{<%.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f>}", 
-                    event.Payload.Parameter.Data.Mat3[0].x,
-                    event.Payload.Parameter.Data.Mat3[0].y,
-                    event.Payload.Parameter.Data.Mat3[0].z,
-                    event.Payload.Parameter.Data.Mat3[1].x,
-                    event.Payload.Parameter.Data.Mat3[1].y,
-                    event.Payload.Parameter.Data.Mat3[1].z,
-                    event.Payload.Parameter.Data.Mat3[2].x,
-                    event.Payload.Parameter.Data.Mat3[2].y,
-                    event.Payload.Parameter.Data.Mat3[2].z);
-                break;
-            case Engine::Core::Pipeline::VariantType::Mat4:
-                printf("{<%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>, <%.3f, %.3f, %.3f, %.3f>}", 
-                    event.Payload.Parameter.Data.Mat4[0].x,
-                    event.Payload.Parameter.Data.Mat4[0].y,
-                    event.Payload.Parameter.Data.Mat4[0].z,
-                    event.Payload.Parameter.Data.Mat4[0].w,
-                    event.Payload.Parameter.Data.Mat4[1].x,
-                    event.Payload.Parameter.Data.Mat4[1].y,
-                    event.Payload.Parameter.Data.Mat4[1].z,
-                    event.Payload.Parameter.Data.Mat4[1].w,
-                    event.Payload.Parameter.Data.Mat4[2].x,
-                    event.Payload.Parameter.Data.Mat4[2].y,
-                    event.Payload.Parameter.Data.Mat4[2].z,
-                    event.Payload.Parameter.Data.Mat4[2].w,
-                    event.Payload.Parameter.Data.Mat4[3].x,
-                    event.Payload.Parameter.Data.Mat4[3].y,
-                    event.Payload.Parameter.Data.Mat4[3].z,
-                    event.Payload.Parameter.Data.Mat4[3].w);
-                break;
-            case Engine::Core::Pipeline::VariantType::Path:
-                printf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-                    event.Payload.Parameter.Data.Path[0],
-                    event.Payload.Parameter.Data.Path[1],
-                    event.Payload.Parameter.Data.Path[2],
-                    event.Payload.Parameter.Data.Path[3],
-                    event.Payload.Parameter.Data.Path[4],
-                    event.Payload.Parameter.Data.Path[5],
-                    event.Payload.Parameter.Data.Path[6],
-                    event.Payload.Parameter.Data.Path[7],
-                    event.Payload.Parameter.Data.Path[8],
-                    event.Payload.Parameter.Data.Path[9],
-                    event.Payload.Parameter.Data.Path[10],
-                    event.Payload.Parameter.Data.Path[11],
-                    event.Payload.Parameter.Data.Path[12],
-                    event.Payload.Parameter.Data.Path[13],
-                    event.Payload.Parameter.Data.Path[14],
-                    event.Payload.Parameter.Data.Path[15]);
-                break;
-            case Engine::Core::Pipeline::VariantType::Invalid:
-                printf("<N/A>");    
+            case LogParameterType::String:
+                if (event.Payload.Parameter.Data.String == nullptr)
+                {
+                    printf("(null)");
+                }
+                else 
+                {
+                    printf("%s", event.Payload.Parameter.Data.String);
+                }
                 break;
             }
         }

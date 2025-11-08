@@ -1,4 +1,5 @@
 #include "ExampleGameplayModule/example_gameplay_module.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/task_scheduler.h"
 #include "ExampleGameplayModule/auto_rotate_marker.h"
 
@@ -49,6 +50,12 @@ static Core::Runtime::CallbackResult EventUpdate(const Core::Runtime::ServiceTab
     return Core::Runtime::CallbackSuccess();
 }
 
+struct ExamplePayload
+{
+    int Index1;
+    int Index2;
+};
+
 Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDefinition()
 {
     static Core::Pipeline::EventCallback callbacks[] {
@@ -59,7 +66,7 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
 
     static Core::Pipeline::ComponentDefinition componentDefinitions[] {
         {
-            md5::compute("AutoRotateMarker"),
+            HASH_NAME("AutoRotateMarker"),
             CompileMarker,
             LoadMarker
         }
@@ -67,7 +74,7 @@ Core::Pipeline::ModuleDefinition Engine::Extension::ExampleGameplayModule::GetDe
 
     return Core::Pipeline::ModuleDefinition 
     {
-        md5::compute("ExampleGameplayModule"),
+        HASH_NAME("ExampleGameplayModule"),
         InitModule,
         DisposeModule,
         nullptr,

@@ -1,4 +1,5 @@
 #include "InputModule/input_module.h"
+#include "LuaScriptingModule/lua_scripting_module.h"
 #include "RendererModule/renderer_module.h"
 #include "ExampleGameplayModule/example_gameplay_module.h"
 
@@ -15,7 +16,8 @@ static const Core::Pipeline::ModuleDefinition Modules[] = {
     Engine::Core::Runtime::RootModuleState::GetDefinition(),
     Extension::InputModule::GetModuleDefinition(),
     Extension::RendererModule::GetModuleDefinition(),
-    Extension::ExampleGameplayModule::GetDefinition()
+    Extension::ExampleGameplayModule::GetDefinition(),
+    Extension::LuaScriptingModule::GetModuleDefinition()
 };
 
 constexpr size_t ModuleCount = sizeof(Modules) / sizeof(Core::Pipeline::ModuleDefinition);

@@ -34,11 +34,11 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
         Pipeline::ModuleDefinition moduleDef = modules.Modules[i];
         void* newState = moduleDef.Initialize(services);
 
-        auto foundCollision = m_LoadedModules.find(moduleDef.Name);
+        auto foundCollision = m_LoadedModules.find(moduleDef.Name.Hash);
         if (foundCollision != m_LoadedModules.end())
-            return Crash(__FILE__, __LINE__, ModuleLoadingError("module name collision", moduleDef.Name));
+            return Crash(__FILE__, __LINE__, ModuleLoadingError("module name collision", moduleDef.Name.Hash));
 
-        m_LoadedModules[moduleDef.Name] = {moduleDef, newState};
+        m_LoadedModules[moduleDef.Name.Hash] = {moduleDef, newState};
 
         // set up callback table
         for (size_t j = 0; j < moduleDef.SynchronousCallbackCount; j++) 
@@ -67,19 +67,27 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
             m_EventCallbacks.push_back({ callback.Callback, newState });
         }
 
-        m_Logger.Information("Loaded module {moduleId}", { moduleDef.Name });
+        m_Logger.Information("Loaded module {moduleName}:{moduleId}", { moduleDef.Name.DisplayName, moduleDef.Name.Hash });
     }
 
     return CallbackSuccess();
 }
 
-ModuleManager::~ModuleManager()
+CallbackResult ModuleManager::UnloadModules()
 {
     for (auto module : m_LoadedModules)
     {
         module.second.Definition.Dispose(m_Services, module.second.State);
         m_Logger.Information("Unloaded module {moduleId}", { module.first });
     }
+
+    m_LoadedModules.clear();
+    return CallbackSuccess();
+}
+
+ModuleManager::~ModuleManager()
+{
+    UnloadModules();
 }
 
 const void* ModuleManager::FindModule(const Pipeline::HashId& name) const
@@ -102,5 +110,5 @@ const void* ModuleManager::FindModule(const Pipeline::HashId&& name) const
 
 const RootModuleState* ModuleManager::GetRootModule() const
 {
-    return static_cast<const RootModuleState*>(FindModule(RootModuleState::GetDefinition().Name));
+    return static_cast<const RootModuleState*>(FindModule(RootModuleState::GetDefinition().Name.Hash));
 }

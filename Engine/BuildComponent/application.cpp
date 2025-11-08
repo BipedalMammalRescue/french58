@@ -21,7 +21,7 @@ int main()
         for (size_t j = 0; j < module.ComponentCount; j ++)
         {
             Pipeline::ComponentDefinition component = module.Components[j];
-            Pipeline::HashIdTuple tuple { module.Name, component.Name };
+            Pipeline::HashIdTuple tuple { module.Name.Hash, component.Name.Hash };
             componentDefinitions[tuple] = component;
         }
     }

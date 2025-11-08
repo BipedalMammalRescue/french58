@@ -1,12 +1,12 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
 #include <ostream>
 #include <istream>
-#include <array>
 
 namespace Engine::Core::Runtime {
 struct ServiceTable;
@@ -29,7 +29,7 @@ struct RawComponent
 
 struct ComponentDefinition
 {
-    std::array<unsigned char, 16> Name;
+    NamePair Name;
     bool (*Compile)(RawComponent input, std::ostream* output);
     Runtime::CallbackResult (*Load)(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState);
 };

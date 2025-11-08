@@ -228,37 +228,37 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
     static const Core::Pipeline::AssetDefinition Assets[]
     {
         {
-            md5::compute("VertexShader"),
+            HASH_NAME("VertexShader"),
             Assets::LoadVertexShader,
             Assets::UnloadVertexShader
         },
         {
-            md5::compute("FragmentShader"),
+            HASH_NAME("FragmentShader"),
             Assets::LoadFragmentShader,
             Assets::UnloadFragmentShader
         },
         {
-            md5::compute("SlangVertexShader"),
+            HASH_NAME("SlangVertexShader"),
             Assets::LoadVertexShader,
             Assets::UnloadVertexShader
         },
         {
-            md5::compute("SlangFragmentShader"),
+            HASH_NAME("SlangFragmentShader"),
             Assets::LoadFragmentShader,
             Assets::UnloadFragmentShader
         },
         {
-            md5::compute("RenderPipeline"),
+            HASH_NAME("RenderPipeline"),
             Assets::LoadRenderPipeline,
             Assets::UnloadRenderPipeline
         },
         {
-            md5::compute("Material"),
+            HASH_NAME("Material"),
             Assets::LoadMaterial,
             Assets::UnloadMaterial
         },
         {
-            md5::compute("Mesh"),
+            HASH_NAME("Mesh"),
             Assets::LoadMesh,
             Assets::UnloadMesh,
         }
@@ -275,12 +275,12 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
     static const Core::Pipeline::ComponentDefinition Components[]
     {
         {
-            md5::compute("MeshRenderer"),
+            HASH_NAME("MeshRenderer"),
             Components::CompileMeshRenderer,
             Components::LoadMeshRenderer
         },
         {
-            md5::compute("DirectionalLight"),
+            HASH_NAME("DirectionalLight"),
             Components::CompileDirectionalLight,
             Components::LoadDirectionalLight
         }
@@ -288,7 +288,7 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
 
     return Core::Pipeline::ModuleDefinition 
     {
-        md5::compute("RendererModule"),
+        HASH_NAME("RendererModule"),
         InitRendererModule,
         DisposeRendererModule,
         Assets,

@@ -8,6 +8,7 @@ class GraphicsLayer;
 class WorldState;
 class ModuleManager;
 class EventManager;
+class InputManager;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 

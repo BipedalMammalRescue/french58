@@ -4,6 +4,7 @@
 #include "EngineCore/Pipeline/component_definition.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/task_scheduler.h"
@@ -11,6 +12,7 @@
 
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
+using namespace Engine::Core::Ecs::Components;
 
 static void* InitializeRootModule(ServiceTable* services)
 {
@@ -73,12 +75,12 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
 {
     static const Pipeline::ComponentDefinition rootComponents[] {
         {
-            md5::compute("SpatialRelation"),
+            HASH_NAME("SpatialRelation"),
             Ecs::Components::CompileSpatialComponent,
             Ecs::Components::LoadSpatialComponent
         },
         {
-            md5::compute("Camera"),
+            HASH_NAME("Camera"),
             Ecs::Components::CompileCameraComponent,
             Ecs::Components::LoadCameraComponent
         }
@@ -102,7 +104,7 @@ Pipeline::ModuleDefinition RootModuleState::GetDefinition()
     };
 
     return Pipeline::ModuleDefinition {
-        md5::compute("EngineRootModule"),
+        HASH_NAME("EngineRootModule"),
         InitializeRootModule,
         DisposeRootModule,
         nullptr,

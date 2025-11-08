@@ -1,10 +1,10 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/fwd.h"
 
-#include <array>
 #include <cstddef>
 
 namespace Engine::Core::Pipeline {
@@ -13,7 +13,7 @@ class IAssetEnumerator;
 
 struct AssetDefinition
 {
-    std::array<unsigned char, 16> Name;
+    NamePair Name;
 
     // load function needs to support batch operations natively
     Runtime::CallbackResult (*Load)(IAssetEnumerator *inputStreams, Runtime::ServiceTable *services, void *moduleState);

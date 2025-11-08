@@ -12,7 +12,7 @@ bool Engine::Extension::ExampleGameplayModule::CompileMarker(Engine::Core::Pipel
         return false;
 
     output->write((char*)&input.Entity, sizeof(input.Entity));
-    output->write((char*)input.FieldV[0].Payload.Data.Path.data(), sizeof(input.FieldV[0].Payload.Data.Path));
+    output->write((char*)input.FieldV[0].Payload.Data.Path.Hash.data(), sizeof(input.FieldV[0].Payload.Data.Path));
     return true;
 }
 
