@@ -23,7 +23,7 @@ const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
 
 const char SeGetParameter[] = "GetParameter";
-const char SeQuery[] = "QueryEngineApi";
+const char SeQuery[] = "EngineQuery";
 const char SeEvent[] = "RaiseEvent";
 
 template <typename T>

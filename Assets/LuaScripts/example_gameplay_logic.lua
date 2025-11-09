@@ -1,7 +1,7 @@
 -- trigger on tick
-if QueryEngineApi(SE_API_TABLE.EngineRootModule.CheckTickEvent) then
+if EngineQuery(SE_API_TABLE.EngineRootModule.CheckTickEvent) then
     rotation_speed = GetParameter("rotation_speed")
-    delta_time = QueryEngineApi(SE_API_TABLE.EngineRootModule.GetDeltaTime)
+    delta_time = EngineQuery(SE_API_TABLE.EngineRootModule.GetDeltaTime)
     rotation_angle = rotation_speed * delta_time / 1000.0
 
     translation = vec3(0, 0, 0)
