@@ -18,7 +18,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadLuaScript(Core::Pipeline::IAss
         auto foundScript = state->GetLoadedScripts().find(inputStreams->GetCurrent().ID);
         if (foundScript != state->GetLoadedScripts().end())
         {
-            state->GetExecutor()->LoadScript(&code, foundScript->second.ScriptIndex);
+            state->GetExecutor()->LoadScript(&code, foundScript->second);
         }
         else 
         {

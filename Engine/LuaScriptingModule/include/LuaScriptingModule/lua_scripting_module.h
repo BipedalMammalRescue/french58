@@ -13,7 +13,8 @@ Engine::Core::Pipeline::ModuleDefinition GetModuleDefinition();
 class LuaScriptingModuleState 
 {
 private:
-    std::unordered_map<Core::Pipeline::HashId, InstancedScript> LoadedScripts;
+    std::unordered_map<Core::Pipeline::HashId, int> m_LoadedScripts;
+    std::vector<InstancedScriptNode> m_ScriptNodes;
 
     LuaExecutor m_Executor;
     int m_ScriptCounter;
@@ -24,14 +25,24 @@ public:
         m_Executor.Initialize();
     }
 
-    inline std::unordered_map<Core::Pipeline::HashId, InstancedScript>& GetLoadedScripts() 
+    inline std::unordered_map<Core::Pipeline::HashId, int>& GetLoadedScripts() 
     {
-        return LoadedScripts;
+        return m_LoadedScripts;
     }
 
-    inline const std::unordered_map<Core::Pipeline::HashId, InstancedScript>& GetLoadedScripts() const 
+    inline const std::unordered_map<Core::Pipeline::HashId, int>& GetLoadedScripts() const 
     {
-        return LoadedScripts;
+        return m_LoadedScripts;
+    }
+
+    inline std::vector<InstancedScriptNode>& GetNodes()
+    {
+        return m_ScriptNodes;
+    }
+
+    inline const std::vector<InstancedScriptNode>& GetNodes() const
+    {
+        return m_ScriptNodes;
     }
 
     inline LuaExecutor* GetExecutor() 

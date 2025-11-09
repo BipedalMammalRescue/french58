@@ -58,21 +58,21 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, s
     for (size_t i = 0; i < count; i++)
     {
         int entity;
-        input[i].read((char*)&entity, sizeof(entity));
+        input->read((char*)&entity, sizeof(entity));
 
         Core::Pipeline::HashId scriptPath;
-        input[i].read((char*)&scriptPath, sizeof(scriptPath));
+        input->read((char*)&scriptPath, sizeof(scriptPath));
 
         int parameterCount;
-        input[i].read((char*)&parameterCount, sizeof(parameterCount));
+        input->read((char*)&parameterCount, sizeof(parameterCount));
         std::unordered_map<Core::Pipeline::HashId, Core::Pipeline::Variant> params;
         params.reserve(parameterCount);
         for (int paramIndex = 0; paramIndex < parameterCount; paramIndex ++)
         {
             Core::Pipeline::HashId name;
             Core::Pipeline::Variant data;
-            input[i].read((char*)&name, sizeof(name));
-            input[i].read((char*)&data, sizeof(data));
+            input->read((char*)&name, sizeof(name));
+            input->read((char*)&data, sizeof(data));
 
             params[name] = data;
         }
@@ -80,7 +80,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, s
         auto foundScript = state->GetLoadedScripts().find(scriptPath);
         if (foundScript == state->GetLoadedScripts().end())
             continue;
-        foundScript->second.Nodes.push_back({ entity, std::move(params) });
+        state->GetNodes().push_back({ entity, foundScript->second, std::move(params) });
     }
 
     return Core::Runtime::CallbackSuccess();

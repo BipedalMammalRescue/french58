@@ -192,6 +192,19 @@
                             "Path": "RenderPipelines/monochrome_phong.se_asset"
                         }
                     }
+                },
+                {
+                    "Name": "spin_script",
+                    "Module": "LuaScriptingModule",
+                    "Type": "ScriptNode",
+                    "Fields": {
+                        "rotation_speed": {
+                            "Float": 10
+                        },
+                        "Script": {
+                            "Path": "LuaScripts/example_gameplay_logic.se_asset"
+                        }
+                    }
                 }
             ]
         },

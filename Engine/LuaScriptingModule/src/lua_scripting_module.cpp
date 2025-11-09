@@ -21,15 +21,11 @@ void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, 
     auto moduleState = static_cast<const LuaScriptingModuleState*>(services->ModuleManager->FindModule(MODULE_NAME.Hash));
     auto executor = static_cast<LuaExecutor*>(localState);
 
-    for (const auto& scriptGroup : moduleState->GetLoadedScripts())
+    for (const auto& scriptNode : moduleState->GetNodes())
     {
-        if (!executor->SelectScript(scriptGroup.second.ScriptIndex))
+        if (!executor->SelectScript(scriptNode.ScriptIndex))
             continue;
-
-        for (const auto& node : scriptGroup.second.Nodes)
-        {
-            executor->ExecuteNode(node, writer);
-        }
+        executor->ExecuteNode(scriptNode, writer);
     }
 }
 
