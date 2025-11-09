@@ -13,6 +13,8 @@
 #include "EngineCore/Scripting/api_data.h"
 #include "EngineCore/Scripting/api_event.h"
 #include "EngineCore/Scripting/api_query.h"
+#include "EngineCore/Scripting/api_declaration.h"
+#include "EngineCore/Scripting/event_declaration.h"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 
