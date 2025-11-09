@@ -47,7 +47,7 @@ void FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, void
 
         if (inputLevel > 0)
         {
-            writer->WriteInputEvent(&rootModule->TransformUpdateEventOwner, Engine::Core::Runtime::TransformUpdateEvent { newTransform, marker.Entity }, 0);
+            writer->WriteInputEvent(&rootModule->TransformUpdateEventOwner, Engine::Core::Runtime::TransformUpdateEventData { newTransform, marker.Entity }, 0);
         }
     }
 

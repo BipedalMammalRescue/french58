@@ -6,6 +6,7 @@
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/component_definition.h"
 #include "EngineCore/Scripting/api_query.h"
+#include "EngineCore/Scripting/api_event.h"
 
 #include <md5.h>
 
@@ -37,9 +38,13 @@ struct ModuleDefinition
     const ComponentDefinition* Components = nullptr;
     size_t ComponentCount = 0;
 
-    // api
+    // query api
     const Scripting::ApiQueryBase** ApiQueries = nullptr;
     size_t ApiQueryCount = 0;
+
+    // event api
+    const Scripting::ApiEventBase** ApiEvents = nullptr;
+    size_t ApiEventCount = 0;
 };
 
 } // namespace Engine::Core::Pipeline

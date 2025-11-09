@@ -4,23 +4,27 @@
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/event_manager.h"
+#include "EngineCore/Scripting/api_data.h"
+#include "EngineCore/Scripting/event_declaration.h"
+#include "EngineCore/Scripting/api_declaration.h"
 
 #include <optional>
 #include <vector>
 
 namespace Engine::Core::Runtime {
 
-struct TransformUpdateEvent
+struct TransformUpdateEventData
 {
     Ecs::Components::SpatialRelation NewTransform;
     int EntityId;
 };
 
-struct TickEvent
+struct TickEventData
 {
     float TotalTime = 0;
     float DeltaTime = 0;
 };
+// NOTE: object declaration needs to be in source file
 
 // The root module authors data and manages states for part of the engine meant to be shared to other modules, but itself protected from them.
 struct RootModuleState
@@ -31,10 +35,10 @@ struct RootModuleState
     std::vector<Ecs::Components::Camera> CameraComponents;
 
     // output events
-    std::optional<TickEvent> TickEvent;
+    std::optional<TickEventData> TickEvent;
 
     // input events
-    EventOwner<TransformUpdateEvent> TransformUpdateEventOwner;
+    EventOwner<TransformUpdateEventData> TransformUpdateEventOwner;
 };
 
 }
