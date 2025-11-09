@@ -65,7 +65,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, s
 
         int parameterCount;
         input[i].read((char*)&parameterCount, sizeof(parameterCount));
-        std::vector<NamedScriptParameter> params;
+        std::unordered_map<Core::Pipeline::HashId, Core::Pipeline::Variant> params;
         params.reserve(parameterCount);
         for (int paramIndex = 0; paramIndex < parameterCount; paramIndex ++)
         {
@@ -73,6 +73,8 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, s
             Core::Pipeline::Variant data;
             input[i].read((char*)&name, sizeof(name));
             input[i].read((char*)&data, sizeof(data));
+
+            params[name] = data;
         }
 
         auto foundScript = state->GetLoadedScripts().find(scriptPath);

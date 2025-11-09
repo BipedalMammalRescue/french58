@@ -5,16 +5,10 @@
 
 namespace Engine::Extension::LuaScriptingModule {
 
-struct NamedScriptParameter
-{
-    Core::Pipeline::HashId Name;
-    Core::Pipeline::Variant Data;
-};
-
 struct InstancedScriptNode
 {
     int Entity;
-    std::vector<NamedScriptParameter> Parameters;
+    std::unordered_map<Core::Pipeline::HashId, Core::Pipeline::Variant> Parameters;
 };
 
 struct InstancedScript

@@ -1,13 +1,16 @@
 #include "LuaScriptingModule/lua_executor.h"
+#include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
+#include "EngineCore/Scripting/api_data.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "LuaScriptingModule/state_data.h"
+#include <md5.h>
 
 using namespace Engine::Extension::LuaScriptingModule;
 
@@ -20,6 +23,7 @@ const char SeEvent[] = "RaiseEvent";
 const char SeEntityId[] = "SE_COMPONENT_ID";
 const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
+const char SeGetParameter[] = "GetParameter";
 
 template <typename T>
 struct VariantLite
@@ -247,6 +251,35 @@ static int CreateVec4(lua_State* luaState)
     WriteVariantLite(luaState, glm::vec4(x, y, z, w));
     return 1;
 }
+
+
+static int GetLuaScriptParameter(lua_State* luaState)
+{
+    if (!lua_isstring(luaState, -1))
+        return 0;
+
+    const char* paramName = lua_tostring(luaState, -1);
+    Engine::Core::Pipeline::HashId paramId = md5::compute(paramName);
+
+    lua_getglobal(luaState, SeScriptParameters);
+    if (!lua_isuserdata(luaState, -1))
+        return 0;
+
+    auto parameters = static_cast<std::unordered_map<Engine::Core::Pipeline::HashId, Engine::Core::Pipeline::Variant>*>(lua_touserdata(luaState, -1));
+    auto foundParam = parameters->find(paramId);
+
+    if (foundParam == parameters->end())
+        return 0;
+
+    Engine::Core::Scripting::ApiData data;
+    data.Type = Engine::Core::Scripting::ApiDataType::Variant;
+    data.Data.Variant = foundParam->second;
+
+    return WriteApiData(luaState, 
+        { .Type = Engine::Core::Scripting::ApiDataType::Variant, .SubType = { .Variant = foundParam->second.Type } }, 
+        &data) ? 1 : 0;
+}
+
 
 int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
 {
@@ -478,6 +511,10 @@ void LuaExecutor::Initialize()
     // functions that's used for raising events
     lua_pushcfunction(m_LuaState, LuaRaiseEvent);
     lua_setglobal(m_LuaState, SeEvent);
+
+    // used for parameters
+    lua_pushcfunction(m_LuaState, GetLuaScriptParameter);
+    lua_setglobal(m_LuaState, SeGetParameter);
 
     // library functions
     lua_pushcfunction(m_LuaState, CreateVec2);

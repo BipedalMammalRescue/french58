@@ -221,6 +221,9 @@
             "Module": "LuaScriptingModule",
             "Type": "ScriptNode",
             "Fields": {
+                "sample_param": {
+                    "Int32": 42
+                },
                 "Script": {
                     "Path": "LuaScripts/example_gameplay_logic.se_asset"
                 }
