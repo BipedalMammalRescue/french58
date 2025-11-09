@@ -4,9 +4,6 @@
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/event_manager.h"
-#include "EngineCore/Scripting/api_data.h"
-#include "EngineCore/Scripting/event_declaration.h"
-#include "EngineCore/Scripting/api_declaration.h"
 
 #include <optional>
 #include <vector>
