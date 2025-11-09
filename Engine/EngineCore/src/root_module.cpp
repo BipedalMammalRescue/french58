@@ -47,7 +47,8 @@ void RaiseTransformUpdateEvent(const ServiceTable* services, const void* moduleS
     TransformUpdateEventData event {
         *translation,
         *scale,
-        glm::quat(*eulerRotation)
+        glm::quat(*eulerRotation),
+        *entity
     };
 
     writer->WriteInputEvent(&state->TransformUpdateEventOwner, event, path);

@@ -18,12 +18,13 @@ const char SeScriptTable[] = "SE_SCRIPT_TABLE";
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
 const char SeApiTable[] = "SE_API_TABLE";
 const char SeEventTable[] = "SE_EVENT_TABLE";
-const char SeQuery[] = "QueryEngineApi";
-const char SeEvent[] = "RaiseEvent";
 const char SeEntityId[] = "SE_COMPONENT_ID";
 const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
+
 const char SeGetParameter[] = "GetParameter";
+const char SeQuery[] = "QueryEngineApi";
+const char SeEvent[] = "RaiseEvent";
 
 template <typename T>
 struct VariantLite
@@ -47,12 +48,12 @@ static void WriteVariantLite(lua_State* luaState, const T& src)
 
 
 template <typename T>
-static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier)
+static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier, int index)
 {
-    if (!lua_isuserdata(luaState, -1))
+    if (!lua_isuserdata(luaState, index))
         return { Engine::Core::Scripting::ApiDataType::Invalid };
 
-    void* data = lua_touserdata(luaState, -1);
+    void* data = lua_touserdata(luaState, index);
     VariantLite<T>* asVariant = static_cast<VariantLite<T>*>(data);
 
     if (asVariant->Identifier != asVariant->IdPad1 || asVariant->Identifier != identifier)
@@ -185,19 +186,19 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
 
         case Engine::Core::Pipeline::VariantType::Vec2:
-            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec3:
-            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec4:
-            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat2:
-            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat3:
-            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat4:
-            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Path:
-            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant);
+            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant, index);
         default:
             return { Engine::Core::Scripting::ApiDataType::Invalid };
         }
@@ -326,7 +327,7 @@ int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
         {
             auto apiActual = static_cast<const Core::Scripting::ApiEventBase_2*>(event.Api);
 
-            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP2Type(), offset - 1);
             Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
             
             apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, writer, 0);
@@ -336,8 +337,8 @@ int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
         {
             auto apiActual = static_cast<const Core::Scripting::ApiEventBase_3*>(event.Api);
 
-            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
-            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
+            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP3Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP2Type(), offset - 2);
             Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 3);
             
             apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, p3, writer, 0);
@@ -347,9 +348,9 @@ int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
         {
             auto apiActual = static_cast<const Core::Scripting::ApiEventBase_4*>(event.Api);
 
-            Engine::Core::Scripting::ApiData p4 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
-            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
-            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 3);
+            Engine::Core::Scripting::ApiData p4 = ReadApiData(luaState, apiActual->GetP4Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP3Type(), offset - 2);
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP2Type(), offset - 3);
             Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 4);
             
             apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, p3, p4, writer, 0);
