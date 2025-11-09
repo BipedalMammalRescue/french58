@@ -1,0 +1,14 @@
+#!/bin/bash
+project_root=$(dirname $(dirname "$0"))
+cd $project_root
+
+echo "> Building game ..."
+cmake --build build --config Release --target Game
+
+result=$?
+
+if [ $result != 0 ]; then
+    echo "> Build game failed."
+else
+    echo "> Game built."
+fi

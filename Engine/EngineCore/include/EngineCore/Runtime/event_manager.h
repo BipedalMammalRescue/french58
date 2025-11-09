@@ -1,7 +1,6 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
-#include <complex>
 #include <vector>
 
 namespace Engine::Core::Logging {
@@ -15,7 +14,7 @@ namespace Engine::Core::Runtime {
 class EventWriter;
 struct ServiceTable;
 
-using EventSystemDelegate = bool(*)(const ServiceTable* services, EventWriter* writer);
+using EventSystemDelegate = void(*)(const ServiceTable* services, void* state, EventWriter* writer);
 
 template <typename TEvent>
 class EventOwner
@@ -30,6 +29,7 @@ struct EventSystemInstance
 {
     EventSystemDelegate Delegate;
     const char* Name;
+    void* SystemLocalState;
 };
 
 class EventManager 
@@ -46,9 +46,6 @@ private:
 
     bool ExecuteAllSystems(ServiceTable* services, EventWriter& writer);
 
-    // event systems are stateless functions executed that transforms input events to output events
-    void RegisterEventSystem(const EventSystemInstance* systems, size_t systemCount);
-
 public:
     // input events needs to be registered so event systems can access them
     template <typename TEvent>
@@ -60,6 +57,9 @@ public:
         owner.m_ID = id;
         return owner;
     }
+
+    // event systems are stateless functions executed that transforms input events to output events
+    void RegisterEventSystem(const EventSystemInstance* systems, size_t systemCount);
 };
 
 }

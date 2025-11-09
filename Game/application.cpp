@@ -17,10 +17,10 @@
 static Engine::Core::Pipeline::HashId ExampleModuleName = Engine::Extension::ExampleGameplayModule::GetDefinition().Name.Hash;
 static Engine::Core::Pipeline::HashId InputModuleName = Engine::Extension::InputModule::GetModuleDefinition().Name.Hash;
 
-bool FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, Engine::Core::Runtime::EventWriter* writer)
+void FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, void*, Engine::Core::Runtime::EventWriter* writer)
 {
     if (!services->ModuleManager->GetRootModule()->TickEvent.has_value())
-        return false;
+        return;
 
     const Engine::Core::Runtime::RootModuleState* rootModule = services->ModuleManager->GetRootModule();
 
@@ -51,7 +51,7 @@ bool FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, Engi
         }
     }
 
-    return true;
+    return;
 }
 
 int main()

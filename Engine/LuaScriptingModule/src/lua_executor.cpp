@@ -1,18 +1,19 @@
 #include "LuaScriptingModule/lua_executor.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
 #include "EngineCore/Runtime/module_manager.h"
+#include "LuaScriptingModule/state_data.h"
 #include <string>
 
 using namespace Engine::Extension::LuaScriptingModule;
 
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
 const char SeApiTable[] = "SE_API_TABLE";
-const char SeFindApi[] = "SE_FIND_API";
-const char SeInvokeApi[] = "SE_INVOKE_API";
+const char SeInvokeApi[] = "InvokeEngineApi";
 
 template <typename T>
 struct VariantLite
@@ -28,7 +29,6 @@ static void PushFullUserdata(lua_State* luaState, const T* data, unsigned char i
     void* dest = lua_newuserdata(luaState, sizeof(VariantLite<T>));
     *static_cast<VariantLite<T>*>(dest) = { identifier, identifier, *data };
 }
-
 
 template <typename T>
 static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier)
@@ -237,24 +237,6 @@ int LuaExecutor::LuaInvoke(lua_State* luaState)
     }
 }
 
-int LuaExecutor::L1CallMultiplexer(lua_State* luaState)
-{
-    if (!lua_isstring(luaState, -1) || !lua_isstring(luaState, -2))
-        return 0;
-
-    const char* moduleName = lua_tostring(luaState, -2);
-    const char* apiName = lua_tostring(luaState, -1);
-
-    lua_getglobal(luaState, SeApiTable);
-    lua_getfield(luaState, -1, moduleName);
-    lua_getfield(luaState, -1, apiName);
-
-    if (!lua_isinteger(luaState, -1))
-        return 0;
-    
-    return 1;
-}
-
 Engine::Core::Runtime::CallbackResult LuaExecutor::ExecuteFile(const char* path)
 {
     if (luaL_dofile(m_LuaState, path) != LUA_OK)
@@ -314,23 +296,57 @@ void LuaExecutor::Initialize()
     lua_setglobal(m_LuaState, SeApiTable);
 
     // install the invoke function
-    lua_pushcfunction(m_LuaState, L1CallMultiplexer);
-    lua_setglobal(m_LuaState, SeFindApi);
     lua_pushcfunction(m_LuaState, LuaInvoke);
     lua_setglobal(m_LuaState, SeInvokeApi);
 
     // TODO: library functions
-
-    // TODO: raise events
 }
 
 LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services)
 {
+    static const char* LogChannel[] = { "LuaExecutor" };
+    m_Logger = services->LoggerService->CreateLogger(LogChannel, 1);
+
     m_LuaState = luaL_newstate();
     luaL_openlibs(m_LuaState);
 }
 
-LuaExecutor::~LuaExecutor()
+LuaExecutor::~LuaExecutor() 
 {
-    lua_close(m_LuaState);
+    lua_close(m_LuaState); 
+}
+
+void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer) 
+{
+    if (!lua_isfunction(m_LuaState, -1))
+        return;
+
+    Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
+
+    // TODO: allow to raise events
+    lua_pushinteger(m_LuaState, node.Entity);
+    lua_setglobal(m_LuaState, "SE_COMPONENT_ID");
+
+    lua_pushlightuserdata(m_LuaState, (void*)&node.Parameters);
+    lua_setglobal(m_LuaState, "SE_SCRIPT_PARAMETERS");
+
+    auto result = lua_pcall(m_LuaState, 0, 0, 0);
+    if (result != LUA_OK)
+    {
+        writer->Rollback(checkpoint);
+
+        // TODO: handle errors
+    }
+}
+
+bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(const std::vector<unsigned char> *byteCode) 
+{
+    auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode->data(), byteCode->size(), "");
+    if (result != LUA_OK)
+    {
+        // TDOO: log error
+        return false;
+    }
+
+    return true;
 }

@@ -23,15 +23,13 @@ void EventManager::RegisterEventSystem(const EventSystemInstance* systems, size_
 
 bool EventManager::ExecuteAllSystems(ServiceTable* services, EventWriter& writer)
 {
-    bool hasEvent = false;
-
     writer.Initialize();
 
     for (const EventSystemInstance& system : m_Systems)
     {
         writer.m_UserName = system.Name;
-        hasEvent |= system.Delegate(services, &writer);
+        system.Delegate(services, system.SystemLocalState, &writer);
     }
 
-    return hasEvent;
+    return writer.HasEvents();
 }

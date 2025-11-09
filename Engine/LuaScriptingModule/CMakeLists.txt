@@ -1,6 +1,9 @@
 add_library(LuaScriptingModule
+    src/api.cpp
     src/lua_executor.cpp
+    src/lua_script.cpp
     src/lua_scripting_module.cpp
+    src/script_node.cpp
 )
 
 target_include_directories(LuaScriptingModule PUBLIC include)
