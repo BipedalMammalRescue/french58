@@ -1,5 +1,13 @@
 #pragma once
 
+#define DECLARE_SE_OBJECT(name)\
+template<> Engine::Core::Scripting::ApiDataDefinition GetApiDataDefinition<name>()\
+{\
+    static const char typeName[] = #name;\
+    static const Engine::Core::Scripting::OpaqueObjectMetadata typeMetadata = { typeName };\
+    return { .Type = ApiDataType::Object, .SubType.Object = &typeMetadata };\
+}
+
 #define DECLARE_SE_API_0(name, returnType, runCore)\
 class name : public Engine::Core::Scripting::ApiQuery_0<returnType>\
 {\
@@ -29,7 +37,6 @@ public: \
     {\
         return #name; \
     }\
-    Engine::Core::Scripting::ApiDataDefinition GetP1Type() const override { return Engine::Core::Scripting::GetApiDataDefinition<tp1>(); } \
     static const Engine::Core::Scripting::ApiQueryBase* GetQuery()\
     { \
         static const name query; \

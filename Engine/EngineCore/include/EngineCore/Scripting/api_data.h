@@ -16,6 +16,11 @@ namespace Engine::Core::Runtime {
 
 namespace Engine::Core::Scripting {
 
+struct OpaqueObjectMetadata
+{
+    const char* Name;
+};
+
 enum class ApiDataType : unsigned char
 {
     Invalid,
@@ -27,14 +32,14 @@ struct ApiDataDefinition
 {
     ApiDataType Type;
     // only used for variants
-    Pipeline::VariantType SubType;
+    union {
+        Pipeline::VariantType Variant;
+        const OpaqueObjectMetadata* Object;
+    } SubType;
 };
 
 template <typename T>
-ApiDataDefinition GetApiDataDefinition()
-{
-    return { ApiDataType::Object };
-}
+ApiDataDefinition GetApiDataDefinition();
 
 template<>
 inline ApiDataDefinition GetApiDataDefinition<unsigned char>()
