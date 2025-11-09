@@ -54,7 +54,7 @@ static bool WriteApiData(lua_State* luaState, Engine::Core::Scripting::ApiDataDe
         lua_pushlightuserdata(luaState, (void*)data->Data.Object);
         return 1;
     case Engine::Core::Scripting::ApiDataType::Variant:
-        switch (type.SubType)
+        switch (type.SubType.Variant)
         {
         case Engine::Core::Pipeline::VariantType::Byte:
             lua_pushinteger(luaState, data->Data.Variant.Data.Byte);
@@ -110,7 +110,7 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             return { Engine::Core::Scripting::ApiDataType::Invalid };
         return { .Type = Engine::Core::Scripting::ApiDataType::Object, .Data { .Object = lua_touserdata(luaState, index) } };
     case Engine::Core::Scripting::ApiDataType::Variant:
-        switch (type.SubType)
+        switch (type.SubType.Variant)
         {
         case Engine::Core::Pipeline::VariantType::Byte:
             {
@@ -169,19 +169,19 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
 
         case Engine::Core::Pipeline::VariantType::Vec2:
-            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Vec3:
-            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Vec4:
-            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Mat2:
-            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Mat3:
-            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Mat4:
-            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType.Variant);
         case Engine::Core::Pipeline::VariantType::Path:
-            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType);
+            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant);
         default:
             return { Engine::Core::Scripting::ApiDataType::Invalid };
         }
