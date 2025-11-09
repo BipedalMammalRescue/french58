@@ -3,6 +3,7 @@
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "LuaScriptingModule/lua_scripting_module.h"
+#include <iostream>
 #include <md5.h>
 #include <optional>
 
@@ -19,6 +20,7 @@ bool Components::CompileScriptNode(Core::Pipeline::RawComponent input, std::ostr
         {
             if (input.FieldV[i].Payload.Type != Core::Pipeline::VariantType::Path)
             {
+                std::cout << "script path is not a path" << std::endl;
                 return false;
             }
 
@@ -32,9 +34,11 @@ bool Components::CompileScriptNode(Core::Pipeline::RawComponent input, std::ostr
 
     if (!scriptId.has_value())
     {
+        std::cout << "script path not specified" << std::endl;
         return false;
     }
 
+    output->write((char*)&input.Id, sizeof(input.Id));
     output->write((char*)&input.Entity, sizeof(input.Entity));
 
     output->write((char*)&scriptId->Hash, sizeof(scriptId->Hash));
@@ -57,30 +61,32 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, s
 
     for (size_t i = 0; i < count; i++)
     {
+        int id;
+        input->read((char*)&id, sizeof(id));
+
         int entity;
         input->read((char*)&entity, sizeof(entity));
 
         Core::Pipeline::HashId scriptPath;
         input->read((char*)&scriptPath, sizeof(scriptPath));
 
+        // load parameters
         int parameterCount;
         input->read((char*)&parameterCount, sizeof(parameterCount));
-        std::unordered_map<Core::Pipeline::HashId, Core::Pipeline::Variant> params;
-        params.reserve(parameterCount);
-        for (int paramIndex = 0; paramIndex < parameterCount; paramIndex ++)
+        for (int paramIndex = 0; parameterCount > 0 && paramIndex < parameterCount; paramIndex ++)
         {
             Core::Pipeline::HashId name;
             Core::Pipeline::Variant data;
             input->read((char*)&name, sizeof(name));
             input->read((char*)&data, sizeof(data));
 
-            params[name] = data;
+            state->GetExecutor()->SetParameter(name, id, data);
         }
 
         auto foundScript = state->GetLoadedScripts().find(scriptPath);
         if (foundScript == state->GetLoadedScripts().end())
             continue;
-        state->GetNodes().push_back({ entity, foundScript->second, std::move(params) });
+        state->GetNodes().push_back({ id, entity, foundScript->second });
     }
 
     return Core::Runtime::CallbackSuccess();

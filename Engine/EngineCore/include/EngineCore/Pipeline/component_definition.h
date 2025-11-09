@@ -22,6 +22,7 @@ struct Field
 
 struct RawComponent
 {
+    int Id;
     int Entity;
     Field* FieldV;
     size_t FieldC;

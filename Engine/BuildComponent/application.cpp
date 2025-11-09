@@ -69,7 +69,7 @@ int main()
             fieldReadBuffer.push_back({fieldName, fieldData});
         }
 
-        Pipeline::RawComponent nextInput {entityId, fieldReadBuffer.data(), fieldReadBuffer.size()};
+        Pipeline::RawComponent nextInput {componentId, entityId, fieldReadBuffer.data(), fieldReadBuffer.size()};
         bool success = targetComponentType.Compile(nextInput, &std::cout);
 
         if (!success)

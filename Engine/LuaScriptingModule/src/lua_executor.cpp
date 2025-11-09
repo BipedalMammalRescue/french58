@@ -18,13 +18,15 @@ const char SeScriptTable[] = "SE_SCRIPT_TABLE";
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
 const char SeApiTable[] = "SE_API_TABLE";
 const char SeEventTable[] = "SE_EVENT_TABLE";
-const char SeEntityId[] = "SE_COMPONENT_ID";
+const char SeEntityId[] = "SE_ENTITY_ID";
+const char SeComponentId[] = "SE_COMPONENT_ID";
 const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
 
 const char SeGetParameter[] = "GetParameter";
 const char SeQuery[] = "EngineQuery";
 const char SeEvent[] = "RaiseEvent";
+
 
 template <typename T>
 struct VariantLite
@@ -48,7 +50,7 @@ static void WriteVariantLite(lua_State* luaState, const T& src)
 
 
 template <typename T>
-static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier, int index)
+static Engine::Core::Scripting::ApiData PopVariantLite(lua_State* luaState, unsigned char identifier, int index)
 {
     if (!lua_isuserdata(luaState, index))
         return { Engine::Core::Scripting::ApiDataType::Invalid };
@@ -186,19 +188,19 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
 
         case Engine::Core::Pipeline::VariantType::Vec2:
-            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec3:
-            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec4:
-            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat2:
-            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat3:
-            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat4:
-            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Path:
-            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant, index);
         default:
             return { Engine::Core::Scripting::ApiDataType::Invalid };
         }
@@ -262,23 +264,28 @@ static int GetLuaScriptParameter(lua_State* luaState)
     const char* paramName = lua_tostring(luaState, -1);
     Engine::Core::Pipeline::HashId paramId = md5::compute(paramName);
 
-    lua_getglobal(luaState, SeScriptParameters);
-    if (!lua_isuserdata(luaState, -1))
-        return 0;
+    lua_getglobal(luaState, SeComponentId);
+    int componentId = lua_tointeger(luaState, -1);
 
-    auto parameters = static_cast<std::unordered_map<Engine::Core::Pipeline::HashId, Engine::Core::Pipeline::Variant>*>(lua_touserdata(luaState, -1));
-    auto foundParam = parameters->find(paramId);
+    lua_getglobal(luaState, SeExecutorInstance);
+    auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
 
-    if (foundParam == parameters->end())
-        return 0;
+    auto foundParam = executor->GetParameter(paramId, componentId);
+    if (foundParam.Type == Engine::Core::Pipeline::VariantType::Invalid)
+    {
+        lua_pushnil(luaState);
+        return 1;
+    }
+    else 
+    {
+        Engine::Core::Scripting::ApiData data;
+        data.Type = Engine::Core::Scripting::ApiDataType::Variant;
+        data.Data.Variant = foundParam;
 
-    Engine::Core::Scripting::ApiData data;
-    data.Type = Engine::Core::Scripting::ApiDataType::Variant;
-    data.Data.Variant = foundParam->second;
-
-    return WriteApiData(luaState, 
-        { .Type = Engine::Core::Scripting::ApiDataType::Variant, .SubType = { .Variant = foundParam->second.Type } }, 
-        &data) ? 1 : 0;
+        return WriteApiData(luaState, 
+            { .Type = Engine::Core::Scripting::ApiDataType::Variant, .SubType = { .Variant = foundParam.Type } }, 
+            &data) ? 1 : 0;
+    }
 }
 
 
@@ -556,8 +563,8 @@ void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const Insta
     lua_pushinteger(m_LuaState, node.Entity);
     lua_setglobal(m_LuaState, SeEntityId);
 
-    lua_pushlightuserdata(m_LuaState, (void*)&node.Parameters);
-    lua_setglobal(m_LuaState, SeScriptParameters);
+    lua_pushinteger(m_LuaState, node.Component);
+    lua_setglobal(m_LuaState, SeComponentId);
 
     lua_pushlightuserdata(m_LuaState, writer);
     lua_setglobal(m_LuaState, SeEventWriter);
@@ -589,4 +596,17 @@ bool LuaExecutor::SelectScript(int index)
     lua_getglobal(m_LuaState, SeScriptTable);
     lua_rawgeti(m_LuaState, -1, index);
     return lua_isfunction(m_LuaState, -1);
+}
+
+Engine::Core::Pipeline::Variant Engine::Extension::LuaScriptingModule::LuaExecutor::GetParameter(const Core::Pipeline::HashId &name, const int &component) const 
+{
+    auto foundParam = m_NodeParameters.find({ name, component });
+    if (foundParam == m_NodeParameters.end())
+        return Core::Pipeline::Variant::Invalid();
+
+    return foundParam->second;
+}
+void Engine::Extension::LuaScriptingModule::LuaExecutor::SetParameter(const Core::Pipeline::HashId& name, const int& component, const Core::Pipeline::Variant& data)
+{
+    m_NodeParameters[{ name, component }] = data;
 }
