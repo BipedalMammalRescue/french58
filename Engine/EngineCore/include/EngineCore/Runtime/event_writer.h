@@ -37,6 +37,7 @@ private:
     }
 
 public:
+    // TODO: should use something more descriptive than integer
     template <typename TEvent>
     void WriteInputEvent(const EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
     {

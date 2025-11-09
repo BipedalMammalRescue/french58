@@ -88,5 +88,6 @@ template<> inline VariantType ToVariantType<glm::vec4>() { return VariantType::V
 template<> inline VariantType ToVariantType<glm::mat2>() { return VariantType::Mat2; }
 template<> inline VariantType ToVariantType<glm::mat3>() { return VariantType::Mat3; }
 template<> inline VariantType ToVariantType<glm::mat4>() { return VariantType::Mat4; }
+template<> inline VariantType ToVariantType<HashId>() { return VariantType::Path; }
 
 }

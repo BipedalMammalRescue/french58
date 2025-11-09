@@ -1,4 +1,5 @@
 #include "LuaScriptingModule/lua_executor.h"
+#include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -7,13 +8,17 @@
 #include "lualib.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "LuaScriptingModule/state_data.h"
-#include <string>
 
 using namespace Engine::Extension::LuaScriptingModule;
 
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
 const char SeApiTable[] = "SE_API_TABLE";
-const char SeInvokeApi[] = "InvokeEngineApi";
+const char SeEventTable[] = "SE_EVENT_TABLE";
+const char SeQuery[] = "QueryEngineApi";
+const char SeEvent[] = "RaiseEvent";
+const char SeEntityId[] = "SE_COMPONENT_ID";
+const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
+const char SeEventWriter[] = "SE_EVENT_WRITER";
 
 template <typename T>
 struct VariantLite
@@ -23,12 +28,18 @@ struct VariantLite
     T Data;
 };
 
+
 template <typename T>
-static void PushFullUserdata(lua_State* luaState, const T* data, unsigned char identifier)
+static void WriteVariantLite(lua_State* luaState, const T& src)
 {
-    void* dest = lua_newuserdata(luaState, sizeof(VariantLite<T>));
-    *static_cast<VariantLite<T>*>(dest) = { identifier, identifier, *data };
+    auto dest = static_cast<VariantLite<T>*>(lua_newuserdata(luaState, sizeof(VariantLite<T>)));
+    *dest = {
+        (unsigned char)Engine::Core::Pipeline::ToVariantType<T>(),
+        (unsigned char)Engine::Core::Pipeline::ToVariantType<T>(),
+        src
+    };
 }
+
 
 template <typename T>
 static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier)
@@ -72,25 +83,25 @@ static bool WriteApiData(lua_State* luaState, Engine::Core::Scripting::ApiDataDe
             lua_pushnumber(luaState, data->Data.Variant.Data.Float);
             return 1;
         case Engine::Core::Pipeline::VariantType::Vec2:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Vec2, (unsigned char)Engine::Core::Pipeline::VariantType::Vec2);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Vec2);
             return 1;
         case Engine::Core::Pipeline::VariantType::Vec3:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Vec3, (unsigned char)Engine::Core::Pipeline::VariantType::Vec3);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Vec3);
             return 1;
         case Engine::Core::Pipeline::VariantType::Vec4:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Vec4, (unsigned char)Engine::Core::Pipeline::VariantType::Vec4);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Vec4);
             return 1;
         case Engine::Core::Pipeline::VariantType::Mat2:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Mat2, (unsigned char)Engine::Core::Pipeline::VariantType::Mat2);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Mat2);
             return 1;
         case Engine::Core::Pipeline::VariantType::Mat3:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Mat3, (unsigned char)Engine::Core::Pipeline::VariantType::Mat3);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Mat3);
             return 1;
         case Engine::Core::Pipeline::VariantType::Mat4:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Mat4, (unsigned char)Engine::Core::Pipeline::VariantType::Mat4);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Mat4);
             return 1;
         case Engine::Core::Pipeline::VariantType::Path:
-            PushFullUserdata(luaState, &data->Data.Variant.Data.Path, (unsigned char)Engine::Core::Pipeline::VariantType::Path);
+            WriteVariantLite(luaState, data->Data.Variant.Data.Path);
             return 1;
         default:
             return 0;
@@ -191,7 +202,131 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
 }
 
 
-int LuaExecutor::LuaInvoke(lua_State* luaState)
+static int CreateVec2(lua_State* luaState)
+{
+    if (!lua_isnumber(luaState, -1) 
+        || !lua_isnumber(luaState, -2))
+        return 0;
+
+    float x = lua_tonumber(luaState, -2);
+    float y = lua_tonumber(luaState, -1);
+
+    WriteVariantLite(luaState, glm::vec2(x, y));
+    return 1;
+}
+
+static int CreateVec3(lua_State* luaState)
+{
+    if (!lua_isnumber(luaState, -1) 
+        || !lua_isnumber(luaState, -2)
+        || !lua_isnumber(luaState, -3))
+        return 0;
+
+    float x = lua_tonumber(luaState, -3);
+    float y = lua_tonumber(luaState, -2);
+    float z = lua_tonumber(luaState, -1);
+
+    WriteVariantLite(luaState, glm::vec3(x, y, z));
+    return 1;
+}
+
+static int CreateVec4(lua_State* luaState)
+{
+    if (!lua_isnumber(luaState, -1) 
+        || !lua_isnumber(luaState, -2)
+        || !lua_isnumber(luaState, -3)
+        || !lua_isnumber(luaState, -4))
+        return 0;
+
+    float x = lua_tonumber(luaState, -4);
+    float y = lua_tonumber(luaState, -3);
+    float z = lua_tonumber(luaState, -2);
+    float w = lua_tonumber(luaState, -1);
+
+    WriteVariantLite(luaState, glm::vec4(x, y, z, w));
+    return 1;
+}
+
+int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
+{
+    int offset = 0;
+
+    int stackDepth = lua_gettop(luaState);
+    if (!lua_isinteger(luaState, 0 - stackDepth))
+        return 0;
+    int eventIndex = lua_tointeger(luaState, 0 - stackDepth);
+
+    lua_getglobal(luaState, SeExecutorInstance);
+    offset --;
+    auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
+
+    lua_getglobal(luaState, SeEventWriter);
+    offset --;
+    auto writer = static_cast<Core::Runtime::EventWriter*>(lua_touserdata(luaState, -1));
+
+    if (eventIndex < 0 || eventIndex >= executor->m_ApiEventList.size())
+        return 0;
+
+    auto event = executor->m_ApiEventList[eventIndex];
+    if (stackDepth - 1 != event.Api->GetParamCount())
+        return 0;
+
+    switch (event.Api->GetParamCount())
+    {
+    case 0:
+        {
+            auto apiActual = static_cast<const Core::Scripting::ApiEvent_0*>(event.Api);
+            apiActual->Run(executor->m_Services, event.ModuleState, writer, 0);
+        }
+        break;
+    case 1:
+        {
+            auto apiActual = static_cast<const Core::Scripting::ApiEventBase_1*>(event.Api);
+
+            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
+            
+            apiActual->Run(executor->m_Services, event.ModuleState, p1, writer, 0);
+        }
+        break;
+    case 2:
+        {
+            auto apiActual = static_cast<const Core::Scripting::ApiEventBase_2*>(event.Api);
+
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
+            
+            apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, writer, 0);
+        }
+        break;
+    case 3:
+        {
+            auto apiActual = static_cast<const Core::Scripting::ApiEventBase_3*>(event.Api);
+
+            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
+            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 3);
+            
+            apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, p3, writer, 0);
+        }
+        break;
+    case 4:
+        {
+            auto apiActual = static_cast<const Core::Scripting::ApiEventBase_4*>(event.Api);
+
+            Engine::Core::Scripting::ApiData p4 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 1);
+            Engine::Core::Scripting::ApiData p3 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 2);
+            Engine::Core::Scripting::ApiData p2 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 3);
+            Engine::Core::Scripting::ApiData p1 = ReadApiData(luaState, apiActual->GetP1Type(), offset - 4);
+            
+            apiActual->Run(executor->m_Services, event.ModuleState, p1, p2, p3, p4, writer, 0);
+        }
+        break;
+    }
+
+    return 0;
+}
+
+int LuaExecutor::LuaQuery(lua_State* luaState)
 {
     int offset = 0;
 
@@ -204,10 +339,13 @@ int LuaExecutor::LuaInvoke(lua_State* luaState)
     offset --;
     auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
 
-    if (apiIndex < 0 || apiIndex >= executor->m_ApiList.size())
+    if (apiIndex < 0 || apiIndex >= executor->m_ApiQueryList.size())
         return 0;
 
-    auto api = executor->m_ApiList[apiIndex];
+    auto api = executor->m_ApiQueryList[apiIndex];
+
+    if (stackDepth - 1 != api.Api->GetParamCount())
+        return 0;
 
     switch (api.Api->GetParamCount())
     {
@@ -263,8 +401,10 @@ void LuaExecutor::Initialize()
     lua_pushlightuserdata(m_LuaState, this);
     lua_setglobal(m_LuaState, SeExecutorInstance);
 
-    // set up the api table
+    // get the modules
     Engine::Core::Pipeline::ModuleAssembly modules = Engine::Core::Pipeline::ListModules();
+
+    // set up the api table
     lua_createtable(m_LuaState, 0, modules.ModuleCount);
     for (size_t i = 0; i < modules.ModuleCount; i++)
     {
@@ -283,23 +423,68 @@ void LuaExecutor::Initialize()
                 continue;
 
             // insert the instanced api
-            InstancedApi instancedApi {moduleState, api};
-            m_ApiList.push_back(instancedApi);
+            InstancedApiQuery instancedApi {moduleState, api};
+            m_ApiQueryList.push_back(instancedApi);
 
             // register it in the inner api table
             lua_pushstring(m_LuaState, api->GetName());
-            lua_pushinteger(m_LuaState, m_ApiList.size() - 1);
+            lua_pushinteger(m_LuaState, m_ApiQueryList.size() - 1);
             lua_settable(m_LuaState, -3);
         }
         lua_settable(m_LuaState, -3);
     }
     lua_setglobal(m_LuaState, SeApiTable);
 
-    // install the invoke function
-    lua_pushcfunction(m_LuaState, LuaInvoke);
-    lua_setglobal(m_LuaState, SeInvokeApi);
+    // set up the event table
+    lua_createtable(m_LuaState, 0, modules.ModuleCount);
+    for (size_t i = 0; i < modules.ModuleCount; i++)
+    {
+        if (modules.Modules[i].ApiEventCount <= 0)
+            continue;
 
-    // TODO: library functions
+        lua_pushstring(m_LuaState, modules.Modules[i].Name.DisplayName);
+        lua_createtable(m_LuaState, 0, modules.Modules[i].ApiEventCount);
+        for (size_t j = 0; j < modules.Modules[i].ApiEventCount; j++)
+        {
+            auto api = modules.Modules[i].ApiEvents[j];
+
+            // find module state (skip if not found)
+            const void* moduleState = m_Services->ModuleManager->FindModule(modules.Modules[i].Name.Hash);
+            if (moduleState == nullptr)
+                continue;
+
+            // insert the instanced api
+            InstancedApiEvent instancedApi {moduleState, api};
+            m_ApiEventList.push_back(instancedApi);
+
+            // register it in the inner api table
+            lua_pushstring(m_LuaState, api->GetName());
+            lua_pushinteger(m_LuaState, m_ApiEventList.size() - 1);
+            lua_settable(m_LuaState, -3);
+        }
+        lua_settable(m_LuaState, -3);
+    }
+    lua_setglobal(m_LuaState, SeEventTable);
+
+    // install the invoke function
+    lua_pushcfunction(m_LuaState, LuaQuery);
+    lua_setglobal(m_LuaState, SeQuery);
+
+    // functions that's used for raising events
+    lua_pushcfunction(m_LuaState, LuaRaiseEvent);
+    lua_setglobal(m_LuaState, SeEvent);
+
+    // library functions
+    lua_pushcfunction(m_LuaState, CreateVec2);
+    lua_setglobal(m_LuaState, "vec2");
+
+    lua_pushcfunction(m_LuaState, CreateVec3);
+    lua_setglobal(m_LuaState, "vec3");
+
+    lua_pushcfunction(m_LuaState, CreateVec4);
+    lua_setglobal(m_LuaState, "vec4");
+
+    // TODO: matrix and multiplication and stuff
 }
 
 LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services)
@@ -313,7 +498,7 @@ LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : 
 
 LuaExecutor::~LuaExecutor() 
 {
-    lua_close(m_LuaState); 
+    lua_close(m_LuaState);
 }
 
 void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer) 
@@ -323,19 +508,20 @@ void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const Insta
 
     Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
 
-    // TODO: allow to raise events
     lua_pushinteger(m_LuaState, node.Entity);
-    lua_setglobal(m_LuaState, "SE_COMPONENT_ID");
+    lua_setglobal(m_LuaState, SeEntityId);
 
     lua_pushlightuserdata(m_LuaState, (void*)&node.Parameters);
-    lua_setglobal(m_LuaState, "SE_SCRIPT_PARAMETERS");
+    lua_setglobal(m_LuaState, SeScriptParameters);
+
+    lua_pushlightuserdata(m_LuaState, writer);
+    lua_setglobal(m_LuaState, SeEventWriter);
 
     auto result = lua_pcall(m_LuaState, 0, 0, 0);
     if (result != LUA_OK)
     {
         writer->Rollback(checkpoint);
-
-        // TODO: handle errors
+        m_Logger.Error("Lua script execution failed, return code: {return}", { result });
     }
 }
 

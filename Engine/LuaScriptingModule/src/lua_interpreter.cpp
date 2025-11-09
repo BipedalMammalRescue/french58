@@ -14,6 +14,9 @@ int main()
         controller->Initialize();
         controller->LoadModules();
 
+        controller->BeginFrame();
+        controller->Preupdate();
+
         std::cout << "*** LUA RUNTIME START ***" << std::endl;
         Engine::Extension::LuaScriptingModule::LuaExecutor executor(controller->GetServices());
         executor.Initialize();
@@ -26,5 +29,7 @@ int main()
         }
 
         std::cout << "*** LUA RUNTIME END ***" << std::endl;
+
+        controller->EndFrame();
     });
 }

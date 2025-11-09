@@ -4,6 +4,7 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
+#include "EngineCore/Scripting/api_event.h"
 #include "EngineCore/Scripting/api_query.h"
 #include "lua.h"
 #include "LuaScriptingModule/state_data.h"
@@ -13,20 +14,29 @@ namespace Engine::Extension::LuaScriptingModule {
 class LuaExecutor
 {
 private:
-    struct InstancedApi
+    struct InstancedApiQuery
     {
         const void* ModuleState;
         const Core::Scripting::ApiQueryBase* Api;
+    };
+
+    struct InstancedApiEvent
+    {
+        const void* ModuleState;
+        const Core::Scripting::ApiEventBase* Api;
     };
 
     const Engine::Core::Runtime::ServiceTable* m_Services;
 
     Core::Logging::Logger m_Logger;
 
-    std::vector<InstancedApi> m_ApiList;
+    std::vector<InstancedApiQuery> m_ApiQueryList;
+    std::vector<InstancedApiEvent> m_ApiEventList;
+
     lua_State* m_LuaState = nullptr;
 
-    static int LuaInvoke(lua_State* luaState);
+    static int LuaRaiseEvent(lua_State* luaState);
+    static int LuaQuery(lua_State* luaState);
     static int L1CallMultiplexer(lua_State* luaState);
 
 public:
