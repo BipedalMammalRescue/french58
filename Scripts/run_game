@@ -1,6 +1,14 @@
 #!/bin/bash
 project_root=$(dirname $(dirname "$0"))
-
 cd $project_root
-cd built_data
-Game
+
+build_game
+build_game_result=$?
+
+if [ $build_game_result != 0 ]; then
+    echo "> Build failed; won't execute game"
+    exit $build_game_result
+else
+    cd built_data
+    Game
+fi

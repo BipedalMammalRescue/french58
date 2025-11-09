@@ -64,6 +64,8 @@ public:
         return ToApiData(result.Get());
     }
 
+    Engine::Core::Scripting::ApiDataDefinition GetP1Type() const override { return Engine::Core::Scripting::GetApiDataDefinition<TP1>(); }
+    
     ApiDataDefinition GetReturnType() const override { return GetApiDataDefinition<TRet>(); }
 };
 

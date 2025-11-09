@@ -6,6 +6,11 @@
 namespace Engine::Core::Runtime 
 {
 
+struct EventWriterCheckpoint
+{
+    size_t PrevLength;
+};
+
 class EventWriter
 {
 private:
@@ -32,6 +37,7 @@ private:
     }
 
 public:
+    // TODO: should use something more descriptive than integer
     template <typename TEvent>
     void WriteInputEvent(const EventOwner<TEvent>* owner, TEvent eventData, int authorPath)
     {
@@ -41,6 +47,21 @@ public:
     inline EventStream OpenReadStream()
     {
         return EventStream(&m_Data);
+    }
+
+    inline bool HasEvents() const
+    {
+        return m_Data.size() > sizeof(EventHeader);
+    }
+
+    inline EventWriterCheckpoint CreateCheckpoint() const 
+    {
+        return { m_Data.size() };
+    }
+
+    inline void Rollback(EventWriterCheckpoint checkpoint)
+    {
+        m_Data.resize(checkpoint.PrevLength);
     }
 };
 

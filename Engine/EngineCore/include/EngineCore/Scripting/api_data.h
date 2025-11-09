@@ -9,12 +9,30 @@
 #include "glm/ext/vector_float3.hpp"
 #include "glm/ext/vector_float4.hpp"
 
+#define DECLARE_SE_OBJECT(name, checker)\
+template<> Engine::Core::Scripting::ApiDataDefinition Engine::Core::Scripting::GetApiDataDefinition<name>()\
+{   static const char typeName[] = #name;\
+    static const Engine::Core::Scripting::OpaqueObjectMetadata typeMetadata = { typeName };\
+    Engine::Core::Scripting::ApiDataDefinition type {};\
+    type.Type = Engine::Core::Scripting::ApiDataType::Object;\
+    type.SubType.Object = &typeMetadata;\
+    return type; }\
+template <>\
+bool Engine::Core::Scripting::CheckOpaqueObjectType<name>(const Runtime::ServiceTable* services, const void* moduleState, const void* data)\
+{ return checker(services, moduleState, data); }
+
+
 namespace Engine::Core::Runtime {
     class ServiceTable;
 }
 
 
 namespace Engine::Core::Scripting {
+
+struct OpaqueObjectMetadata
+{
+    const char* Name;
+};
 
 enum class ApiDataType : unsigned char
 {
@@ -27,14 +45,14 @@ struct ApiDataDefinition
 {
     ApiDataType Type;
     // only used for variants
-    Pipeline::VariantType SubType;
+    union {
+        Pipeline::VariantType Variant;
+        const OpaqueObjectMetadata* Object;
+    } SubType;
 };
 
 template <typename T>
-ApiDataDefinition GetApiDataDefinition()
-{
-    return { ApiDataType::Object };
-}
+ApiDataDefinition GetApiDataDefinition();
 
 template<>
 inline ApiDataDefinition GetApiDataDefinition<unsigned char>()

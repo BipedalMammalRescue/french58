@@ -9,6 +9,6 @@ echo "Entering code shell, $temp_path will be temporarily added to the PATH envi
 PATH=$temp_path:$PATH
 echo "To exit code shell, run \"exit\""
 
-ASSET_ROOT=$project_root/Assets PROJECT_ROOT=$project_root bash
+ASSET_ROOT=$project_root/Assets PROJECT_ROOT=$project_root CMAKE_COLOR_DIAGNOSTICS=ON bash
 
 echo "Exiting code shell..."

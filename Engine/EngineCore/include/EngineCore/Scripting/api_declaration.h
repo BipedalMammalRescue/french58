@@ -1,3 +1,7 @@
+#pragma once
+
+#include <EngineCore/Scripting/api_data.h>
+
 #define DECLARE_SE_API_0(name, returnType, runCore)\
 class name : public Engine::Core::Scripting::ApiQuery_0<returnType>\
 {\
@@ -27,7 +31,6 @@ public: \
     {\
         return #name; \
     }\
-    Engine::Core::Scripting::ApiDataDefinition GetP1Type() const override { return Engine::Core::Scripting::GetApiDataDefinition<tp1>(); } \
     static const Engine::Core::Scripting::ApiQueryBase* GetQuery()\
     { \
         static const name query; \

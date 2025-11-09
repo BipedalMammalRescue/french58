@@ -1,26 +1,53 @@
 #include "LuaScriptingModule/lua_scripting_module.h"
+#include "EngineCore/Pipeline/asset_definition.h"
+#include "EngineCore/Pipeline/component_definition.h"
 #include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Pipeline/name_pair.h"
+#include "EngineCore/Runtime/event_manager.h"
+#include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
-#include "EngineCore/Scripting/api_declaration.h"
 #include "EngineCore/Scripting/api_query.h"
+#include "LuaScriptingModule/Assets/lua_script.h"
+#include "LuaScriptingModule/Components/script_node.h"
+#include "LuaScriptingModule/api.h"
+#include "LuaScriptingModule/lua_executor.h"
 
 using namespace Engine::Extension::LuaScriptingModule;
 
+#define MODULE_NAME HASH_NAME("LuaScriptingModule")
+
+void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, void* localState, Engine::Core::Runtime::EventWriter* writer)
+{
+    auto moduleState = static_cast<const LuaScriptingModuleState*>(services->ModuleManager->FindModule(MODULE_NAME.Hash));
+    auto executor = static_cast<LuaExecutor*>(localState);
+
+    for (const auto& scriptNode : moduleState->GetNodes())
+    {
+        if (!executor->SelectScript(scriptNode.ScriptIndex))
+            continue;
+        executor->ExecuteNode(scriptNode, writer);
+    }
+}
+
 void* InitializeModule(Engine::Core::Runtime::ServiceTable* services)
 {
-    return new int();
+    auto newState = new LuaScriptingModuleState(services);
+    
+    Engine::Core::Runtime::EventSystemInstance newSystem {
+        ScriptNodeEventSystem,
+        "ScriptNodeExecutor",
+        newState->GetExecutor()
+    };
+
+    services->EventManager->RegisterEventSystem(&newSystem, 1);
+
+    return newState;
 }
 
 void DisposeModule(Engine::Core::Runtime::ServiceTable* services, void* moduleState)
 {
-    delete static_cast<int*>(moduleState);
+    delete static_cast<LuaScriptingModuleState*>(moduleState);
 }
-
-int TestApiDelegate(const Engine::Core::Runtime::ServiceTable*, const void*, const int* p1)
-{
-    return (*p1) << 2;
-}
-DECLARE_SE_API_1(TestApi, int, int, TestApiDelegate);
 
 Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::GetModuleDefinition()
 {
@@ -28,19 +55,35 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::
         TestApi::GetQuery()
     };
 
+    static const Core::Pipeline::AssetDefinition assets[] = {
+        {
+            HASH_NAME("LuaScript"),
+            Assets::LoadLuaScript,
+            Assets::UnloadLuaScript,
+        }
+    };
+
+    static const Core::Pipeline::ComponentDefinition components[] = {
+        {
+            HASH_NAME("ScriptNode"),
+            Components::CompileScriptNode,
+            Components::LoadScriptNode
+        }
+    };
+
     return Core::Pipeline::ModuleDefinition 
     {
-        HASH_NAME("LuaScriptingModule"),
+        MODULE_NAME,
         InitializeModule,
         DisposeModule,
+        assets,
+        sizeof(assets) / sizeof(Core::Pipeline::AssetDefinition),
         nullptr,
         0,
         nullptr,
         0,
-        nullptr,
-        0,
-        nullptr,
-        0,
+        components,
+        sizeof(components) / sizeof(Core::Pipeline::ComponentDefinition),
         apis,
         sizeof(apis) / sizeof(void*)
     };

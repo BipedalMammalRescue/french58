@@ -1,0 +1,11 @@
+{
+    "Module": "LuaScriptingModule",
+    "Type": "LuaScript",
+    "Data": {
+        "$type": "obj",
+        "Source": {
+            "$type": "leaf",
+            "Path": "LuaScripts/example_gameplay_logic.lua"
+        }
+    }
+}
