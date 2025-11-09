@@ -215,5 +215,16 @@
             ]
         }
     ],
-    "Components": []
+    "Components": [
+        {
+            "Name": "example_script",
+            "Module": "LuaScriptingModule",
+            "Type": "ScriptNode",
+            "Fields": {
+                "Script": {
+                    "Path": "LuaScripts/example_gameplay_logic.se_asset"
+                }
+            }
+        }
+    ]
 }

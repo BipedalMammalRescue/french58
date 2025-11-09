@@ -19,7 +19,7 @@ struct InstancedScriptNode
 
 struct InstancedScript
 {
-    std::vector<unsigned char> Code;
+    int ScriptIndex;
     std::vector<InstancedScriptNode> Nodes;
 };
 

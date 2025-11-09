@@ -10,13 +10,22 @@ Engine::Core::Runtime::CallbackResult Assets::LoadLuaScript(Core::Pipeline::IAss
 {
     auto state = static_cast<LuaScriptingModuleState*>(moduleState);
 
-    state->GetLoadedScripts().reserve(inputStreams->Count());
+    state->GetLoadedScripts().reserve(state->GetLoadedScripts().size() + inputStreams->Count());
     while (inputStreams->MoveNext())
     {
-        state->GetLoadedScripts()[inputStreams->GetCurrent().ID] = {
-            std::vector<unsigned char>(std::istreambuf_iterator<char>(*inputStreams->GetCurrent().Storage), {}),
-            {}
-        };
+        auto code = std::vector<unsigned char>(std::istreambuf_iterator<char>(*inputStreams->GetCurrent().Storage), {});
+
+        auto foundScript = state->GetLoadedScripts().find(inputStreams->GetCurrent().ID);
+        if (foundScript != state->GetLoadedScripts().end())
+        {
+            state->GetExecutor()->LoadScript(&code, foundScript->second.ScriptIndex);
+        }
+        else 
+        {
+            int newIndex = state->IncrementScriptCounter();
+            state->GetExecutor()->LoadScript(&code, newIndex);
+            state->GetLoadedScripts()[inputStreams->GetCurrent().ID] = { newIndex };
+        }
     }
 
     return Core::Runtime::CallbackSuccess();

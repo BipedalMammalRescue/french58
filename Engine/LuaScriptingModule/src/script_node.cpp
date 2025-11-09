@@ -51,7 +51,7 @@ bool Components::CompileScriptNode(Core::Pipeline::RawComponent input, std::ostr
     return true;
 }
 
-Engine::Core::Runtime::CallbackResult Components::Load(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
 {
     auto state = static_cast<LuaScriptingModuleState*>(moduleState);
 

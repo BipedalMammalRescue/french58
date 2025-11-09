@@ -1,11 +1,14 @@
 #include "LuaScriptingModule/lua_scripting_module.h"
 #include "EngineCore/Pipeline/asset_definition.h"
+#include "EngineCore/Pipeline/component_definition.h"
 #include "EngineCore/Pipeline/module_definition.h"
+#include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/event_manager.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_query.h"
 #include "LuaScriptingModule/Assets/lua_script.h"
+#include "LuaScriptingModule/Components/script_node.h"
 #include "LuaScriptingModule/api.h"
 #include "LuaScriptingModule/lua_executor.h"
 
@@ -20,7 +23,8 @@ void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, 
 
     for (const auto& scriptGroup : moduleState->GetLoadedScripts())
     {
-        executor->LoadScript(&scriptGroup.second.Code);
+        if (!executor->SelectScript(scriptGroup.second.ScriptIndex))
+            continue;
 
         for (const auto& node : scriptGroup.second.Nodes)
         {
@@ -57,9 +61,17 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::
 
     static const Core::Pipeline::AssetDefinition assets[] = {
         {
-            HASH_NAME("ScriptNode"),
+            HASH_NAME("LuaScript"),
             Assets::LoadLuaScript,
             Assets::UnloadLuaScript,
+        }
+    };
+
+    static const Core::Pipeline::ComponentDefinition components[] = {
+        {
+            HASH_NAME("ScriptNode"),
+            Components::CompileScriptNode,
+            Components::LoadScriptNode
         }
     };
 
@@ -74,8 +86,8 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::
         0,
         nullptr,
         0,
-        nullptr,
-        0,
+        components,
+        sizeof(components) / sizeof(Core::Pipeline::ComponentDefinition),
         apis,
         sizeof(apis) / sizeof(void*)
     };

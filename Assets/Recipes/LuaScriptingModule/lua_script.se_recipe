@@ -1,0 +1,11 @@
+{
+    "Module": "LuaScriptingModule",
+    "Type": "LuaScript",
+    "Action": {
+        "$type": "command",
+        "Process": "cat",
+        "Arguments": [
+            "#(Source)"
+        ]
+    }
+}

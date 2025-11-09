@@ -11,6 +11,7 @@
 
 using namespace Engine::Extension::LuaScriptingModule;
 
+const char SeScriptTable[] = "SE_SCRIPT_TABLE";
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
 const char SeApiTable[] = "SE_API_TABLE";
 const char SeEventTable[] = "SE_EVENT_TABLE";
@@ -466,6 +467,10 @@ void LuaExecutor::Initialize()
     }
     lua_setglobal(m_LuaState, SeEventTable);
 
+    // script table (not sure how many scritps are there)
+    lua_createtable(m_LuaState, 0, 0);
+    lua_setglobal(m_LuaState, SeScriptTable);
+
     // install the invoke function
     lua_pushcfunction(m_LuaState, LuaQuery);
     lua_setglobal(m_LuaState, SeQuery);
@@ -485,6 +490,8 @@ void LuaExecutor::Initialize()
     lua_setglobal(m_LuaState, "vec4");
 
     // TODO: matrix and multiplication and stuff
+
+    m_Logger.Information("Lua executor initialized.");
 }
 
 LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services)
@@ -520,19 +527,28 @@ void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const Insta
     auto result = lua_pcall(m_LuaState, 0, 0, 0);
     if (result != LUA_OK)
     {
+        // TODO: this is a hack, it's not memory safe: we need a real string passing mechanism
         writer->Rollback(checkpoint);
-        m_Logger.Error("Lua script execution failed, return code: {return}", { result });
+        m_Logger.Error("Lua script execution failed, return code: {return}, error: {error}", { result, lua_tostring(m_LuaState, -1) });
     }
 }
 
-bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(const std::vector<unsigned char> *byteCode) 
+bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(const std::vector<unsigned char> *byteCode, int index) 
 {
+    lua_getglobal(m_LuaState, SeScriptTable);
+    lua_pushinteger(m_LuaState, index);
+
     auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode->data(), byteCode->size(), "");
     if (result != LUA_OK)
-    {
-        // TDOO: log error
         return false;
-    }
-
+    
+    lua_settable(m_LuaState, -3);
     return true;
+}
+
+bool LuaExecutor::SelectScript(int index)
+{
+    lua_getglobal(m_LuaState, SeScriptTable);
+    lua_rawgeti(m_LuaState, -1, index);
+    return lua_isfunction(m_LuaState, -1);
 }

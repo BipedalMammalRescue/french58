@@ -48,7 +48,8 @@ public:
     Core::Runtime::CallbackResult ExecuteFile(const char* path);
     Core::Runtime::CallbackResult ExecuteString(const char* string);
 
-    bool LoadScript(const std::vector<unsigned char> *byteCode);
+    bool LoadScript(const std::vector<unsigned char> *byteCode, int index);
+    bool SelectScript(int index);
     void ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer);
 };
 

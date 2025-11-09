@@ -14,10 +14,15 @@ class LuaScriptingModuleState
 {
 private:
     std::unordered_map<Core::Pipeline::HashId, InstancedScript> LoadedScripts;
+
     LuaExecutor m_Executor;
+    int m_ScriptCounter;
 
 public:
-    LuaScriptingModuleState(const Engine::Core::Runtime::ServiceTable* services) : m_Executor(services) {}
+    LuaScriptingModuleState(const Engine::Core::Runtime::ServiceTable* services) : m_Executor(services), m_ScriptCounter(0)
+    {
+        m_Executor.Initialize();
+    }
 
     inline std::unordered_map<Core::Pipeline::HashId, InstancedScript>& GetLoadedScripts() 
     {
@@ -32,6 +37,12 @@ public:
     inline LuaExecutor* GetExecutor() 
     {
         return &m_Executor;
+    }
+
+    inline int IncrementScriptCounter()
+    {
+        m_ScriptCounter ++;
+        return m_ScriptCounter - 1;
     }
 };
 
