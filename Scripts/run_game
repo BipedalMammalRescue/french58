@@ -1,6 +1,10 @@
 #!/bin/bash
 project_root=$(dirname $(dirname "$0"))
-
 cd $project_root
+
+echo "> Building game ..."
+cmake --build build --config Release --target Game
+echo "> Game built."
+
 cd built_data
 Game
