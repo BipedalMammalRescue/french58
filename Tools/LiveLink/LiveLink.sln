@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveLink.Abstractions", "LiveLink.Abstractions\LiveLink.Abstractions.csproj", "{100B97D7-5107-4D76-A083-8D5C4CF0AE14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveLink.Ping", "LiveLink.Ping\LiveLink.Ping.csproj", "{AF9A8040-91D8-4EF0-8814-B274A2AADD42}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{100B97D7-5107-4D76-A083-8D5C4CF0AE14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{100B97D7-5107-4D76-A083-8D5C4CF0AE14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{100B97D7-5107-4D76-A083-8D5C4CF0AE14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{100B97D7-5107-4D76-A083-8D5C4CF0AE14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF9A8040-91D8-4EF0-8814-B274A2AADD42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF9A8040-91D8-4EF0-8814-B274A2AADD42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF9A8040-91D8-4EF0-8814-B274A2AADD42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF9A8040-91D8-4EF0-8814-B274A2AADD42}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

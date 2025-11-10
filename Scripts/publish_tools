@@ -44,3 +44,11 @@ cd $project_root
 mkdir -p bin/src/InputActionCompiler
 cp -r Tools/InputActionEditor/InputActionCompiler/bin/Release/net9.0/publish/* bin/src/InputActionCompiler
 ln -s src/InputActionCompiler/InputActionCompiler bin/InputActionCompiler
+
+echo "Building LiveLink.Ping ..."
+cd $project_root/Tools/LiveLink/LiveLink.Ping
+dotnet publish
+cd $project_root
+mkdir -p bin/src/LiveLink.Ping
+cp -r Tools/LiveLink/LiveLink.Ping/bin/Release/net9.0/publish/* bin/src/LiveLink.Ping
+ln -s src/LiveLink.Ping/LiveLink.Ping bin/LiveLink.Ping
