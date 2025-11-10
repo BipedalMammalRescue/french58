@@ -8,6 +8,7 @@
 #include <EngineUtils/ErrorHandling/exceptions.h>
 
 #include <EngineCore/Pipeline/asset_enumerable.h>
+#include <EngineCore/Logging/logger_service.h>
 #include <EngineCore/Runtime/graphics_layer.h>
 #include <EngineCore/Runtime/service_table.h>
 

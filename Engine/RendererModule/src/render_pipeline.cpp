@@ -1,9 +1,9 @@
 #include "RendererModule/Assets/render_pipeline.h"
 #include "RendererModule/renderer_module.h"
 
+#include <EngineCore/Logging/logger_service.h>
 #include <EngineCore/Pipeline/hash_id.h>
 #include <EngineCore/Runtime/crash_dump.h>
-#include <EngineCore/Logging/logger.h>
 #include <EngineUtils/ErrorHandling/exceptions.h>
 #include <EngineCore/Pipeline/asset_enumerable.h>
 #include <EngineCore/Runtime/graphics_layer.h>

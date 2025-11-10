@@ -3,6 +3,7 @@
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "LiveLinkModule/live_link_module_state.h"
 #include "LiveLinkModule/live_link_session.h"
 #include "SDL3/SDL_error.h"

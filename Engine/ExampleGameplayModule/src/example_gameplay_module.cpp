@@ -2,6 +2,7 @@
 #include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Runtime/task_scheduler.h"
 #include "ExampleGameplayModule/auto_rotate_marker.h"
+#include "EngineCore/Logging/logger_service.h"
 
 #include <EngineCore/Logging/logger.h>
 #include <EngineCore/Pipeline/component_definition.h>

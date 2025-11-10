@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 

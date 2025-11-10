@@ -1,7 +1,9 @@
 #pragma once
 
-#include "EngineCore/Logging/logger_service.h"
-#include "EngineCore/Runtime/input_manager.h"
+namespace Engine::Core::Logging {
+class LoggerService;
+}
+
 namespace Engine::Core::Runtime {
 
 class GraphicsLayer;
@@ -10,6 +12,7 @@ class ModuleManager;
 class EventManager;
 class InputManager;
 class NetworkLayer;
+class TaskManager;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 
@@ -21,6 +24,7 @@ struct ServiceTable
     EventManager* EventManager;
     InputManager* InputManager;
     NetworkLayer* NetworkLayer;
+    TaskManager* TaskManager;
 };
 
 }

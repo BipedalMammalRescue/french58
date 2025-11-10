@@ -7,7 +7,6 @@
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_manager.h"
-#include "EngineCore/Runtime/service_table.h"
 
 #include <unordered_map>
 #include <vector>

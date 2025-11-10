@@ -58,5 +58,13 @@ int main()
 {
     Engine::Core::Runtime::GameLoop gameloop(Engine::Core::Pipeline::ListModules(), {});
     gameloop.AddEventSystem(&FoobarEventSystem, "FoobarEventSystem");
-    return gameloop.Run(md5::compute("Entities/example.se_entity"));
+    Engine::Core::Runtime::CallbackResult gameError = gameloop.Run(md5::compute("Entities/example.se_entity"));
+
+    if (!gameError.has_value())
+        return 0;
+
+    printf("*** GAME CRASHED ***\n");
+    printf("location: %s : %d\n", gameError->File.c_str(), gameError->Line);
+    printf("crash dump: %s\n", gameError->ErrorDetail.c_str());
+    return 1;
 }

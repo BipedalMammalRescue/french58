@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EngineCore/Scripting/api_data.h>
+#include <EngineCore/Scripting/api_query.h>
 
 #define DECLARE_SE_API_0(name, returnType, runCore)\
 class name : public Engine::Core::Scripting::ApiQuery_0<returnType>\

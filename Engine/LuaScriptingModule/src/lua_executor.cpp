@@ -5,6 +5,7 @@
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_data.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"

@@ -3,7 +3,9 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "EngineUtils/String/hex_strings.h"
+#include "EngineCore/Logging/logger_service.h"
 #include <string>
 
 using namespace Engine::Core::Runtime;

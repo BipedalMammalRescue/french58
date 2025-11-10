@@ -5,6 +5,7 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "RendererModule/renderer_module.h"
+#include <EngineCore/Logging/logger_service.h>
 #include <md5.h>
 
 using namespace Engine::Extension::RendererModule;

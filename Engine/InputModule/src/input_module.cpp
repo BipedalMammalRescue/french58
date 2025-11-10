@@ -1,5 +1,6 @@
 #include "InputModule/input_module.h"
 #include "EngineCore/Pipeline/name_pair.h"
+#include "EngineCore/Runtime/input_manager.h"
 #include "InputModule/Assets/input_action.h"
 
 #include <EngineCore/Pipeline/asset_definition.h>
