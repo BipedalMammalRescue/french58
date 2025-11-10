@@ -14,15 +14,21 @@
 
 using namespace Engine::Extension::LuaScriptingModule;
 
+// not meant for access
 const char SeScriptTable[] = "SE_SCRIPT_TABLE";
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
-const char SeApiTable[] = "SE_API_TABLE";
-const char SeEventTable[] = "SE_EVENT_TABLE";
-const char SeEntityId[] = "SE_ENTITY_ID";
-const char SeComponentId[] = "SE_COMPONENT_ID";
 const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
 
+// constants
+const char SeApiTable[] = "SE_API_TABLE";
+const char SeEventTable[] = "SE_EVENT_TABLE";
+
+// changes every node
+const char SeEntityId[] = "__entity_id";
+const char SeComponentId[] = "__component_id";
+
+// functions
 const char SeGetParameter[] = "GetParameter";
 const char SeQuery[] = "EngineQuery";
 const char SeEvent[] = "RaiseEvent";
