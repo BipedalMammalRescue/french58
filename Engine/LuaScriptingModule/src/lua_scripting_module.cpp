@@ -16,7 +16,7 @@ using namespace Engine::Extension::LuaScriptingModule;
 
 #define MODULE_NAME HASH_NAME("LuaScriptingModule")
 
-void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, void* localState, Engine::Core::Runtime::EventWriter* writer)
+static void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, void* localState, Engine::Core::Runtime::EventWriter* writer)
 {
     auto moduleState = static_cast<const LuaScriptingModuleState*>(services->ModuleManager->FindModule(MODULE_NAME.Hash));
     auto executor = static_cast<LuaExecutor*>(localState);
@@ -29,7 +29,7 @@ void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* services, 
     }
 }
 
-void* InitializeModule(Engine::Core::Runtime::ServiceTable* services)
+static void* InitializeModule(Engine::Core::Runtime::ServiceTable* services)
 {
     auto newState = new LuaScriptingModuleState(services);
     

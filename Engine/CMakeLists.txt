@@ -35,6 +35,7 @@ add_subdirectory(RendererModule)
 add_subdirectory(ExampleGameplayModule)
 add_subdirectory(InputModule)
 add_subdirectory(LuaScriptingModule)
+add_subdirectory(LiveLinkModule)
 
 # tools
 add_subdirectory(BuildComponent)
