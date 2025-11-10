@@ -9,6 +9,7 @@ class WorldState;
 class ModuleManager;
 class EventManager;
 class InputManager;
+class NetworkLayer;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 
@@ -19,6 +20,7 @@ struct ServiceTable
     ModuleManager* ModuleManager;
     EventManager* EventManager;
     InputManager* InputManager;
+    NetworkLayer* NetworkLayer;
 };
 
 }

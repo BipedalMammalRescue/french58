@@ -13,6 +13,7 @@
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/input_manager.h"
+#include "EngineCore/Runtime/network_layer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
@@ -225,6 +226,7 @@ CallbackResult GameLoop::DiagnsoticModeCore(std::function<void(IGameLoopControll
     ModuleManager moduleManager;
     EventManager eventManager(&loggerService);
     InputManager inputManager;
+    NetworkLayer networkLayer(&loggerService);
 
     // insert systems
     for (auto pair : m_EventSystems)
@@ -243,7 +245,8 @@ CallbackResult GameLoop::DiagnsoticModeCore(std::function<void(IGameLoopControll
         &worldState,
         &moduleManager,
         &eventManager,
-        &inputManager
+        &inputManager,
+        &networkLayer
     };
 
     TaskManager taskManager(&services, m_ConfigurationProvider.WorkerCount);
@@ -291,6 +294,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     ModuleManager moduleManager;
     EventManager eventManager(&loggerService);
     InputManager inputManager;
+    NetworkLayer networkLayer(&loggerService);
 
     // insert systems
     for (auto pair : m_EventSystems)
@@ -309,10 +313,15 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         &worldState,
         &moduleManager,
         &eventManager,
-        &inputManager
+        &inputManager,
+        &networkLayer
     };
 
     CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
+    if (serviceInitResult.has_value())
+        return serviceInitResult;
+
+    serviceInitResult = networkLayer.Initialize();
     if (serviceInitResult.has_value())
         return serviceInitResult;
 

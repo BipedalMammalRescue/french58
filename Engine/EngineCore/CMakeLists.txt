@@ -14,6 +14,7 @@ add_library(EngineCore STATIC
     src/event_writer.cpp
     src/task_manager.cpp
     src/input_manager.cpp
+    src/network_layer.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -6,9 +6,4 @@ namespace Engine::Extension::LiveLinkModule {
 
 Core::Pipeline::ModuleDefinition GetModuleDefinition();
 
-class LiveLinkModuleState
-{
-
-};
-
 }
