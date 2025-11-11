@@ -63,7 +63,7 @@ public:
 LoggerService::LoggerService(Engine::Core::Configuration::ConfigurationProvider configs)
 {
     auto formatter = std::make_unique<spdlog::pattern_formatter>();
-    formatter->add_flag<SdlTimeFormatFlag>('E').set_pattern("[%E %l][%t][%n] %v");
+    formatter->add_flag<SdlTimeFormatFlag>('E').set_pattern("[%E %^%l%$][%t][%n] %v");
     spdlog::set_formatter(std::move(formatter));
 }
 

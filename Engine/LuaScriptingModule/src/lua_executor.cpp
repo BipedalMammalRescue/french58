@@ -572,6 +572,7 @@ LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : 
 LuaExecutor::~LuaExecutor() 
 {
     lua_close(m_LuaState);
+    m_Logger.Information("Lua executor disposed.");
 }
 
 void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer) 

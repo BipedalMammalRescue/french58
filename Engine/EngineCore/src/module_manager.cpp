@@ -81,7 +81,7 @@ CallbackResult ModuleManager::UnloadModules()
     for (auto module : m_LoadedModules)
     {
         module.second.Definition.Dispose(m_Services, module.second.State);
-        m_Logger.Information("Unloaded module {}", module.first);
+        m_Logger.Information("Unloaded module {}:{}", module.second.Definition.Name.DisplayName, module.second.Definition.Name.Hash);
     }
 
     m_LoadedModules.clear();
