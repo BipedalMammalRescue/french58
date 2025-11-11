@@ -84,13 +84,16 @@ private:
         CallbackResult EventUpdate() override;
         CallbackResult RenderPass() override;
         CallbackResult EndFrame() override;
+
+        CallbackResult LoadAsset(Pipeline::HashIdTuple type, Pipeline::HashId assetId);
+        CallbackResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
     };
 
     // services
     Configuration::ConfigurationProvider m_ConfigurationProvider;
     Pipeline::ModuleAssembly m_Modules;
     std::unordered_map<Pipeline::HashIdTuple, Pipeline::ComponentDefinition> m_Components;
-    std::unordered_map<Pipeline::HashIdTuple, Pipeline::AssetDefinition> m_Assets;
+    std::unordered_map<Pipeline::HashIdTuple, Pipeline::AssetDefinition> m_AssetDefinitions;
 
     // events
     std::unordered_map<Pipeline::HashId, EventSystemInstance> m_EventSystems;
@@ -99,7 +102,6 @@ private:
     CallbackResult DiagnsoticModeCore(std::function<void(IGameLoopController*)> executor);
 
     // IO utilities (maybe move this to a service at sometime?)
-    CallbackResult LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger);
 
 public:
     GameLoop(Pipeline::ModuleAssembly modules, const Configuration::ConfigurationProvider& configs);
