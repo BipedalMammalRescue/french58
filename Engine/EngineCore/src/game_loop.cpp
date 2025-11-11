@@ -54,7 +54,7 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::Config
         {
             Pipeline::AssetDefinition asset = module.Assets[j];
             Pipeline::HashIdTuple tuple { module.Name.Hash, asset.Name.Hash };
-            m_Assets[tuple] = asset;
+            m_AssetDefinitions[tuple] = asset;
         }
     }
 }
@@ -239,9 +239,49 @@ static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, c
     return errorMessage;
 }
 
-CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger)
+// CallbackResult GameLoop::GameLoopController::LoadAsset(Pipeline::HashIdTuple assetGroupId, Pipeline::HashId assetId)
+// {
+//     m_TopLevelLogger.Information("Loading asset: {id}, ({module}:{type})", { assetId, assetGroupId.First, assetGroupId.Second });
+
+//     auto targetAssetType = m_Owner->m_Assets.find(assetGroupId);
+//     if (targetAssetType == m_Owner->m_Assets.end())
+//     {
+//         m_TopLevelLogger.Warning("Module state not found for asset: {module}:{type}, assets will be skipped", {assetGroupId.First, assetGroupId.Second});
+//         return CallbackSuccess();
+//     }
+
+//     auto targetModuleState = m_Services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
+//     if (targetModuleState == m_Services.ModuleManager->m_LoadedModules.end())
+//     {
+//         m_TopLevelLogger.Warning("Module state not found: {module}.", {assetGroupId.First});
+//         return CallbackSuccess();
+//     }
+
+//     AssetManagement::AssetLoadingContext context {};
+//     context.AssetId = assetId;
+//     context.AssetGroupId = assetGroupId;
+
+//     // contextualize
+//     auto contextualizeResult = targetAssetType->second.Contextualize(&m_Services, targetModuleState->second.State, assetId, context);
+//     if (contextualizeResult.has_value())
+//         return contextualizeResult;
+
+//     // load
+//     switch (context.Buffer.Type)
+//     {
+//     case AssetManagement::LoadBufferType::TransientBuffer:
+//         // open file
+
+//     case AssetManagement::LoadBufferType::ModuleBuffer:
+//         break;
+//     default:
+//         return Crash(__FILE__, __LINE__, "Error loading asset: unrecognized context buffer type returned from contextualizer. asset id = {TODO}");
+//     }
+// }
+
+CallbackResult GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityId)
 {
-    logger->Information("Loading entity {id}", {entityId});
+    m_TopLevelLogger.Information("Loading entity {id}", {entityId});
 
     char pathBuffer[] = "CD0ED230BD87479C61DB68677CAA9506.bse_entity";
     Utils::String::BinaryToHex(16, entityId.Hash.data(), pathBuffer);
@@ -252,7 +292,7 @@ CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable serv
     if (!entityFile.is_open())
     {
         static const char errorMessage[] = "Entity file can't be opened.";
-        logger->Fatal(errorMessage);
+        m_TopLevelLogger.Fatal(errorMessage);
         return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
@@ -260,7 +300,7 @@ CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable serv
     if (!CheckMagicWord(0xCCBBFFF1, &entityFile))
     {
         static const char errorMessage[] = "Entity magic word for asset section mismatch.";
-        logger->Fatal(errorMessage);
+        m_TopLevelLogger.Fatal(errorMessage);
         return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
@@ -271,29 +311,29 @@ CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable serv
         Pipeline::HashIdTuple assetGroupId;
         entityFile.read((char*)&assetGroupId, 32);
 
-        auto targetAssetType = m_Assets.find(assetGroupId);
-        if (targetAssetType == m_Assets.end())
+        auto targetAssetType = m_Owner->m_AssetDefinitions.find(assetGroupId);
+        if (targetAssetType == m_Owner->m_AssetDefinitions.end())
         {
-            logger->Fatal("Module state not found for asset: {module}:{type}.", {assetGroupId.First, assetGroupId.Second});
+            m_TopLevelLogger.Fatal("Module state not found for asset: {module}:{type}.", {assetGroupId.First, assetGroupId.Second});
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
         }
 
-        auto targetModuleState = services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
-        if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
+        auto targetModuleState = m_Services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
+        if (targetModuleState == m_Services.ModuleManager->m_LoadedModules.end())
         {
-            logger->Fatal("Module state not found: {module}.", {assetGroupId.First});
+            m_TopLevelLogger.Fatal("Module state not found: {module}.", {assetGroupId.First});
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
         }
 
         StreamAssetEnumerator enumerator(&entityFile);
-        targetAssetType->second.Load(&enumerator, &services, targetModuleState->second.State);
+        targetAssetType->second.Load(&enumerator, &m_Services, targetModuleState->second.State);
     }
 
     // read the entities
-    if (!CheckMagicWord(0xCCBBFFF2, &entityFile) || !services.WorldState->LoadEntities(&entityFile))
+    if (!CheckMagicWord(0xCCBBFFF2, &entityFile) || !m_Services.WorldState->LoadEntities(&entityFile))
     {
         static const char errorMessage[] = "Entity magic word for entity section mismatch.";
-        logger->Fatal(errorMessage);
+        m_TopLevelLogger.Fatal(errorMessage);
         return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
@@ -301,7 +341,7 @@ CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable serv
     if (!CheckMagicWord(0xCCBBFFF3, &entityFile))
     {
         static const char errorMessage[] = "Entity magic word for component section mismatch.";
-        logger->Fatal(errorMessage);
+        m_TopLevelLogger.Fatal(errorMessage);
         return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
     }
 
@@ -312,26 +352,26 @@ CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable serv
         Pipeline::HashIdTuple componentGroupId;
         entityFile.read((char*)&componentGroupId, 32);
         
-        auto targetComponent = m_Components.find(componentGroupId);
-        if (targetComponent == m_Components.end())
+        auto targetComponent = m_Owner->m_Components.find(componentGroupId);
+        if (targetComponent == m_Owner->m_Components.end())
         {
-            logger->Fatal("Module state not found for component: {module}:{type}.", {componentGroupId.First, componentGroupId.Second});
+            m_TopLevelLogger.Fatal("Module state not found for component: {module}:{type}.", {componentGroupId.First, componentGroupId.Second});
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
         }
 
-        auto targetModuleState = services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
-        if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
+        auto targetModuleState = m_Services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
+        if (targetModuleState == m_Services.ModuleManager->m_LoadedModules.end())
         {
-            logger->Fatal("Module state not found: {module}.", {componentGroupId.First});
+            m_TopLevelLogger.Fatal("Module state not found: {module}.", {componentGroupId.First});
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
         }
 
         int componentCount = 0;
         entityFile.read((char*)&componentCount, sizeof(int));
-        targetComponent->second.Load(componentCount, &entityFile, &services, targetModuleState->second.State);
+        targetComponent->second.Load(componentCount, &entityFile, &m_Services, targetModuleState->second.State);
     }
 
-    logger->Verbose("Loaded {assetC} asset groups, {componentCount} component groups.", {assetGroupCount, componentGroupCount});
+    m_TopLevelLogger.Verbose("Loaded {assetC} asset groups, {componentCount} component groups.", {assetGroupCount, componentGroupCount});
     return CallbackSuccess();
 }
 
@@ -397,12 +437,6 @@ Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopC
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::UnloadModules() 
 {
     return m_ModuleManager.UnloadModules();
-}
-
-Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityId) 
-{
-    // load the first scene
-    return m_Owner->LoadEntity(entityId, m_Services, &m_TopLevelLogger);
 }
 
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::BeginFrame() 
