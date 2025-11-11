@@ -30,6 +30,7 @@ private:
     static int LuaRaiseEvent(lua_State* luaState);
     static int LuaQuery(lua_State* luaState);
     static int L1CallMultiplexer(lua_State* luaState);
+    static int LuaPrint(lua_State* luaState);
 
 public:
     LuaExecutor(const Engine::Core::Runtime::ServiceTable* services);

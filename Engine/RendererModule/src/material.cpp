@@ -17,14 +17,12 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-const char* LoggingChannels[] = {"MaterialLoader"};
-
 Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
                   Core::Runtime::ServiceTable *services,
                   void *moduleState)
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
-    Core::Logging::Logger logger = services->LoggerService->CreateLogger(LoggingChannels, 1);
+    Core::Logging::Logger logger = services->LoggerService->CreateLogger("MaterialLoader");
 
     while (inputStreams->MoveNext())
     {

@@ -149,6 +149,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
             return gameresult;
     }
 
+    controller.UnloadModules();
     return CallbackSuccess();
 }
 
@@ -281,7 +282,7 @@ static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, c
 
 CallbackResult GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityId)
 {
-    m_TopLevelLogger.Information("Loading entity {id}", {entityId});
+    m_TopLevelLogger.Information("Loading entity {}", entityId);
 
     char pathBuffer[] = "CD0ED230BD87479C61DB68677CAA9506.bse_entity";
     Utils::String::BinaryToHex(16, entityId.Hash.data(), pathBuffer);
@@ -314,14 +315,14 @@ CallbackResult GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityI
         auto targetAssetType = m_Owner->m_AssetDefinitions.find(assetGroupId);
         if (targetAssetType == m_Owner->m_AssetDefinitions.end())
         {
-            m_TopLevelLogger.Fatal("Module state not found for asset: {module}:{type}.", {assetGroupId.First, assetGroupId.Second});
+            m_TopLevelLogger.Fatal("Module state not found for asset: {}:{}.", assetGroupId.First, assetGroupId.Second);
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
         }
 
         auto targetModuleState = m_Services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
         if (targetModuleState == m_Services.ModuleManager->m_LoadedModules.end())
         {
-            m_TopLevelLogger.Fatal("Module state not found: {module}.", {assetGroupId.First});
+            m_TopLevelLogger.Fatal("Module state not found: {}.", assetGroupId.First);
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
         }
 
@@ -355,14 +356,14 @@ CallbackResult GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityI
         auto targetComponent = m_Owner->m_Components.find(componentGroupId);
         if (targetComponent == m_Owner->m_Components.end())
         {
-            m_TopLevelLogger.Fatal("Module state not found for component: {module}:{type}.", {componentGroupId.First, componentGroupId.Second});
+            m_TopLevelLogger.Fatal("Module state not found for component: {}:{}.", componentGroupId.First, componentGroupId.Second);
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
         }
 
         auto targetModuleState = m_Services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
         if (targetModuleState == m_Services.ModuleManager->m_LoadedModules.end())
         {
-            m_TopLevelLogger.Fatal("Module state not found: {module}.", {componentGroupId.First});
+            m_TopLevelLogger.Fatal("Module state not found: {}.", componentGroupId.First);
             return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
         }
 
@@ -371,7 +372,7 @@ CallbackResult GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityI
         targetComponent->second.Load(componentCount, &entityFile, &m_Services, targetModuleState->second.State);
     }
 
-    m_TopLevelLogger.Verbose("Loaded {assetC} asset groups, {componentCount} component groups.", {assetGroupCount, componentGroupCount});
+    m_TopLevelLogger.Verbose("Loaded {} asset groups, {} component groups.", assetGroupCount, componentGroupCount);
     return CallbackSuccess();
 }
 
@@ -382,7 +383,7 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Configuration::Co
     : m_LoggerService(configs),
     m_GraphicsLayer(&configs, &m_LoggerService),
     m_WorldState(&configs),
-    m_ModuleManager(),
+    m_ModuleManager(&m_LoggerService),
     m_EventManager(&m_LoggerService),
     m_InputManager(),
     m_NetworkLayer(&m_LoggerService),
@@ -398,7 +399,7 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Configuration::Co
         &m_TaskManager
     },
     m_Owner(owner),
-    m_TopLevelLogger(m_LoggerService.CreateLogger(TopLevelLogChannels, 1)),
+    m_TopLevelLogger(m_LoggerService.CreateLogger("GameLoop")),
     m_EventWriter()
 {
     for (const auto& system : owner->m_EventSystems)
@@ -414,10 +415,6 @@ const Engine::Core::Runtime::ServiceTable *Engine::Core::Runtime::GameLoop::Game
 
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::Initialize() 
 {
-    CallbackResult loggerStartResult = m_LoggerService.StartLogger();
-    if (loggerStartResult.has_value())
-        return loggerStartResult;
-
     CallbackResult graphicsInitResult = m_GraphicsLayer.InitializeSDL();
     if (graphicsInitResult.has_value())
         return graphicsInitResult;

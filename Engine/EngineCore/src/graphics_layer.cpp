@@ -31,10 +31,10 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	if (m_Window == nullptr)
 	{
         static const char errorMessage[] = "Window creation failed.";
-        m_Logger.Fatal(errorMessage, {});
+        m_Logger.Fatal(errorMessage);
 		return SdlCrashOut(errorMessage);
 	}
-    m_Logger.Information("Window created.", {});
+    m_Logger.Information("Window created.");
 
 	// Create GPU device
 	m_GpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, m_Configs->UseDeviceValidation, NULL);
@@ -42,10 +42,10 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 	{
         const char errorMessage[] = "GPU device creation failed.";
 		// Logging::GetLogger()->Error(s_ServiceName, "Failed to create GPU device! SDL Error: %s", SDL_GetError());
-        m_Logger.Fatal(errorMessage, {});
+        m_Logger.Fatal(errorMessage);
 		return SdlCrashOut(errorMessage);
 	}
-    m_Logger.Information("GPU device created", {});
+    m_Logger.Information("GPU device created");
 	
 	// setup gpu window
 	if (!SDL_ClaimWindowForGPUDevice(m_GpuDevice, m_Window))
@@ -54,7 +54,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 		m_Logger.Fatal(errorMessage);
         return SdlCrashOut(errorMessage);
 	}
-    m_Logger.Information("Accelerated window created.", {});
+    m_Logger.Information("Accelerated window created.");
 	
 	SDL_SetWindowResizable(m_Window, false);
     SDL_ShowWindow(m_Window);
@@ -83,7 +83,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
 
 CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 {
-    m_Logger.Verbose("Begin frame.", {});
+    m_Logger.Verbose("Begin frame.");
 
     // create command buffer
     m_CommandBuffer = SDL_AcquireGPUCommandBuffer(m_GpuDevice);
@@ -122,7 +122,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
 
 CallbackResult Engine::Core::Runtime::GraphicsLayer::EndFrame()
 {
-    m_Logger.Verbose("End frame.", {});
+    m_Logger.Verbose("End frame.");
 
 	if (!SDL_SubmitGPUCommandBuffer(m_CommandBuffer))
     {
@@ -137,7 +137,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::EndFrame()
 }
 
 GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider* configs, Logging::LoggerService* loggerService)
-	: m_Configs(configs), m_Logger(loggerService->CreateLogger(LogChannels, 1)) {}
+	: m_Configs(configs), m_Logger(loggerService->CreateLogger("GraphicsLayer")) {}
 
 Engine::Core::Runtime::GraphicsLayer::~GraphicsLayer()
 {

@@ -1,50 +1,57 @@
 #pragma once
 
-#include "EngineCore/Logging/log_data.h"
+#include "spdlog/spdlog.h"
 
-#include <cstddef>
-#include <initializer_list>
+#include <memory>
 
 namespace Engine::Core::Logging {
 
 class LoggerService;
 
-struct Logger
+class Logger
 {
-    const char** Channels;
-    size_t ChanneCount;
-    LoggerService* Service;
+    std::shared_ptr<spdlog::logger> m_CoreLogger;
 
-    bool Write(LogLevel level, const char* message, std::initializer_list<LogParameter> params);
+public:
+    Logger(std::shared_ptr<spdlog::logger> coreLogger) : m_CoreLogger(coreLogger) {}
 
-    inline bool Verbose(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Verbose(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Verbose, message, params);
+        m_CoreLogger->trace(message, std::forward<Args>(args)...);
     }
 
-    inline bool Debug(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Debug(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Debug, message, params);
+        m_CoreLogger->debug(message, std::forward<Args>(args)...);
     }
 
-    inline bool Information(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Information(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Information, message, params);
+        m_CoreLogger->info(message, std::forward<Args>(args)...);
+
     }
 
-    inline bool Warning(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Warning(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Warning, message, params);
+        m_CoreLogger->warn(message, std::forward<Args>(args)...);
+
     }
 
-    inline bool Error(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Error(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Error, message, params);
+        m_CoreLogger->error(message, std::forward<Args>(args)...);
+
     }
 
-    inline bool Fatal(const char* message, std::initializer_list<LogParameter> params = {})
+    template <typename... Args>
+    inline void Fatal(const char* message, Args &&...args)
     {
-        return Write(LogLevel::Fatal, message, params);
+        m_CoreLogger->critical(message, std::forward<Args>(args)...);
     }
 };
 

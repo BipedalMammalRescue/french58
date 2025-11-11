@@ -10,6 +10,7 @@ add_subdirectory(lib/constexpr-md5-cpp)
 add_subdirectory(lib/concurrentqueue)
 add_subdirectory(lib/lua-5.3.6)
 add_subdirectory(lib/SDL_net)
+add_subdirectory(lib/spdlog)
 
 add_subdirectory(EngineUtils)
 

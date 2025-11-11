@@ -12,17 +12,14 @@
 
 using namespace Engine::Extension::LiveLinkModule;
 
-static const char* LogChannels[] = { "LiveLinkModule" };
-
 static void* InitializeModule(Engine::Core::Runtime::ServiceTable* services)
 {
-    Engine::Core::Logging::Logger logger = services->LoggerService->CreateLogger(LogChannels, 1);
-
+    Engine::Core::Logging::Logger logger = services->LoggerService->CreateLogger("LiveLinkModule");
     // initialize server
     NET_Server *server = NET_CreateServer(nullptr, 3459); // TODO: configuration system and configured ports
     if (server == nullptr)
     {
-        logger.Error("Failed to create server, error: {error}", { SDL_GetError() });
+        logger.Error("Failed to create server, error: {}", SDL_GetError());
         return nullptr;
     }
 
@@ -76,13 +73,13 @@ static Engine::Core::Runtime::CallbackResult PreupdateDelegate(Engine::Core::Run
 
         if (sessionSlot < 0)
         {
-            state->Logger.Warning("Maximum session count reached, dropping connection from {client}.", {NET_GetAddressString(NET_GetStreamSocketAddress(candidate))});
+            state->Logger.Warning("Maximum session count reached, dropping connection from {}.", NET_GetAddressString(NET_GetStreamSocketAddress(candidate)));
             NET_DestroyStreamSocket(candidate);
             continue;
         }
         else 
         {
-            state->Logger.Information("Accepted connection at slot {slot} from {client}.", { sessionSlot, NET_GetAddressString(NET_GetStreamSocketAddress(candidate)) });
+            state->Logger.Information("Accepted connection at slot {} from {}.", sessionSlot, NET_GetAddressString(NET_GetStreamSocketAddress(candidate)));
         }
         
         state->Connections[sessionSlot].Activate(candidate);

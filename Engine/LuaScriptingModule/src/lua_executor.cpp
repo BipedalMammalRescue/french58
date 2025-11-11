@@ -295,6 +295,23 @@ static int GetLuaScriptParameter(lua_State* luaState)
     }
 }
 
+int LuaExecutor::LuaPrint(lua_State* luaState)
+{
+    lua_getglobal(luaState, SeExecutorInstance);
+    auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
+
+    const char* str = lua_tostring(luaState, -2);
+    if (str != nullptr)
+    {
+        executor->m_Logger.Information("[lua] {}", str);
+    }
+    else 
+    {
+        executor->m_Logger.Information("[lua] <n/a>");
+    }
+
+    return 0;
+}
 
 int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
 {
@@ -546,11 +563,8 @@ void LuaExecutor::Initialize()
     m_Logger.Information("Lua executor initialized.");
 }
 
-LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services)
+LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services), m_Logger(services->LoggerService->CreateLogger("LuaExecutor"))
 {
-    static const char* LogChannel[] = { "LuaExecutor" };
-    m_Logger = services->LoggerService->CreateLogger(LogChannel, 1);
-
     m_LuaState = luaL_newstate();
     luaL_openlibs(m_LuaState);
 }
@@ -579,9 +593,8 @@ void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const Insta
     auto result = lua_pcall(m_LuaState, 0, 0, 0);
     if (result != LUA_OK)
     {
-        // TODO: this is a hack, it's not memory safe: we need a real string passing mechanism
         writer->Rollback(checkpoint);
-        m_Logger.Error("Lua script execution failed, return code: {return}, error: {error}", { result, lua_tostring(m_LuaState, -1) });
+        m_Logger.Error("Lua script execution failed, return code: {}, error: {}", result, lua_tostring(m_LuaState, -1));
     }
 }
 

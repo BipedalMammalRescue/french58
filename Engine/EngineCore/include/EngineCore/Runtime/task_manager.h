@@ -55,6 +55,7 @@ private:
 
     ServiceTable* m_ServiceTable;
     Logging::Logger m_Logger;
+    Logging::Logger m_WorkerLogger;
 
     static int ThreadRoutine(void* state);
 

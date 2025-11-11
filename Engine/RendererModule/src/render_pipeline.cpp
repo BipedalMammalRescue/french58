@@ -53,8 +53,7 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
                                                                  Core::Runtime::ServiceTable *services,
                                                                  void *moduleState)
 {
-    const char* channels[] = {"RenderPipelineLoader"};
-    Core::Logging::Logger logger = services->LoggerService->CreateLogger(channels, 1);
+    Core::Logging::Logger logger = services->LoggerService->CreateLogger("RenderPipelineLoader");
 
     ModuleState* state = static_cast<ModuleState*>(moduleState);
     while (inputStreams->MoveNext())
@@ -74,8 +73,8 @@ Engine::Core::Runtime::CallbackResult Assets::LoadRenderPipeline(Core::Pipeline:
         auto foundFragShader = state->FragmentShaders.find(fragmentShaderId);
         if (foundVertShader == state->VertexShaders.end() || foundFragShader == state->FragmentShaders.end())
         {
-            logger.Error("Error loading pipeline {pipelineId}, shaders (fragment = {frag}, vertex = {vert}) not found.", 
-                {inputStreams->GetCurrent().ID, fragmentShaderId, vertexShaderId});
+            logger.Error("Error loading pipeline {}, shaders (fragment = {}, vertex = {}) not found.", 
+                inputStreams->GetCurrent().ID, fragmentShaderId, vertexShaderId);
             continue;
         }
 

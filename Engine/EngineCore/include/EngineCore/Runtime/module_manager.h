@@ -14,6 +14,7 @@
 namespace Engine::Core::Runtime {
 
 struct RootModuleState;
+struct ServiceTable;
 
 struct ModuleInstance
 {
@@ -52,6 +53,7 @@ private:
     CallbackResult UnloadModules();
 
 public:
+    ModuleManager(Logging::LoggerService* loggerService);
     ~ModuleManager();
 
     const void* FindModule(const Pipeline::HashId& name) const;

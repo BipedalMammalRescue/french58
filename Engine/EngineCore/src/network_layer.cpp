@@ -9,9 +9,8 @@ using namespace Engine::Core::Runtime;
 static const char* LogChannels[] = { "NetworkLayer" };
 
 NetworkLayer::NetworkLayer(Engine::Core::Logging::LoggerService* loggerService)
-{
-    m_Logger = loggerService->CreateLogger(LogChannels, 1);
-}
+    : m_Logger(loggerService->CreateLogger("NetworkLayer"))
+{}
 
 NetworkLayer::~NetworkLayer()
 {

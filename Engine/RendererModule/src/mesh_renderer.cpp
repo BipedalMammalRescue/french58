@@ -55,8 +55,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
 {
     ModuleState* state = static_cast<ModuleState*>(moduleState);
 
-    const char* logChannels[] = {"MeshRendererLoader"};
-    Core::Logging::Logger logger = services->LoggerService->CreateLogger(logChannels, 1);
+    Core::Logging::Logger logger = services->LoggerService->CreateLogger("MeshRendererLoader");
 
     for (size_t i = 0; i < count; i++) 
     {
@@ -74,7 +73,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
         auto mesh = state->Meshes.find(meshId);
         if (mesh == state->Meshes.end())
         {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, mesh ({meshId}) not found.", {entity, meshId});
+            logger.Error("Failed to load mesh renderer component for entity {}, mesh ({}) not found.", entity, meshId);
             continue;
         }
 
@@ -82,7 +81,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
         auto material = state->Materials.find(materialId);
         if (material == state->Materials.end())
         {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, material ({materialId}) not found.", {entity, materialId});
+            logger.Error("Failed to load mesh renderer component for entity {}, material ({}) not found.", entity, materialId);
             continue;
         }
 
@@ -90,7 +89,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
         auto pipelineLocation = state->PipelineIndex.find(pipelineId);
         if (pipelineLocation == state->PipelineIndex.end())
         {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline ({pipelineId}) not found.", {entity, pipelineId});
+            logger.Error("Failed to load mesh renderer component for entity {}, pipeline ({}) not found.", entity, pipelineId);
             continue;
         }
         IndexedPipeline& pipeline = state->Pipelines[pipelineLocation->second];
@@ -98,7 +97,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count,
         // verify the pipeline and material are compatible
         if (pipeline.Pipeline.PrototypeId != material->second.PrototypeId)
         {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline prototype ({pipelinePrototype}) and material prototype ({materialPrototype}) do not match.", {entity, pipeline.Pipeline.PrototypeId, material->second.PrototypeId});
+            logger.Error("Failed to load mesh renderer component for entity {}, pipeline prototype ({}) and material prototype ({}) do not match.", entity, pipeline.Pipeline.PrototypeId, material->second.PrototypeId);
             continue;
         }
 

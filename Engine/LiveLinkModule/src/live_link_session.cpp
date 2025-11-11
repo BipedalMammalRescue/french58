@@ -26,7 +26,7 @@ void LiveLinkSession::ReadToExhaustion()
 
         if (newRead < 0)
         {
-            m_Logger->Information("Connection slot {num} closed.", { m_Slot });
+            m_Logger->Information("Connection slot {} closed.", m_Slot);
             Dispose();
             return;
         }
@@ -54,7 +54,7 @@ int LiveLinkSession::ProcessInputData(int validLength)
         case PacketType::Invalid:
             break;
         case PacketType::Ping:
-            m_Logger->Information("Received ping from connection slot {slot}.", {m_Slot});
+            m_Logger->Information("Received ping from connection slot {}.", m_Slot);
             break;
         }
     }
