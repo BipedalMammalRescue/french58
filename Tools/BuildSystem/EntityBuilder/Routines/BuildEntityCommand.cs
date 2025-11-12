@@ -248,6 +248,7 @@ public class BuildEntityCommand : Command
         _logger.Information("Assets built.");
 
         // copy the built assets to the output folder
+        Dictionary<string, long> assetFileSizes = [];
         Task copyTask = Task.Run(() =>
         {
             foreach (KeyValuePair<string, BuildResult> output in buildOutput)
@@ -264,6 +265,10 @@ public class BuildEntityCommand : Command
                     string assetFileName = Path.ChangeExtension(Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(output.Key))), "bse_asset");
                     string outFilePath = Path.Combine(outPath.FullName, assetFileName);
                     File.Move(output.Value.OutputPath, outFilePath, overwrite: true);
+
+                    // log file size
+                    assetFileSizes[output.Key] = new FileInfo(output.Key).Length;
+
                     _logger.Information("Asset task result <{key}> {path}", output.Key, assetFileName);
                 }
             }
@@ -380,7 +385,10 @@ public class BuildEntityCommand : Command
             outEntityFile.Write(group.Tasks.Count());
             foreach (string task in group.Tasks)
             {
+                if (!assetFileSizes.TryGetValue(task, out long length))
+                    continue;
                 outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(task)));
+                outEntityFile.Write(length);
             }
             _logger.Information("Printed asset group {module}:{type}", group.Module, group.Type);
         }
@@ -401,6 +409,9 @@ public class BuildEntityCommand : Command
         _logger.Verbose("Launching component builder processes ...");
         outEntityFile.Write(0xCCBBFFF3);
         outEntityFile.Write(componentTasks.Length);
+
+        List<(string Module, string Type, string BuiltPath, long OffsetAddress)> componentTable = [];
+
         foreach ((ComponentGroup group, Task<string?> task) in componentTasks)
         {
             string? result = await task.ConfigureAwait(false);
@@ -412,15 +423,32 @@ public class BuildEntityCommand : Command
 
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
             outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
-
             outEntityFile.Write(group.Components.Length);
 
-            await using FileStream componentFile = File.OpenRead(result);
-            await componentFile.CopyToAsync(outEntityFile);
+            long offsetAddress = outEntityFile.Position;
+            outEntityFile.Write<long>(0);
 
-            _logger.Information("Printed component group {module}:{type}", group.Module, group.Type);
+            componentTable.Add((group.Module, group.Type, result, offsetAddress));
+
+            _logger.Information("Printed component group {module}:{type} metadata", group.Module, group.Type);
         }
-        _logger.Information("Component section printed.");
+        _logger.Information("Component table printed.");
+
+        // write component storage
+        foreach ((string module, string type, string builtPath, long offsetAddress) in componentTable)
+        {
+            long savedPosition = outEntityFile.Position;
+            outEntityFile.Seek(offsetAddress, SeekOrigin.Begin);
+            outEntityFile.Write(savedPosition);
+            outEntityFile.Seek(savedPosition, SeekOrigin.Begin);
+
+            using FileStream componentFile = File.OpenRead(builtPath);
+            outEntityFile.Write(componentFile.Length);
+            componentFile.CopyTo(outEntityFile);
+
+            _logger.Information("Printed component group {module}:{type} storage", module, type);
+        }
+        _logger.Information("Component storage printed.");
 
         // wait for tasks to finish
         await copyTask.ConfigureAwait(false);

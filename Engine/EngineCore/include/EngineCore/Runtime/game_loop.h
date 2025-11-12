@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
@@ -70,6 +71,10 @@ private:
 
         Logging::Logger m_TopLevelLogger;
         EventWriter m_EventWriter;
+
+        std::vector<AssetManagement::AssetLoadingContext> m_ContexualizeQueue;
+        std::vector<AssetManagement::AssetLoadingContext> m_IndexQueue;
+        std::unordered_multimap<Pipeline::HashId, AssetManagement::AssetLoadingContext> m_AssetTable;
 
     public:
         GameLoopController(Configuration::ConfigurationProvider configs, GameLoop* owner);

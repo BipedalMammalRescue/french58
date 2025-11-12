@@ -11,7 +11,7 @@
 namespace Engine::Core::Ecs::Components {
 
 bool CompileSpatialComponent(Core::Pipeline::RawComponent input, std::ostream* output);
-Runtime::CallbackResult LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
+Runtime::CallbackResult LoadSpatialComponent(size_t count, Utils::Memory::MemStreamLite& stream, Core::Runtime::ServiceTable* services, void* moduleState);
 
 struct SpatialRelation
 {

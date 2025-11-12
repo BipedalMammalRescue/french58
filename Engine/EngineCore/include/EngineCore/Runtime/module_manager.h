@@ -56,6 +56,8 @@ public:
     ModuleManager(Logging::LoggerService* loggerService);
     ~ModuleManager();
 
+    void* FindModuleMutable(const Pipeline::HashId& name);
+
     const void* FindModule(const Pipeline::HashId& name) const;
     const void* FindModule(const Pipeline::HashId&& name) const;
 

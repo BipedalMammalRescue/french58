@@ -1,4 +1,5 @@
 add_library(EngineCore STATIC
+    src/asset_manager.cpp
 	src/logger_service.cpp
     src/logger.cpp
 	src/graphics_layer.cpp
@@ -15,6 +16,7 @@ add_library(EngineCore STATIC
     src/task_manager.cpp
     src/input_manager.cpp
     src/network_layer.cpp
+    src/transient_allocator.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

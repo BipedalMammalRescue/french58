@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Ecs/entity.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 
 #include <glm/glm.hpp>
 #include <istream>
@@ -33,7 +34,7 @@ private:
 
 public:
     void AddEntity(Ecs::Entity* entities, size_t count);
-    bool LoadEntities(std::istream* input);
+    bool LoadEntities(Utils::Memory::MemStreamLite& input);
 
     // total elapsed time
     inline float GetTotalTime() const

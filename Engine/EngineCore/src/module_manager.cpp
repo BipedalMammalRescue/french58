@@ -93,6 +93,15 @@ ModuleManager::~ModuleManager()
     UnloadModules();
 }
 
+void* ModuleManager::FindModuleMutable(const Pipeline::HashId& name)
+{
+    auto foundModule = m_LoadedModules.find(name);
+    if (foundModule == m_LoadedModules.end())
+        return nullptr;
+    
+    return foundModule->second.State;
+}
+
 const void* ModuleManager::FindModule(const Pipeline::HashId& name) const
 {
     auto foundModule = m_LoadedModules.find(name);
