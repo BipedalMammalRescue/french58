@@ -261,26 +261,8 @@ CallbackResult AssetManager::PollEvents()
                 continue;
 
             // run the index routine
-            auto targetAssetType = m_AssetDefinitions.find(m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId);
-            if (targetAssetType == m_AssetDefinitions.end())
-            {
-                m_Logger.Warning("Module state not found for asset: {}:{}, assets will be skipped", 
-                    m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId.First, 
-                    m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId.Second);
-                continue;
-            }
-
-            auto targetModuleState = m_Services->ModuleManager->FindModuleMutable(m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId.First);
-            if (targetModuleState == nullptr)
-            {
-                m_Logger.Warning("Module state not found for asset: {}:{}, loading skipped.", 
-                    m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId.First, 
-                    m_IndexQueue[availableIndexQueue].GetContext()->AssetGroupId.Second);
-                continue;
-            }
-
             m_Logger.Information("Indexing asset {}.", m_IndexQueue[availableIndexQueue].GetContext()->AssetId);
-            Runtime::CallbackResult result = targetAssetType->second.Index(m_Services, targetModuleState, m_IndexQueue[availableIndexQueue].GetContext());
+            Runtime::CallbackResult result = m_IndexQueue[availableIndexQueue].GetDefinition()->Index(m_Services, m_IndexQueue[availableIndexQueue].GetModuleState(), m_IndexQueue[availableIndexQueue].GetContext());
             if (result.has_value())
                 return result;
 
@@ -363,7 +345,7 @@ CallbackResult AssetManager::PollEvents()
                         }
 
                         // push the new event into index queue; this will be the persistent location until the task is finished (we need to pass opaque pointers around)
-                        m_IndexQueue.push_back(AssetManagement::AsyncAssetEvent(m_ContextualizeQueue[i]));
+                        m_IndexQueue.push_back(AssetManagement::AsyncAssetEvent(m_ContextualizeQueue[i], &targetAssetType->second, targetModuleState));
                         AssetManagement::AsyncAssetEvent* persistentCopy = &*(m_IndexQueue.end() - 1);
 
                         switch (persistentCopy->GetContext()->Buffer.Type)
@@ -374,11 +356,7 @@ CallbackResult AssetManager::PollEvents()
                             transientBufferCount++;
                             break;
                         case AssetManagement::LoadBufferType::ModuleBuffer:
-                            {
-                                m_IndexQueue.push_back(AssetManagement::AsyncAssetEvent(m_ContextualizeQueue[i]));
-                                AssetManagement::AsyncAssetEvent* persistentCopy = &*(m_IndexQueue.end() - 1);
-                                LoadAssetFileAsync(persistentCopy);
-                            }
+                            LoadAssetFileAsync(persistentCopy);
                             break;
                         default:
                             break;

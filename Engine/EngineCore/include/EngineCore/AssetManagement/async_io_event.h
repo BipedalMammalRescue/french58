@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Pipeline/asset_definition.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/transient_allocator.h"
 
@@ -23,11 +24,13 @@ class AsyncAssetEvent : public AsyncIoEvent
 private:
     bool m_Available;
     bool m_Broken;
+    const Pipeline::AssetDefinition* m_Definition;
+    void* m_ModuleState;
     AssetManagement::AssetLoadingContext m_LoadingContext;
 
 public:
-    AsyncAssetEvent(const AssetManagement::AssetLoadingContext& source)
-        : m_Available(false), m_Broken(false), m_LoadingContext(source)
+    AsyncAssetEvent(const AssetManagement::AssetLoadingContext& source, const Pipeline::AssetDefinition* definition, void* module)
+        : m_Available(false), m_Broken(false), m_Definition(definition), m_ModuleState(module), m_LoadingContext(source)
     {}
 
     bool IsAvailable() const { return m_Available; }
@@ -38,6 +41,8 @@ public:
     void MakeBroken() { m_Broken = true; }
 
     EventType GetType() const override { return EventType::Asset; }
+    const Pipeline::AssetDefinition* GetDefinition() const { return m_Definition; }
+    void* GetModuleState() { return m_ModuleState; }
 };
 
 class AsyncEntityEvent : public AsyncIoEvent 
