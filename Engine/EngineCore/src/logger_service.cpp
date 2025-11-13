@@ -60,10 +60,62 @@ public:
     }
 };
 
+class SerilogLevelFormatFlag : public spdlog::custom_flag_formatter
+{
+public:
+    void format(const spdlog::details::log_msg & msg, const std::tm &, spdlog::memory_buf_t &dest) override
+    {
+        const char ver[] = "VER";
+        const char dbg[] = "DBG";
+        const char inf[] = "INF";
+        const char wrn[] = "WRN";
+        const char err[] = "ERR";
+        const char ftl[] = "FTL";
+
+        const char* level = nullptr;
+
+        switch (msg.level)
+        {
+        case spdlog::level::trace:
+            level = ver;
+            break;
+        case spdlog::level::debug:
+            level = dbg;
+            break;
+        case spdlog::level::info:
+            level = inf;
+            break;
+        case spdlog::level::warn:
+            level = wrn;
+            break;
+        case spdlog::level::err:
+            level = err;
+            break;
+        case spdlog::level::critical:
+            level = ftl;
+            break;
+        case spdlog::level::off:
+        case spdlog::level::n_levels:
+            break;
+        }
+
+        if (level != nullptr)
+        {
+            dest.append(level, level + sizeof(ver));
+        }
+    }
+
+    std::unique_ptr<custom_flag_formatter> clone() const override
+    {
+        return spdlog::details::make_unique<SerilogLevelFormatFlag>();
+    }
+};
+
+
 LoggerService::LoggerService(Engine::Core::Configuration::ConfigurationProvider configs)
 {
     auto formatter = std::make_unique<spdlog::pattern_formatter>();
-    formatter->add_flag<SdlTimeFormatFlag>('E').set_pattern("[%E %^%l%$][%t][%n] %v");
+    formatter->add_flag<SdlTimeFormatFlag>('E').add_flag<SerilogLevelFormatFlag>('L').set_pattern("[%E %^%L%$][%t][%n] %v");
     spdlog::set_formatter(std::move(formatter));
 }
 

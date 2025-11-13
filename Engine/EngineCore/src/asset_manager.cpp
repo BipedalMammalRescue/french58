@@ -115,87 +115,111 @@ CallbackResult AssetManager::PollEvents()
     SDL_AsyncIOOutcome lastResult;
     while (SDL_GetAsyncIOResult(m_AsyncQueue, &lastResult))
     {
-        auto resource = static_cast<AssetManagement::AsyncIoEvent*>(lastResult.userdata);
+        // we'll use null userdata for events not worth tracking
+        if (lastResult.userdata == nullptr)
+            continue;
 
+        // close file
+        SDL_CloseAsyncIO(lastResult.asyncio, false, m_AsyncQueue, nullptr);
+
+        auto resource = static_cast<AssetManagement::AsyncIoEvent*>(lastResult.userdata);
         switch (resource->GetType())
         {
         case AssetManagement::EventType::Entity:
             {
                 auto entityEvent = static_cast <AssetManagement::AsyncEntityEvent*>(resource);
 
-                m_Logger.Information("Entity ready for processing: {}", entityEvent->GetId());
-                TransientBufferReturnHelper helper = { entityEvent->GetBuffer(), m_Services->TransientAllocator };
-
-                MemStreamLite stream { m_Services->TransientAllocator->GetBuffer(helper.Id) };
-                size_t readCount = 0;
-
-                // read the asset section
-                if (!CheckMagicWord(0xCCBBFFF1, stream))
+                switch (lastResult.result)
                 {
-                    m_Logger.Error("Entity {} magic word for asset section mismatch (loading skipped).", entityEvent->GetId());
-                    break;
-                }
-
-                // queue asset groups for contextualization
-                int assetGroupCount = stream.Read<int>();
-                for (int assetGroupIndex = 0; assetGroupIndex < assetGroupCount; assetGroupIndex ++)
-                {
-                    Pipeline::HashIdTuple assetGroupId = stream.Read<Pipeline::HashIdTuple>();
-                    int groupSize = stream.Read<int>();
-
-                    // note here asset groups are always continuous in the contextualization queue
-                    m_ContextualizeQueue.reserve(m_ContextualizeQueue.size() + groupSize);
-                    for (int assetIndex = 0; assetIndex < groupSize; assetIndex ++)
+                case SDL_ASYNCIO_COMPLETE:
                     {
-                        Pipeline::HashId nextAssetId = stream.Read<Pipeline::HashId>();
-                        size_t nextAssetSize = stream.Read<size_t>();
-                        m_ContextualizeQueue.push_back(AssetManagement::AssetLoadingContext{
-                            nextAssetSize,
-                            assetGroupId,
-                            nextAssetId,
+                        m_Logger.Information("Entity ready for processing: {}", entityEvent->GetId());
+                        TransientBufferReturnHelper helper = { entityEvent->GetBuffer(), m_Services->TransientAllocator };
+
+                        MemStreamLite stream { m_Services->TransientAllocator->GetBuffer(helper.Id) };
+                        size_t readCount = 0;
+
+                        // read the asset section
+                        if (!CheckMagicWord(0xCCBBFFF1, stream))
+                        {
+                            m_Logger.Error("Entity {} magic word for asset section mismatch (loading skipped).", entityEvent->GetId());
+                            break;
+                        }
+
+                        // queue asset groups for contextualization
+                        int assetGroupCount = stream.Read<int>();
+                        for (int assetGroupIndex = 0; assetGroupIndex < assetGroupCount; assetGroupIndex ++)
+                        {
+                            Pipeline::HashIdTuple assetGroupId = stream.Read<Pipeline::HashIdTuple>();
+                            int groupSize = stream.Read<int>();
+
+                            // note here asset groups are always continuous in the contextualization queue
+                            m_ContextualizeQueue.reserve(m_ContextualizeQueue.size() + groupSize);
+                            for (int assetIndex = 0; assetIndex < groupSize; assetIndex ++)
                             {
-                                {},
-                                AssetManagement::LoadBufferType::Invalid
+                                Pipeline::HashId nextAssetId = stream.Read<Pipeline::HashId>();
+                                size_t nextAssetSize = stream.Read<size_t>();
+                                m_ContextualizeQueue.push_back(AssetManagement::AssetLoadingContext{
+                                    nextAssetSize,
+                                    assetGroupId,
+                                    nextAssetId,
+                                    {
+                                        {},
+                                        AssetManagement::LoadBufferType::Invalid
+                                    }
+                                });
                             }
-                        });
+                        }
+
+                        // read the entities
+                        if (!CheckMagicWord(0xCCBBFFF2, stream))
+                        {
+                            m_Logger.Error("Entity {} magic word for entity section mismatch (loading skipped).", entityEvent->GetId());
+                            break;
+                        }
+                        if (!m_Services->WorldState->LoadEntities(stream))
+                        {
+                            m_Logger.Error("Entity {} rejected by world state.", entityEvent->GetId());
+                            break;
+                        }
+
+                        // read the components
+                        if (!CheckMagicWord(0xCCBBFFF3, stream))
+                        {
+                            m_Logger.Error("Entity {} magic word for component section mismatch (loading skipped).", entityEvent->GetId());
+                            break;
+                        }
+
+                        int componentGroupCount = stream.Read<int>();
+                        for (int componentGroupIndex = 0; componentGroupIndex < componentGroupCount; componentGroupIndex ++)
+                        {
+                            Pipeline::HashIdTuple componentGroupId = stream.Read<Pipeline::HashIdTuple>();
+                            int componentCount = stream.Read<int>();
+                            size_t componentStorageOffset = stream.Read<size_t>();
+                            size_t savedAddress = stream.GetPosition();
+
+                            stream.Seek(componentStorageOffset);
+                            size_t sectionLength = stream.Read<size_t>();
+                            ProcessComponentGroup(stream, componentGroupId, componentCount);
+                            stream.Seek(savedAddress);
+                        }
+
+                        m_Logger.Information("Loaded entity including {} asset groups, {} component groups.", assetGroupCount, componentGroupCount);
+                        break;
                     }
-                }
-
-                // read the entities
-                if (!CheckMagicWord(0xCCBBFFF2, stream))
-                {
-                    m_Logger.Error("Entity {} magic word for entity section mismatch (loading skipped).", entityEvent->GetId());
+                    break;
+                case SDL_ASYNCIO_FAILURE:
+                    m_Logger.Warning("Entity {} loading failed, detail: {}.", 
+                        entityEvent->GetId(),
+                        SDL_GetError()
+                    );
+                    break;
+                case SDL_ASYNCIO_CANCELED:
+                    m_Logger.Warning("Entity {} loading canceled by operating system.", 
+                        entityEvent->GetId()
+                    );
                     break;
                 }
-                if (!m_Services->WorldState->LoadEntities(stream))
-                {
-                    m_Logger.Error("Entity {} rejected by world state.", entityEvent->GetId());
-                    break;
-                }
-
-                // read the components
-                if (!CheckMagicWord(0xCCBBFFF3, stream))
-                {
-                    m_Logger.Error("Entity {} magic word for component section mismatch (loading skipped).", entityEvent->GetId());
-                    break;
-                }
-
-                int componentGroupCount = stream.Read<int>();
-                for (int componentGroupIndex = 0; componentGroupIndex < componentGroupCount; componentGroupIndex ++)
-                {
-                    Pipeline::HashIdTuple componentGroupId = stream.Read<Pipeline::HashIdTuple>();
-                    int componentCount = stream.Read<int>();
-                    size_t componentStorageOffset = stream.Read<size_t>();
-                    size_t savedAddress = stream.GetPosition();
-
-                    stream.Seek(componentStorageOffset);
-                    size_t sectionLength = stream.Read<size_t>();
-                    ProcessComponentGroup(stream, componentGroupId, componentCount);
-                    stream.Seek(savedAddress);
-                }
-
-                m_Logger.Information("Loaded entity including {} asset groups, {} component groups.", assetGroupCount, componentGroupCount);
-                break;
             }
             break;
         case AssetManagement::EventType::Asset:
@@ -209,10 +233,8 @@ CallbackResult AssetManager::PollEvents()
                     break;
                 case SDL_ASYNCIO_FAILURE:
                     asset->MakeBroken();
-                    m_Logger.Warning("Asset loading failed, asset: {}, module: {}, type: {}, detail: {}.", 
+                    m_Logger.Warning("Asset {} loading failed, detail: {}.", 
                         asset->GetContext()->AssetId, 
-                        asset->GetContext()->AssetGroupId.First, 
-                        asset->GetContext()->AssetGroupId.Second,
                         SDL_GetError()
                     );
                     break;
