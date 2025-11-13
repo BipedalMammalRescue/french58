@@ -23,7 +23,7 @@ TransientBufferId Engine::Core::Runtime::TransientAllocator::CreateBufferGroup(s
     m_Buffers[targetIndex].Buffer = malloc(totalSize);
     m_Buffers[targetIndex].ChildCount = childCount;
 
-    m_Logger.Information("Allocating buffer group, index: {}, total size: {}, child count: {}.", targetIndex, totalSize, childCount);
+    m_Logger.Information("Allocating buffer group #{} of {} bytes, with {} children.", targetIndex, totalSize, childCount);
 
     return { targetIndex, 0 };
 }
@@ -49,7 +49,7 @@ void Engine::Core::Runtime::TransientAllocator::Return(TransientBufferId id)
     {
         free(m_Buffers[parent].Buffer);
         m_Buffers[parent].Buffer = nullptr;
-        m_Logger.Information("Transient buffer #{} deallocated.", parent);
+        m_Logger.Information("Transient buffer group #{} deallocated.", parent);
     }
 }
 

@@ -13,6 +13,8 @@ class EventManager;
 class InputManager;
 class NetworkLayer;
 class TaskManager;
+class TransientAllocator;
+class AssetManager;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 
@@ -25,6 +27,8 @@ struct ServiceTable
     InputManager* InputManager;
     NetworkLayer* NetworkLayer;
     TaskManager* TaskManager;
+    TransientAllocator* TransientAllocator;
+    AssetManager* AssetManager;
 };
 
 }

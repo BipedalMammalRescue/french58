@@ -1,8 +1,9 @@
 #include "InputModule/input_module.h"
 #include "LiveLinkModule/live_link_module.h"
 #include "LuaScriptingModule/lua_scripting_module.h"
-#include "RendererModule/renderer_module.h"
-#include "ExampleGameplayModule/example_gameplay_module.h"
+// #include "RendererModule/renderer_module.h"
+// #include "ExampleGameplayModule/example_gameplay_module.h"
+#include "SDL3/SDL_stdinc.h"
 
 #include <EngineCore/Runtime/root_module.h>
 #include <EngineCore/Pipeline/module_definition.h>
@@ -16,15 +17,13 @@ using namespace Engine;
 static const Core::Pipeline::ModuleDefinition Modules[] = {
     Engine::Core::Runtime::RootModuleState::GetDefinition(),
     Extension::InputModule::GetModuleDefinition(),
-    Extension::RendererModule::GetModuleDefinition(),
-    Extension::ExampleGameplayModule::GetDefinition(),
+    // Extension::RendererModule::GetModuleDefinition(),
+    // Extension::ExampleGameplayModule::GetDefinition(),
     Extension::LuaScriptingModule::GetModuleDefinition(),
     Extension::LiveLinkModule::GetModuleDefinition(),
 };
 
-constexpr size_t ModuleCount = sizeof(Modules) / sizeof(Core::Pipeline::ModuleDefinition);
-
 Core::Pipeline::ModuleAssembly Core::Pipeline::ListModules() 
 {
-    return { Modules, ModuleCount };  
+    return { Modules, SDL_arraysize(Modules) };  
 }

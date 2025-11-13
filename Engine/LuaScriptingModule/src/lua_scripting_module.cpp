@@ -11,6 +11,7 @@
 #include "LuaScriptingModule/Components/script_node.h"
 #include "LuaScriptingModule/api.h"
 #include "LuaScriptingModule/lua_executor.h"
+#include "SDL3/SDL_stdinc.h"
 
 using namespace Engine::Extension::LuaScriptingModule;
 
@@ -58,8 +59,8 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::
     static const Core::Pipeline::AssetDefinition assets[] = {
         {
             HASH_NAME("LuaScript"),
-            Assets::LoadLuaScript,
-            Assets::UnloadLuaScript,
+            Assets::ContextualizeLuaScript,
+            Assets::IndexLuaScript,
         }
     };
 
@@ -77,14 +78,14 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::LuaScriptingModule::
         InitializeModule,
         DisposeModule,
         assets,
-        sizeof(assets) / sizeof(Core::Pipeline::AssetDefinition),
+        SDL_arraysize(assets),
         nullptr,
         0,
         nullptr,
         0,
         components,
-        sizeof(components) / sizeof(Core::Pipeline::ComponentDefinition),
+        SDL_arraysize(components),
         apis,
-        sizeof(apis) / sizeof(void*)
+        SDL_arraysize(apis)
     };
 }

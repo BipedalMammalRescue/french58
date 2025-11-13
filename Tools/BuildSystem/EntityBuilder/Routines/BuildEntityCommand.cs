@@ -120,38 +120,42 @@ public class BuildEntityCommand : Command
         {
             Span<byte> variantBuffer = stackalloc byte[72];
 
-            // module
-            componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
-
-            // type
-            componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
-
-            // component count
-            componentBuilder.StandardInput.BaseStream.Write(group.Components.Length);
-
-            foreach (CompiledComponent component in group.Components)
+            try
             {
-                // ids
-                componentBuilder.StandardInput.BaseStream.Write(component.Id);
-                componentBuilder.StandardInput.BaseStream.Write(component.Entity);
+                // module
+                componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Module)));
 
-                // fields
-                componentBuilder.StandardInput.BaseStream.Write(component.Fields.Length);
-                foreach (ComponentField field in component.Fields)
+                // type
+                componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(group.Type)));
+
+                // component count
+                componentBuilder.StandardInput.BaseStream.Write(group.Components.Length);
+
+                foreach (CompiledComponent component in group.Components)
                 {
-                    componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(field.Name)));
+                    // ids
+                    componentBuilder.StandardInput.BaseStream.Write(component.Id);
+                    componentBuilder.StandardInput.BaseStream.Write(component.Entity);
 
-                    variantBuffer.Clear();
-                    BinaryPrimitives.WriteInt32LittleEndian(variantBuffer, (byte)field.Value.Type);
+                    // fields
+                    componentBuilder.StandardInput.BaseStream.Write(component.Fields.Length);
+                    foreach (ComponentField field in component.Fields)
+                    {
+                        componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(field.Name)));
 
-                    // align the data to 8 bytes
-                    Span<byte> dataBuffer = variantBuffer[8..];
-                    field.Value.Write(dataBuffer);
-                    componentBuilder.StandardInput.BaseStream.Write(variantBuffer);
+                        variantBuffer.Clear();
+                        BinaryPrimitives.WriteInt32LittleEndian(variantBuffer, (byte)field.Value.Type);
+
+                        // align the data to 8 bytes
+                        Span<byte> dataBuffer = variantBuffer[8..];
+                        field.Value.Write(dataBuffer);
+                        componentBuilder.StandardInput.BaseStream.Write(variantBuffer);
+                    }
                 }
-            }
 
-            componentBuilder.StandardInput.BaseStream.Dispose();
+                componentBuilder.StandardInput.BaseStream.Dispose();
+            }
+            catch { }
         });
 
         string tempFilePath = Path.GetTempFileName();
@@ -267,7 +271,7 @@ public class BuildEntityCommand : Command
                     File.Move(output.Value.OutputPath, outFilePath, overwrite: true);
 
                     // log file size
-                    assetFileSizes[output.Key] = new FileInfo(output.Key).Length;
+                    assetFileSizes[output.Key] = new FileInfo(outFilePath).Length;
 
                     _logger.Information("Asset task result <{key}> {path}", output.Key, assetFileName);
                 }
@@ -408,10 +412,10 @@ public class BuildEntityCommand : Command
         // launch the component builder and start funneling in the data
         _logger.Verbose("Launching component builder processes ...");
         outEntityFile.Write(0xCCBBFFF3);
-        outEntityFile.Write(componentTasks.Length);
 
+        long componentGroupCountAddress = outEntityFile.Position;
+        outEntityFile.Write(-1);
         List<(string Module, string Type, string BuiltPath, long OffsetAddress)> componentTable = [];
-
         foreach ((ComponentGroup group, Task<string?> task) in componentTasks)
         {
             string? result = await task.ConfigureAwait(false);
@@ -427,11 +431,17 @@ public class BuildEntityCommand : Command
 
             long offsetAddress = outEntityFile.Position;
             outEntityFile.Write<long>(0);
-
             componentTable.Add((group.Module, group.Type, result, offsetAddress));
-
             _logger.Information("Printed component group {module}:{type} metadata", group.Module, group.Type);
         }
+
+        {
+            long futurePos = outEntityFile.Position;
+            outEntityFile.Seek(componentGroupCountAddress, SeekOrigin.Begin);
+            outEntityFile.Write(componentTable.Count);
+            outEntityFile.Seek(futurePos, SeekOrigin.Begin);
+        }
+
         _logger.Information("Component table printed.");
 
         // write component storage
@@ -446,7 +456,7 @@ public class BuildEntityCommand : Command
             outEntityFile.Write(componentFile.Length);
             componentFile.CopyTo(outEntityFile);
 
-            _logger.Information("Printed component group {module}:{type} storage", module, type);
+            _logger.Information("Printed component group {module}:{type} storage starting at {offset}", module, type, savedPosition);
         }
         _logger.Information("Component storage printed.");
 

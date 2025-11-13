@@ -4,7 +4,6 @@
 #include "EngineUtils/Memory/memstream_lite.h"
 
 #include <glm/glm.hpp>
-#include <istream>
 #include <vector>
 
 namespace Engine::Core::Configuration {

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/transient_allocator.h"
 
 namespace Engine::Core::AssetManagement {
 
@@ -40,7 +42,23 @@ public:
 
 class AsyncEntityEvent : public AsyncIoEvent 
 {
+private:
+    Runtime::TransientBufferId m_Buffer;
+    size_t m_Length;
+    Pipeline::HashId m_Id;
+
+public:
+    AsyncEntityEvent(Runtime::TransientBufferId bufferId, size_t length, Pipeline::HashId id)
+        : m_Buffer(bufferId),
+        m_Length(length),
+        m_Id(id)
+    {}
+
     EventType GetType() const override { return EventType::Entity; }
+
+    Runtime::TransientBufferId GetBuffer() const { return m_Buffer; }
+    size_t GetLegnth() const { return m_Length; }
+    Pipeline::HashId GetId() const { return m_Id; }
 };
 
 }

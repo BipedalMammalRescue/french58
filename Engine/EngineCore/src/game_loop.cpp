@@ -34,29 +34,6 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::Config
     m_ConfigurationProvider(configs),
     m_Modules(modules)
 {
-    // build component table
-    for (size_t i = 0; i < modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition module = modules.Modules[i];
-        for (size_t j = 0; j < module.ComponentCount; j ++)
-        {
-            Pipeline::ComponentDefinition component = module.Components[j];
-            Pipeline::HashIdTuple tuple { module.Name.Hash, component.Name.Hash };
-            m_Components[tuple] = component;
-        }
-    }
-
-    // build asset table
-    for (size_t i = 0; i < modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition module = modules.Modules[i];
-        for (size_t j = 0; j < module.AssetsCount; j ++)
-        {
-            Pipeline::AssetDefinition asset = module.Assets[j];
-            Pipeline::HashIdTuple tuple { module.Name.Hash, asset.Name.Hash };
-            m_AssetDefinitions[tuple] = asset;
-        }
-    }
 }
 
 bool GameLoop::AddEventSystem(EventSystemDelegate delegate, const char* userName)
@@ -77,7 +54,7 @@ bool GameLoop::RemoveEventSystem(const char* userName)
 
 CallbackResult GameLoop::DiagnsoticModeCore(std::function<void(IGameLoopController*)> executor)
 {
-    GameLoopController controller(m_ConfigurationProvider, this);
+    GameLoopController controller(m_Modules, m_ConfigurationProvider, this);
 
     executor(&controller);
 
@@ -103,7 +80,7 @@ CallbackResult GameLoop::DiagnsoticMode(std::function<void(IGameLoopController*)
 
 CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
-    GameLoopController controller(m_ConfigurationProvider, this);
+    GameLoopController controller(m_Modules, m_ConfigurationProvider, this);
 
     CallbackResult gameresult = controller.Initialize();
     if (gameresult.has_value())
@@ -122,7 +99,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
     bool quit = false;
     while (!quit)
     {
-        gameresult = controller.BeginFrame();
+        gameresult = controller.PollAsyncIoEvents();
         if (gameresult.has_value())
             return gameresult;
 
@@ -135,6 +112,10 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 
         // event loop
         gameresult = controller.EventUpdate();
+        if (gameresult.has_value())
+            return gameresult;
+
+        gameresult = controller.BeginFrame();
         if (gameresult.has_value())
             return gameresult;
 
@@ -242,7 +223,7 @@ static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, c
 
 static const char* TopLevelLogChannels[] = { "GameLoop" };
 
-GameLoop::GameLoopController::GameLoopController(Engine::Core::Configuration::ConfigurationProvider configs, GameLoop* owner)
+GameLoop::GameLoopController::GameLoopController(Engine::Core::Pipeline::ModuleAssembly modules, Engine::Core::Configuration::ConfigurationProvider configs, GameLoop* owner)
     : m_LoggerService(configs),
     m_GraphicsLayer(&configs, &m_LoggerService),
     m_WorldState(&configs),
@@ -251,6 +232,8 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Configuration::Co
     m_InputManager(),
     m_NetworkLayer(&m_LoggerService),
     m_TaskManager(&m_Services, &m_LoggerService, configs.WorkerCount),
+    m_TransientAllocator(&m_LoggerService),
+    m_AssetManager(modules, &m_LoggerService, &m_Services),
     m_Services {
         &m_LoggerService,
         &m_GraphicsLayer,
@@ -259,7 +242,9 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Configuration::Co
         &m_EventManager,
         &m_InputManager,
         &m_NetworkLayer,
-        &m_TaskManager
+        &m_TaskManager,
+        &m_TransientAllocator,
+        &m_AssetManager
     },
     m_Owner(owner),
     m_TopLevelLogger(m_LoggerService.CreateLogger("GameLoop")),
@@ -382,4 +367,16 @@ Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopC
 {
     // last step in the update loop
     return m_GraphicsLayer.EndFrame();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityId)
+{
+    m_AssetManager.QueueEntity(entityId);
+    return CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::PollAsyncIoEvents() 
+{
+    m_AssetManager.PollEvents();
+    return CallbackSuccess();
 }

@@ -34,6 +34,9 @@ void FoobarEventSystem(const Engine::Core::Runtime::ServiceTable* services, void
     auto exampleState = services->ModuleManager
         ->FindModule<Engine::Extension::ExampleGameplayModule::ModuleState>(ExampleModuleName);
 
+    if (exampleState == nullptr)
+        return;
+
     auto inputModuleState = services->ModuleManager->FindModule<Engine::Extension::InputModule::InputModuleState>(InputModuleName);
 
     for (const Engine::Extension::ExampleGameplayModule::RotationMarker& marker : exampleState->SpinningEntities)

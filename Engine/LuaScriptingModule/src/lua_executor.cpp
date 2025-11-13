@@ -548,6 +548,9 @@ void LuaExecutor::Initialize()
     lua_pushcfunction(m_LuaState, GetLuaScriptParameter);
     lua_setglobal(m_LuaState, SeGetParameter);
 
+    lua_pushcfunction(m_LuaState, LuaPrint);
+    lua_setglobal(m_LuaState, "LogInfo");
+
     // library functions
     lua_pushcfunction(m_LuaState, CreateVec2);
     lua_setglobal(m_LuaState, "vec2");
@@ -599,14 +602,17 @@ void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const Insta
     }
 }
 
-bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(const std::vector<unsigned char> *byteCode, int index) 
+bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(void* byteCode, size_t codeLength, int index) 
 {
     lua_getglobal(m_LuaState, SeScriptTable);
     lua_pushinteger(m_LuaState, index);
 
-    auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode->data(), byteCode->size(), "");
+    auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode, codeLength, "");
     if (result != LUA_OK)
+    {
+        m_Logger.Error("Failed to load lua script, error: {}", lua_tostring(m_LuaState, -1));
         return false;
+    }
     
     lua_settable(m_LuaState, -3);
     return true;
