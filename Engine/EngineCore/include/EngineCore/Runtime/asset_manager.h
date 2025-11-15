@@ -12,6 +12,9 @@
 #include "EngineCore/Runtime/transient_allocator.h"
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "SDL3/SDL_asyncio.h"
+#include "EngineCore/Runtime/index_queue.h"
+
+#include <unordered_map>
 #include <vector>
 
 namespace Engine::Core::Runtime {
@@ -37,7 +40,10 @@ private:
 
     // the main thread: manages these task queues
     std::vector<AssetManagement::AssetLoadingContext> m_ContextualizeQueue;
-    std::vector<AssetManagement::AsyncAssetEvent> m_IndexQueue;    
+    // std::vector<AssetManagement::AsyncAssetEvent> m_IndexQueue;
+
+    std::unordered_map<Pipeline::HashId, IndexQueue*> m_IndexQueues;
+
     std::vector<Pipeline::HashId> m_EntityScheduleQueue;
     std::vector<AssetManagement::AsyncEntityEvent> m_EntityLoadingQueue;
 

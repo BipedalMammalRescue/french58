@@ -234,7 +234,7 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Pipeline::ModuleA
     m_TaskManager(&m_Services, &m_LoggerService, configs.WorkerCount),
     m_TransientAllocator(&m_LoggerService),
     m_AssetManager(modules, &m_LoggerService, &m_Services),
-    m_ContainerFactory(),
+    m_ContainerFactory(&m_LoggerService),
     m_Services {
         &m_LoggerService,
         &m_GraphicsLayer,

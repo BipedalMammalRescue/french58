@@ -43,14 +43,9 @@ private:
     }
 
     IContainerAllocationStrategy* m_Allocator;
-    void* m_Storage;
+    T* m_Storage;
     size_t m_Size;
     size_t m_Capacity;
-
-    inline T* TypedStorage() 
-    {
-        return static_cast<T*>(m_Storage);
-    }
 
 public:
     SortedArray(IContainerAllocationStrategy* allocator, size_t initialCapacity)
@@ -58,7 +53,7 @@ public:
     {
         if (initialCapacity > 0)
         {
-            m_Storage = allocator->Allocate(initialCapacity * sizeof(T));
+            m_Storage = static_cast<T*>(allocator->Allocate(initialCapacity * sizeof(T)));
         }
     }
 
@@ -72,7 +67,7 @@ public:
     {
         if (m_Size + count <= m_Capacity)
             return;
-        m_Storage = realloc(m_Storage, (m_Size + count) * sizeof(T));
+        m_Storage = (T*)m_Allocator->Reallocate((void*)m_Storage, (m_Size + count) * sizeof(T));
         m_Capacity = m_Size + count;
     }
 
@@ -80,7 +75,7 @@ public:
     {
         if (count <= m_Capacity)
             return;
-        m_Storage = realloc(m_Storage, count * sizeof(T));
+        m_Storage = (T*)m_Allocator->Reallocate((void*)m_Storage, count * sizeof(T));
         m_Capacity = count;
     }
 
@@ -94,11 +89,79 @@ public:
         return m_Capacity;
     }
 
+    bool RangeCheck(size_t position) const
+    {
+        return position >= 0 && position < m_Size;
+    }
+
     // Insert a singular element; ideally not doing a full sort.
     void Insert(const T& element)
     {
-        // TODO: need to run a binary search and insert + move
-        InsertRange(&element, 1);
+        ReserveExtra(1);
+
+        if (m_Size == 0)
+        {
+            m_Storage[0] = element;
+            m_Size ++;
+            return;
+        }
+
+        // roll a custom inexact binary search
+        size_t candidate = FindLowerBound(element);
+
+        // move every element larger than or equal to the candidate rightward
+        for (size_t movee = m_Size - 1; movee >= candidate && RangeCheck(movee); movee --)
+        {
+            m_Storage[movee + 1] = m_Storage[movee];
+        }
+
+        // insert the element at candidate
+        m_Storage[candidate] = element;
+        m_Size++;
+    }
+
+    // find the first element to be bigger than argument
+    size_t FindLowerBound(const T& element)
+    {
+        // weird edge case
+        if (m_Size == 0)
+            return 0;
+
+        size_t candidate = m_Size / 2;
+        switch (TCompare::Compare(&element, &m_Storage[candidate]))
+        {
+        case 0:
+            return candidate;
+        case 1:
+            for (candidate += 1; candidate < m_Size; candidate ++)
+            {
+                switch (TCompare::Compare(&element, &m_Storage[candidate]))
+                {
+                case 0:
+                case -1:
+                    return candidate;
+                default:
+                    break;
+                }
+            }
+            return m_Size;
+        case -1:
+            for (candidate -= 1; candidate >= 0; candidate --)
+            {
+                switch (TCompare::Compare(&element, &m_Storage[candidate]))
+                {
+                case 0:
+                case 1:
+                    return candidate + 1;
+                default:
+                    break;
+                }
+            }
+            return 0;
+        // not gonna happen
+        default:
+            return 0;
+        }
     }
 
     // Allocate and asign all elements at once, then do a full buffer sort.
@@ -108,7 +171,7 @@ public:
 
         for (size_t i = 0; i < count; i++)
         {
-            TypedStorage()[m_Size] = elements[i];
+            m_Storage[m_Size] = elements[i];
             m_Size ++;
         }
 
@@ -124,7 +187,7 @@ public:
     {
         ReserveExtra(count);
 
-        writer(&TypedStorage()[m_Size], count, userdata);
+        writer(&m_Storage[m_Size], count, userdata);
 
         m_Size += count;
         SDL_qsort(m_Storage, m_Size, sizeof(T), CompareCore);
@@ -135,7 +198,7 @@ public:
         if (index >= m_Size)
             return nullptr;
 
-        return &TypedStorage()[index];
+        return &m_Storage[index];
     }
 
     const T* PtrAt(size_t index) const
@@ -143,9 +206,10 @@ public:
         if (index >= m_Size)
             return nullptr;
 
-        return &TypedStorage()[index];
+        return &m_Storage[index];
     }
 
+    // EXACT SEARCH
     size_t Search(const T* key)
     {
         void* foundAddress = SDL_bsearch(key, m_Storage, m_Size, sizeof(T), CompareCore);

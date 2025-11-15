@@ -17,6 +17,7 @@ add_library(EngineCore STATIC
     src/input_manager.cpp
     src/network_layer.cpp
     src/transient_allocator.cpp
+    src/index_queue.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

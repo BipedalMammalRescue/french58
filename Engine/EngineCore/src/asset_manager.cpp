@@ -4,6 +4,7 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/index_queue.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/transient_allocator.h"
@@ -122,6 +123,11 @@ CallbackResult AssetManager::PollEvents()
         // close file
         SDL_CloseAsyncIO(lastResult.asyncio, false, m_AsyncQueue, nullptr);
 
+        for (int i = 0; i < 1000000; i++)
+        {
+            auto V = i + 566;
+        }
+
         auto resource = static_cast<AssetManagement::AsyncIoEvent*>(lastResult.userdata);
         switch (resource->GetType())
         {
@@ -229,70 +235,54 @@ CallbackResult AssetManager::PollEvents()
                 {
                 case SDL_ASYNCIO_COMPLETE:
                     asset->MakeAvailable();
-                    m_Logger.Information("Asset {} loaded and made ready for indexing.", asset->GetContext()->AssetId);
+                    m_Logger.Information("Asset {}:{} loaded and made ready for indexing.", 
+                        asset->GetDefinition()->Name.DisplayName, 
+                        asset->GetContext()->AssetId);
                     break;
                 case SDL_ASYNCIO_FAILURE:
                     asset->MakeBroken();
-                    m_Logger.Warning("Asset {} loading failed, detail: {}.", 
-                        asset->GetContext()->AssetId, 
-                        SDL_GetError()
-                    );
+                    m_Logger.Warning("Asset {}:{} loading failed, detail: {}.", 
+                        asset->GetDefinition()->Name.DisplayName, 
+                        asset->GetContext()->AssetId,
+                        SDL_GetError());
                     break;
                 case SDL_ASYNCIO_CANCELED:
                     asset->MakeBroken();
-                    m_Logger.Warning("Asset loading canceled, asset: {}, module: {}, type: {}.", asset->GetContext()->AssetId, asset->GetContext()->AssetGroupId.First, asset->GetContext()->AssetGroupId.Second);
+                    m_Logger.Warning("Asset {}:{} loading canceled.", 
+                        asset->GetDefinition()->Name.DisplayName, 
+                        asset->GetContext()->AssetId);
                     break;
                 }
             }
             break;
         }
-
     }
 
-    // TODO: need to refactor this to batch index as well since we already keep all index requests in the same order they show up in the entity file
-    // TODO: need to make the index queue a circular buffer => contextualize queue now is a resizable buffer which is fine
-    // try to flush the index queue
-    if (!m_IndexQueue.empty())
+    // process all index queues
+    for (auto& moduleLocalQueue : m_IndexQueues)
     {
-        size_t availableIndexQueue = 0;
+        if (moduleLocalQueue.second == nullptr)
+            continue;
 
-        for (availableIndexQueue = 0; availableIndexQueue < m_IndexQueue.size() && (m_IndexQueue[availableIndexQueue].IsAvailable() || m_IndexQueue[availableIndexQueue].IsBroken()); availableIndexQueue ++)
+        // try to flush elements
+        CallbackResult result = moduleLocalQueue.second->Flush();
+        if (result.has_value())
+            return result;
+
+        // update the head
+        IndexQueue* newHead = moduleLocalQueue.second;
+        while (newHead != nullptr && newHead->IsCompleted())
         {
-            // skip broken assets
-            if (m_IndexQueue[availableIndexQueue].IsBroken())
-                continue;
-
-            // run the index routine
-            m_Logger.Information("Indexing asset {} {}.", m_IndexQueue[availableIndexQueue].GetDefinition()->Name.DisplayName, m_IndexQueue[availableIndexQueue].GetContext()->AssetId);
-            Runtime::CallbackResult result = m_IndexQueue[availableIndexQueue].GetDefinition()->Index(m_Services, m_IndexQueue[availableIndexQueue].GetModuleState(), m_IndexQueue[availableIndexQueue].GetContext());
-            if (result.has_value())
-                return result;
-
-            if (m_IndexQueue[availableIndexQueue].GetContext()->Buffer.Type == AssetManagement::LoadBufferType::TransientBuffer)
-            {
-                m_Services->TransientAllocator->Return(m_IndexQueue[availableIndexQueue].GetContext()->Buffer.Location.TransientBufferId);
-            }
+            m_Services->TransientAllocator->Return(newHead->GetBufferId());
+            newHead = newHead->GetNext();
         }
 
-        // remove the first n elements from the index queue that's been completed
-        if (availableIndexQueue > 0)
-        {
-            m_IndexQueue.erase(m_IndexQueue.begin(), m_IndexQueue.begin() + availableIndexQueue);
-        }
+        moduleLocalQueue.second = newHead;
     }
 
     // process contextualized assets
     if (!m_ContextualizeQueue.empty())
     {
-        // TODO: IMPORTANT THIS IS AN ERROR, REALLOCATING INDEX QUEUE CAUSES MEMORY LEAKS WE NEED TO FIX THE UDNERLYING LENGTH
-        // make room in index queue to reduce small allocations
-        m_IndexQueue.reserve(m_IndexQueue.size() + m_ContextualizeQueue.size());
-
-        // transient buffers are batch processed
-        size_t transientBufferBudget = 0;
-        int transientBufferCount = 0;
-        size_t previousIndexQueueOffset = m_IndexQueue.size();
-
         size_t cursor = 0;
         Pipeline::HashIdTuple currentGroupId = { md5::compute(""), md5::compute("") };
         while (cursor < m_ContextualizeQueue.size())
@@ -335,27 +325,51 @@ CallbackResult AssetManager::PollEvents()
                     if (result.has_value())
                         return result;
 
-                    // schedule them for IO and indexing
-                    for (size_t i = cursor; i < cursor + contextGroupSize; i++)
-                    {
-                        if (m_ContextualizeQueue[i].Buffer.Type == AssetManagement::LoadBufferType::Invalid)
-                        {
-                            m_Logger.Information("Loading context rejected, asset: {}, module: {}, type: {}; loading skipped.", 
-                                m_ContextualizeQueue[i].AssetId, 
-                                m_ContextualizeQueue[i].AssetGroupId.First, 
-                                m_ContextualizeQueue[i].AssetGroupId.Second);
-                            continue;
-                        }
+                    // create a new index queue and link it to the module linked list
+                    size_t indexQueueBufferSize = sizeof(IndexQueue) + contextGroupSize * sizeof(AssetManagement::AsyncAssetEvent);
+                    TransientBufferId indexQueueBufferId = m_Services->TransientAllocator->CreateBufferGroup(indexQueueBufferSize, 1);
+                    
+                    AssetManagement::AsyncAssetEvent* newAsyncAssetEvents =
+                        (AssetManagement::AsyncAssetEvent*)((char*)m_Services->TransientAllocator->GetBuffer(indexQueueBufferId) + sizeof(IndexQueue));
+                    
+                    IndexQueue* newIndexQueue = new (m_Services->TransientAllocator->GetBuffer(indexQueueBufferId)) IndexQueue(
+                        indexQueueBufferId, newAsyncAssetEvents, contextGroupSize, m_Logger, m_Services
+                    );
 
-                        // push the new event into index queue; this will be the persistent location until the task is finished (we need to pass opaque pointers around)
-                        m_IndexQueue.push_back(AssetManagement::AsyncAssetEvent(m_ContextualizeQueue[i], &targetAssetType->second, targetModuleState));
-                        AssetManagement::AsyncAssetEvent* persistentCopy = &*(m_IndexQueue.end() - 1);
+                    // link the new queue into the module-type-sorted collection
+                    if (m_IndexQueues[currentGroupId.First] == nullptr)
+                    {
+                        m_IndexQueues[currentGroupId.First] = newIndexQueue;
+                    }
+                    else 
+                    {
+                        m_IndexQueues[currentGroupId.First]->AddTail(newIndexQueue);
+                    }
+
+                    // collect info on transient buffer or send off the IO event
+                    size_t transientBufferBudget = 0;
+                    int transientBufferCount = 0;
+                    for (size_t i = 0; i < contextGroupSize; i++)
+                    {
+                        // assign the new event into the new index queue; 
+                        // this will be the persistent location until the task is finished 
+                        // (we need to pass opaque pointers around)
+                        AssetManagement::AsyncAssetEvent* persistentCopy = new (newAsyncAssetEvents + i) AssetManagement::AsyncAssetEvent(m_ContextualizeQueue[cursor + i], &targetAssetType->second, targetModuleState);
 
                         switch (persistentCopy->GetContext()->Buffer.Type)
                         {
+                        case AssetManagement::LoadBufferType::Invalid:
+                            m_Logger.Information("Loading context rejected, asset: {}, module: {}, type: {}; loading skipped.", 
+                            persistentCopy->GetContext()->AssetId, 
+                            persistentCopy->GetContext()->AssetGroupId.First, 
+                            persistentCopy->GetContext()->AssetGroupId.Second);
+
+                            // make the index ignore this event quitely
+                            persistentCopy->MakeAvailable();
+                            break;
                         case AssetManagement::LoadBufferType::TransientBuffer:
                             // we batch transient requests together to reduce memory alllocation frequency
-                            transientBufferBudget += m_ContextualizeQueue[i].Buffer.Location.TransientBufferSize;
+                            transientBufferBudget += persistentCopy->GetContext()->Buffer.Location.TransientBufferSize;
                             transientBufferCount++;
                             break;
                         case AssetManagement::LoadBufferType::ModuleBuffer:
@@ -365,32 +379,35 @@ CallbackResult AssetManager::PollEvents()
                             break;
                         }
                     }
+
+                    // allocate the transient buffer and distribute it out
+                    if (transientBufferBudget > 0)
+                    {
+                        TransientBufferId bufferId = m_Services->TransientAllocator->CreateBufferGroup(transientBufferBudget, transientBufferCount);
+
+                        int offset = 0;
+
+                        for (size_t i = 0; i < contextGroupSize; i++)
+                        {
+                            auto& currentEvent = newAsyncAssetEvents[i];
+
+                            if (currentEvent.GetContext()->Buffer.Type != AssetManagement::LoadBufferType::TransientBuffer)
+                                continue;
+
+                            // grant a portion of the transient buffer
+                            bufferId.Child = offset;
+                            offset += currentEvent.GetContext()->Buffer.Location.TransientBufferSize;
+                            currentEvent.GetContext()->Buffer.Location.TransientBufferId = bufferId;
+
+                            // schedule IO
+                            LoadAssetFileAsync(&currentEvent);
+                        }
+                    }
                 }
             }
 
             cursor += contextGroupSize;
             currentGroupId.First = md5::compute("");
-        }
-
-        // allocate transient buffer and schedule the transient buffer tasks
-        if (transientBufferBudget > 0)
-        {
-            TransientBufferId bufferId = m_Services->TransientAllocator->CreateBufferGroup(transientBufferBudget, transientBufferCount);
-
-            int offset = 0;
-            for (size_t i = previousIndexQueueOffset; i < m_IndexQueue.size(); i++)
-            {
-                if (m_IndexQueue[i].GetContext()->Buffer.Type != AssetManagement::LoadBufferType::TransientBuffer)
-                    continue;
-
-                // grant a portion of the transient buffer
-                bufferId.Child = offset;
-                offset += m_IndexQueue[i].GetContext()->Buffer.Location.TransientBufferSize;
-                m_IndexQueue[i].GetContext()->Buffer.Location.TransientBufferId = bufferId;
-
-                // schedule IO
-                LoadAssetFileAsync(&m_IndexQueue[i]);
-            }
         }
     }
     m_ContextualizeQueue.clear();
@@ -423,29 +440,28 @@ Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::Module
 {
     m_AsyncQueue = SDL_CreateAsyncIOQueue();
 
-    // build component table
+    // process and cache per-module information
     for (size_t i = 0; i < modules.ModuleCount; i++)
     {
         Pipeline::ModuleDefinition module = modules.Modules[i];
+        
+        // build component table
         for (size_t j = 0; j < module.ComponentCount; j ++)
         {
             Pipeline::ComponentDefinition component = module.Components[j];
             Pipeline::HashIdTuple tuple { module.Name.Hash, component.Name.Hash };
             m_Components[tuple] = component;
         }
-    }
 
-    // build asset table
-    for (size_t i = 0; i < modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition module = modules.Modules[i];
+        // build asset table
         for (size_t j = 0; j < module.AssetsCount; j ++)
         {
             Pipeline::AssetDefinition asset = module.Assets[j];
             Pipeline::HashIdTuple tuple { module.Name.Hash, asset.Name.Hash };
             m_AssetDefinitions[tuple] = asset;
         }
-    }
 
-    m_IndexQueue.reserve(1024);
+        // allocate a null linked list header
+        m_IndexQueues[module.Name.Hash] = nullptr;
+    }
 }

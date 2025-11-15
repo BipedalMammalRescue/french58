@@ -93,6 +93,11 @@ static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *m
         SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
     }
 
+    // destroy the borrowed containers
+    state->MaterialIndex.Destroy();
+    state->PipelineIndex.Destroy();
+    state->MeshRenderers.Destroy();
+
     delete state;
 }
 
