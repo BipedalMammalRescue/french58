@@ -3,8 +3,6 @@
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
-#include "EngineCore/Pipeline/asset_definition.h"
-#include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
@@ -23,7 +21,6 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
-#include <fstream>
 #include <md5.h>
 #include <string>
 
@@ -151,62 +148,6 @@ CallbackResult GameLoop::Run(Pipeline::HashId initialEntityId)
     SDL_Quit();
 
     return gameError;
-}
-
-class StreamAssetEnumerator : public Engine::Core::Pipeline::IAssetEnumerator
-{
-private:
-    int m_Cursor = -1;
-    int m_Count = 0;
-    std::istream* m_Source = nullptr;
-    std::ifstream m_AssetFile;
-    Engine::Core::Pipeline::HashId m_AssetId = { {0} };
-    char m_NameBuffer[43] = "CD0ED230BD87479C61DB68677CAA9506.bse_asset";
-
-public:
-    StreamAssetEnumerator(std::istream* source)
-    {
-        source->read((char*)&m_Count, sizeof(int));
-        m_Source = source;
-    }
-
-    size_t Count() override 
-    {
-        return m_Count;
-    };
-
-    bool MoveNext() override 
-    {
-        if (m_Cursor + 1 >= m_Count)
-            return false;
-
-        m_Cursor ++;
-
-        // close the original file
-        if (m_AssetFile.is_open())
-        {
-            m_AssetFile.close();
-        }
-
-        // open the new file
-        m_Source->read((char*)m_AssetId.Hash.data(), 16);
-        Engine::Utils::String::BinaryToHex(16, m_AssetId.Hash.data(), m_NameBuffer);
-        m_AssetFile.open(m_NameBuffer, std::ios::binary);
-
-        return m_AssetFile.is_open();
-    }
-
-    Engine::Core::Pipeline::RawAsset GetCurrent() override 
-    {
-        return { &m_AssetFile, m_AssetId };
-    }
-};
-
-static bool CheckMagicWord(unsigned int target, std::istream* input)
-{
-    unsigned int getWord = 0;
-    input->read((char*)&getWord, sizeof(unsigned int));
-    return target == getWord;
 }
 
 static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, const char* reason)

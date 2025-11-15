@@ -3,17 +3,12 @@
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/renderer_module.h"
 #include "RendererModule/common.h"
+#include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/service_table.h"
+
+#include "SDL3/SDL_gpu.h"
 #include "SDL3/SDL_error.h"
-
-#include <EngineCore/Logging/logger_service.h>
-#include <EngineCore/Pipeline/hash_id.h>
-#include <EngineCore/Runtime/crash_dump.h>
-#include <EngineUtils/ErrorHandling/exceptions.h>
-#include <EngineCore/Pipeline/asset_enumerable.h>
-#include <EngineCore/Runtime/graphics_layer.h>
-#include <EngineCore/Runtime/service_table.h>
-
-#include <SDL3/SDL_gpu.h>
 
 using namespace Engine::Extension::RendererModule;
 
