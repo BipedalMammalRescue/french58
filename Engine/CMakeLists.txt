@@ -34,7 +34,7 @@ set_target_properties(Engine PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(Engine PUBLIC EngineCore)
 
 # define extension modules here; they should all depend on at least the engine core target
-# add_subdirectory(RendererModule)
+add_subdirectory(RendererModule)
 add_subdirectory(ExampleGameplayModule)
 add_subdirectory(InputModule)
 add_subdirectory(LuaScriptingModule)

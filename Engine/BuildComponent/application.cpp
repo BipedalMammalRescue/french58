@@ -74,7 +74,7 @@ int main()
 
         if (!success)
         {
-            // TODO: logging?
+            // TODO: make the builder callbacks return callback result
             std::cerr << "Error: component failed to compile." << std::endl;
             return 1;
         }

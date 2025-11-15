@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Pipeline/fwd.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/variant.h"
@@ -10,12 +11,8 @@
 
 namespace Engine::Extension::RendererModule::Assets {
 
-Core::Runtime::CallbackResult LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
-                        Core::Runtime::ServiceTable *services,
-                        void *moduleState);
-
-Core::Runtime::CallbackResult UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
-                          Core::Runtime::ServiceTable *services, void *moduleState);
+Core::Runtime::CallbackResult ContextualizeMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount);
+Core::Runtime::CallbackResult IndexMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* inContext);
 
 struct ConfiguredUniform
 {
@@ -23,17 +20,38 @@ struct ConfiguredUniform
     Core::Pipeline::Variant Data;
 };
 
-// TODO: I don't have configured texture or storage buffer yet, add them in when implementing texturing
+struct MaterialHeader
+{
+    Core::Pipeline::HashId PrototypeId;
+};
 
 struct Material 
 {
-    Core::Pipeline::HashId PrototypeId;
+    Core::Pipeline::HashId Id;
+    MaterialHeader* Header;
 
-    uint32_t VertexUniformStart;
-    uint32_t VertexUniformEnd;
-    
-    uint32_t FragmentUniformStart;
-    uint32_t FragmentUniformEnd;
+    size_t VertUniformOffset;
+    size_t VertUniformCount;
+    size_t FragUniformOffset;
+    size_t FragUniformCount;
+};
+
+// sort by prototype id first, then asset id
+struct MaterialComparer
+{
+    static int Compare(const Material* a, const Material* b)
+    {
+        if (a->Header->PrototypeId < b->Header->PrototypeId)
+            return -1;
+        if (a->Header->PrototypeId > b->Header->PrototypeId)
+            return 1;
+
+        if (a->Id < b->Id)
+            return -1;
+        if (a->Id > b->Id)
+            return 1;
+        return 0;
+    }
 };
 
 }

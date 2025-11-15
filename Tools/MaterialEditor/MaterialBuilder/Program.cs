@@ -43,7 +43,8 @@ internal class Program
         }
 
         using Stream outputStream = Console.OpenStandardOutput();
-        var writeBuffer = new byte[64];
+
+        var writeBuffer = new byte[Variant.VariantSize];
 
         // vertex uniforms
         ConfigurableShaderUniform[] vertexUniforms = [.. pipeline.VertexShader.Uniforms.OfType<ConfigurableShaderUniform>()];
@@ -53,16 +54,14 @@ internal class Program
             outputStream.Write(configuredUniform.Binding);
 
             // clear write buffer
-            for (int i = 0; i < 64; i++)
+            for (int i = 0; i < writeBuffer.Length; i++)
             {
                 writeBuffer[i] = 0;
             }
 
             // write data
             Variant actualData = material.ConfiguredUniforms.TryGetValue(configuredUniform.Name, out Variant? foundData) && foundData.Type == configuredUniform.Default.Type ? foundData : configuredUniform.Default;
-            actualData.Write(writeBuffer);
-
-            outputStream.Write((ulong)actualData.Type);
+            actualData.WriteBoxed(writeBuffer);
             outputStream.Write(writeBuffer);
         }
 
@@ -81,9 +80,7 @@ internal class Program
 
             // write data
             Variant actualData = (material.ConfiguredUniforms.TryGetValue(configuredUniform.Name, out Variant? foundData) && foundData.Type == configuredUniform.Default.Type) ? foundData : configuredUniform.Default;
-            actualData.Write(writeBuffer);
-
-            outputStream.Write((ulong)actualData.Type);
+            actualData.WriteBoxed(writeBuffer);
             outputStream.Write(writeBuffer);
         }
     }

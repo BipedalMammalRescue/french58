@@ -30,6 +30,8 @@ public class Variant : ILeafDataPoint
     [JsonIgnore]
     public VariantType Type { get; private set; } = VariantType.Invalid;
 
+    public const int VariantSize = 68;
+
     private object? _internalObj = null;
     private object InternalObj => _internalObj ?? throw new Exception("Variant uninitialized.");
 
@@ -266,5 +268,13 @@ public class Variant : ILeafDataPoint
         byte[] output = new byte[GetLength()];
         Write(output);
         return output;
+    }
+
+    public void WriteBoxed(Span<byte> dest)
+    {
+        // align the data to 4 bytes
+        BinaryPrimitives.WriteInt32LittleEndian(dest, (byte)Type);
+        Span<byte> dataBuffer = dest[4..];
+        Write(dataBuffer);
     }
 }

@@ -1,4 +1,5 @@
 #include "RendererModule/Components/directional_light.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/renderer_module.h"
 
 #include <EngineCore/Pipeline/component_definition.h>
@@ -54,17 +55,16 @@ bool Components::CompileDirectionalLight(Core::Pipeline::RawComponent input, std
     return true;
 }
 
-Engine::Core::Runtime::CallbackResult Components::LoadDirectionalLight(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadDirectionalLight(size_t count, Utils::Memory::MemStreamLite& stream, Core::Runtime::ServiceTable* services, void* moduleState)
 {
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
     state->DirectionalLights.reserve(state->DirectionalLights.size() + count);
     
     // load the reference copy
     DirectionalLight buffer;
     for (size_t i = 0; i < count; i++)
     {
-        input->read((char*)&buffer, sizeof(buffer));
-        state->DirectionalLights.push_back(buffer);
+        state->DirectionalLights.push_back(stream.Read<DirectionalLight>());
     }
 
     // TODO: 1. move the buffer upload logic into graphics layer; 2. add error handling, crash the app whenever SDL is reporting error

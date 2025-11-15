@@ -3,6 +3,7 @@
 #include "LuaScriptingModule/lua_scripting_module.h"
 // #include "RendererModule/renderer_module.h"
 // #include "ExampleGameplayModule/example_gameplay_module.h"
+#include "RendererModule/renderer_module.h"
 #include "SDL3/SDL_stdinc.h"
 
 #include <EngineCore/Runtime/root_module.h>
@@ -11,13 +12,11 @@
 
 using namespace Engine;
 
-// TODO: this file need to be generated based on a list of modules during installs
-
 // define modules here
 static const Core::Pipeline::ModuleDefinition Modules[] = {
     Engine::Core::Runtime::RootModuleState::GetDefinition(),
     Extension::InputModule::GetModuleDefinition(),
-    // Extension::RendererModule::GetModuleDefinition(),
+    Extension::RendererModule::GetModuleDefinition(),
     // Extension::ExampleGameplayModule::GetDefinition(),
     Extension::LuaScriptingModule::GetModuleDefinition(),
     Extension::LiveLinkModule::GetModuleDefinition(),

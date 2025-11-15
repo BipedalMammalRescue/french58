@@ -105,7 +105,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
     // create a single pass to clear screen & clean depth buffer
     SDL_GPUColorTargetInfo colorTargetInfo = {0};
     colorTargetInfo.texture = m_SwapchainTexture;
-    colorTargetInfo.clear_color = SDL_FColor{1.0f, 0.0f, 1.0f, 1.0f}; // ofc it should be magenta
+    colorTargetInfo.clear_color = SDL_FColor{0.0f, 0.0f, 0.0f, 1.0f}; // solumn black screen
     colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 

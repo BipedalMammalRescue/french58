@@ -8,6 +8,7 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
 #include "EngineCore/Runtime/asset_manager.h"
+#include "EngineCore/Runtime/container_factory_service.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_manager.h"
 #include "EngineCore/Runtime/event_writer.h"
@@ -71,6 +72,7 @@ private:
         TaskManager m_TaskManager;
         TransientAllocator m_TransientAllocator;
         AssetManager m_AssetManager;
+        ContainerFactoryService m_ContainerFactory;
         
         ServiceTable m_Services;
 

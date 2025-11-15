@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Runtime/container_factory_service.h"
 namespace Engine::Core::Logging {
 class LoggerService;
 }
@@ -29,6 +30,7 @@ struct ServiceTable
     TaskManager* TaskManager;
     TransientAllocator* TransientAllocator;
     AssetManager* AssetManager;
+    ContainerFactoryService* ContainerFactory;
 };
 
 }

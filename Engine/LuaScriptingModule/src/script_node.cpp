@@ -21,11 +21,12 @@ bool Components::CompileScriptNode(Core::Pipeline::RawComponent input, std::ostr
         {
             if (input.FieldV[i].Payload.Type != Core::Pipeline::VariantType::Path)
             {
-                std::cout << "script path is not a path" << std::endl;
+                std::cerr << "script path is not a path" << std::endl;
                 return false;
             }
 
             scriptId = input.FieldV[i].Payload.Data.Path;
+            break;
         }
         else 
         {
@@ -35,7 +36,7 @@ bool Components::CompileScriptNode(Core::Pipeline::RawComponent input, std::ostr
 
     if (!scriptId.has_value())
     {
-        std::cout << "script path not specified" << std::endl;
+        std::cerr << "script path not specified" << std::endl;
         return false;
     }
 
@@ -84,7 +85,7 @@ Engine::Core::Runtime::CallbackResult Components::LoadScriptNode(size_t count, U
         if (foundScript == state->GetLoadedScripts().end())
         {
             auto newScriptIndex = state->IncrementScriptCounter();
-            state->GetLoadedScripts()[scriptPath] = state->IncrementScriptCounter();
+            state->GetLoadedScripts()[scriptPath] = newScriptIndex;
             state->GetNodes().push_back({ id, entity, newScriptIndex });
         }
         else 

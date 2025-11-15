@@ -1,11 +1,11 @@
 namespace DataModels;
 
-public enum StaticStorageBufferIdentifier : byte
+public enum StaticStorageBufferIdentifier : int
 {
     DirectionalLightBuffer
 }
 
-public enum DynamicStorageBufferIdentifier : byte
+public enum DynamicStorageBufferIdentifier : int
 {
     
 }

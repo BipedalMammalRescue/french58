@@ -1,11 +1,11 @@
 namespace DataModels;
 
-public enum StaticUniformIdentifier : byte
+public enum StaticUniformIdentifier : int
 {
     
 }
 
-public enum DynamicUniformIdentifier : byte
+public enum DynamicUniformIdentifier : int
 {
     ModelTransform,
     ViewTransform,

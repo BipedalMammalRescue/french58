@@ -28,6 +28,7 @@ struct AssetLoadingContext
     Pipeline::HashIdTuple AssetGroupId;
     Pipeline::HashId AssetId;
     LoadBuffer Buffer;
+    void* UserData;
 };
 
 }

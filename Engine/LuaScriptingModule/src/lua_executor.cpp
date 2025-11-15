@@ -578,32 +578,41 @@ LuaExecutor::~LuaExecutor()
     m_Logger.Information("Lua executor disposed.");
 }
 
+// hot path
 void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer) 
 {
-    if (!lua_isfunction(m_LuaState, -1))
-        return;
+    StackBalancer balancer(m_LuaState);
+    
+    lua_getglobal(m_LuaState, SeScriptTable);
+    lua_rawgeti(m_LuaState, -1, node.ScriptIndex);
 
-    Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
-
-    lua_pushinteger(m_LuaState, node.Entity);
-    lua_setglobal(m_LuaState, SeEntityId);
-
-    lua_pushinteger(m_LuaState, node.Component);
-    lua_setglobal(m_LuaState, SeComponentId);
-
-    lua_pushlightuserdata(m_LuaState, writer);
-    lua_setglobal(m_LuaState, SeEventWriter);
-
-    auto result = lua_pcall(m_LuaState, 0, 0, 0);
-    if (result != LUA_OK)
+    if (lua_isfunction(m_LuaState, -1))
     {
-        writer->Rollback(checkpoint);
-        m_Logger.Error("Lua script execution failed, return code: {}, error: {}", result, lua_tostring(m_LuaState, -1));
+        Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
+
+        lua_pushinteger(m_LuaState, node.Entity);
+        lua_setglobal(m_LuaState, SeEntityId);
+
+        lua_pushinteger(m_LuaState, node.Component);
+        lua_setglobal(m_LuaState, SeComponentId);
+
+        lua_pushlightuserdata(m_LuaState, writer);
+        lua_setglobal(m_LuaState, SeEventWriter);
+
+        auto result = lua_pcall(m_LuaState, 0, 0, 0);
+        if (result != LUA_OK)
+        {
+            writer->Rollback(checkpoint);
+            m_Logger.Error("Lua script execution failed, return code: {}, error: {}", result, lua_tostring(m_LuaState, -1));
+        }
     }
 }
 
+// cold path
 bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(void* byteCode, size_t codeLength, int index) 
 {
+    StackBalancer balancer(m_LuaState);
+
     lua_getglobal(m_LuaState, SeScriptTable);
     lua_pushinteger(m_LuaState, index);
 
@@ -616,13 +625,6 @@ bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(void* byteCo
     
     lua_settable(m_LuaState, -3);
     return true;
-}
-
-bool LuaExecutor::SelectScript(int index)
-{
-    lua_getglobal(m_LuaState, SeScriptTable);
-    lua_rawgeti(m_LuaState, -1, index);
-    return lua_isfunction(m_LuaState, -1);
 }
 
 Engine::Core::Pipeline::Variant Engine::Extension::LuaScriptingModule::LuaExecutor::GetParameter(const Core::Pipeline::HashId &name, const int &component) const 

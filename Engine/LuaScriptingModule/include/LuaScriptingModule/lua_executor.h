@@ -32,6 +32,26 @@ private:
     static int L1CallMultiplexer(lua_State* luaState);
     static int LuaPrint(lua_State* luaState);
 
+    class StackBalancer
+    {
+    private:
+        lua_State* m_State;
+        int m_InitialStack;
+    
+    public:
+        StackBalancer(lua_State* luaState)
+            : m_State(luaState), m_InitialStack(lua_gettop(luaState)) {}
+
+        ~StackBalancer()
+        {
+            int newStack = lua_gettop(m_State);
+            if (newStack > m_InitialStack)
+            {
+                lua_pop(m_State, newStack - m_InitialStack);
+            }
+        }
+    };
+
 public:
     LuaExecutor(const Engine::Core::Runtime::ServiceTable* services);
     ~LuaExecutor();
@@ -42,7 +62,6 @@ public:
     Core::Runtime::CallbackResult ExecuteString(const char* string);
 
     bool LoadScript(void* byteCode, size_t codeLength, int index);
-    bool SelectScript(int index);
     void ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer);
 
     Core::Pipeline::Variant GetParameter(const Core::Pipeline::HashId &name, const int &component) const;

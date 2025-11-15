@@ -24,8 +24,6 @@ static void ScriptNodeEventSystem(const Engine::Core::Runtime::ServiceTable* ser
 
     for (const auto& scriptNode : moduleState->GetNodes())
     {
-        if (!executor->SelectScript(scriptNode.ScriptIndex))
-            continue;
         executor->ExecuteNode(scriptNode, writer);
     }
 }

@@ -8,7 +8,6 @@
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
-#include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
@@ -115,6 +114,7 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         if (gameresult.has_value())
             return gameresult;
 
+        // enter rendering critical path
         gameresult = controller.BeginFrame();
         if (gameresult.has_value())
             return gameresult;
@@ -234,6 +234,7 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Pipeline::ModuleA
     m_TaskManager(&m_Services, &m_LoggerService, configs.WorkerCount),
     m_TransientAllocator(&m_LoggerService),
     m_AssetManager(modules, &m_LoggerService, &m_Services),
+    m_ContainerFactory(),
     m_Services {
         &m_LoggerService,
         &m_GraphicsLayer,
@@ -244,7 +245,8 @@ GameLoop::GameLoopController::GameLoopController(Engine::Core::Pipeline::ModuleA
         &m_NetworkLayer,
         &m_TaskManager,
         &m_TransientAllocator,
-        &m_AssetManager
+        &m_AssetManager,
+        &m_ContainerFactory
     },
     m_Owner(owner),
     m_TopLevelLogger(m_LoggerService.CreateLogger("GameLoop")),
@@ -286,22 +288,22 @@ Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopC
 
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::BeginFrame() 
 {
-    // tick the timer
-    m_WorldState.Tick();
-
-    // input handling
-    m_InputManager.ProcessSdlEvents();
-
     // begin update loop
     return m_GraphicsLayer.BeginFrame();
 }
 
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::Preupdate() 
 {
+    // tick the timer
+    m_WorldState.Tick();
+
+    // input handling
+    m_InputManager.ProcessSdlEvents();
+
     // pre-update
-    for (InstancedSynchronousCallback callback :
-        m_ModuleManager.m_PreupdateCallbacks) {
-        auto result = callback.Callback(&m_Services, callback.InstanceState);
+    for (InstancedSynchronousCallback callback : m_ModuleManager.m_PreupdateCallbacks) 
+    {
+        CallbackResult result = callback.Callback(&m_Services, callback.InstanceState);
         if (result.has_value())
         return result;
     }

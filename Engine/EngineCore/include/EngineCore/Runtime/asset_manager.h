@@ -37,7 +37,7 @@ private:
 
     // the main thread: manages these task queues
     std::vector<AssetManagement::AssetLoadingContext> m_ContextualizeQueue;
-    std::vector<AssetManagement::AsyncAssetEvent> m_IndexQueue;
+    std::vector<AssetManagement::AsyncAssetEvent> m_IndexQueue;    
     std::vector<Pipeline::HashId> m_EntityScheduleQueue;
     std::vector<AssetManagement::AsyncEntityEvent> m_EntityLoadingQueue;
 

@@ -24,39 +24,48 @@ public:
     template <typename... Args>
     inline void Verbose(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->trace(message, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     inline void Debug(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->debug(message, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     inline void Information(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->info(message, std::forward<Args>(args)...);
-
     }
 
     template <typename... Args>
     inline void Warning(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->warn(message, std::forward<Args>(args)...);
-
     }
 
     template <typename... Args>
     inline void Error(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->error(message, std::forward<Args>(args)...);
-
     }
 
     template <typename... Args>
     inline void Fatal(const char* message, Args &&...args)
     {
+        if (m_CoreLogger == nullptr)
+            return;
         m_CoreLogger->critical(message, std::forward<Args>(args)...);
     }
 };

@@ -118,7 +118,7 @@ public class BuildEntityCommand : Command
 
         Task inputTask = Task.Run(() =>
         {
-            Span<byte> variantBuffer = stackalloc byte[72];
+            Span<byte> variantBuffer = stackalloc byte[68];
 
             try
             {
@@ -144,11 +144,7 @@ public class BuildEntityCommand : Command
                         componentBuilder.StandardInput.BaseStream.Write(MD5.HashData(Encoding.UTF8.GetBytes(field.Name)));
 
                         variantBuffer.Clear();
-                        BinaryPrimitives.WriteInt32LittleEndian(variantBuffer, (byte)field.Value.Type);
-
-                        // align the data to 8 bytes
-                        Span<byte> dataBuffer = variantBuffer[8..];
-                        field.Value.Write(dataBuffer);
+                        field.Value.WriteBoxed(variantBuffer);
                         componentBuilder.StandardInput.BaseStream.Write(variantBuffer);
                     }
                 }

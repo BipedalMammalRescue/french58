@@ -249,6 +249,8 @@ CallbackResult AssetManager::PollEvents()
 
     }
 
+    // TODO: need to refactor this to batch index as well since we already keep all index requests in the same order they show up in the entity file
+    // TODO: need to make the index queue a circular buffer => contextualize queue now is a resizable buffer which is fine
     // try to flush the index queue
     if (!m_IndexQueue.empty())
     {
@@ -261,7 +263,7 @@ CallbackResult AssetManager::PollEvents()
                 continue;
 
             // run the index routine
-            m_Logger.Information("Indexing asset {}.", m_IndexQueue[availableIndexQueue].GetContext()->AssetId);
+            m_Logger.Information("Indexing asset {} {}.", m_IndexQueue[availableIndexQueue].GetDefinition()->Name.DisplayName, m_IndexQueue[availableIndexQueue].GetContext()->AssetId);
             Runtime::CallbackResult result = m_IndexQueue[availableIndexQueue].GetDefinition()->Index(m_Services, m_IndexQueue[availableIndexQueue].GetModuleState(), m_IndexQueue[availableIndexQueue].GetContext());
             if (result.has_value())
                 return result;
@@ -282,6 +284,7 @@ CallbackResult AssetManager::PollEvents()
     // process contextualized assets
     if (!m_ContextualizeQueue.empty())
     {
+        // TODO: IMPORTANT THIS IS AN ERROR, REALLOCATING INDEX QUEUE CAUSES MEMORY LEAKS WE NEED TO FIX THE UDNERLYING LENGTH
         // make room in index queue to reduce small allocations
         m_IndexQueue.reserve(m_IndexQueue.size() + m_ContextualizeQueue.size());
 
@@ -443,4 +446,6 @@ Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::Module
             m_AssetDefinitions[tuple] = asset;
         }
     }
+
+    m_IndexQueue.reserve(1024);
 }
