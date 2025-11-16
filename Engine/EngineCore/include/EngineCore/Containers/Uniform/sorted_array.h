@@ -94,7 +94,7 @@ public:
         return position >= 0 && position < m_Size;
     }
 
-    // Insert a singular element; ideally not doing a full sort.
+    // Insert a singular element, if the key is not unqiue a duplicate is inserted.
     void Insert(const T& element)
     {
         ReserveExtra(1);
@@ -108,6 +108,71 @@ public:
 
         // roll a custom inexact binary search
         size_t candidate = FindLowerBound(element);
+
+        // move every element larger than or equal to the candidate rightward
+        for (size_t movee = m_Size - 1; movee >= candidate && RangeCheck(movee); movee --)
+        {
+            m_Storage[movee + 1] = m_Storage[movee];
+        }
+
+        // insert the element at candidate
+        m_Storage[candidate] = element;
+        m_Size++;
+    }
+
+    // Insert a singular element, if the key is not unique the insertion is dropped.
+    bool TryInsert(const T& element)
+    {
+        ReserveExtra(1);
+
+        if (m_Size == 0)
+        {
+            m_Storage[0] = element;
+            m_Size ++;
+            return true;
+        }
+
+        // roll a custom inexact binary search
+        size_t candidate = FindLowerBound(element);
+
+        // drop the operation if the new element is not unique
+        if (candidate < m_Size && TCompare::Compare(&element, &m_Storage[candidate]) == 0)
+            return false;
+
+        // move every element larger than or equal to the candidate rightward
+        for (size_t movee = m_Size - 1; movee >= candidate && RangeCheck(movee); movee --)
+        {
+            m_Storage[movee + 1] = m_Storage[movee];
+        }
+
+        // insert the element at candidate
+        m_Storage[candidate] = element;
+        m_Size++;
+
+        return true;
+    }
+
+    // Insert a singular element, if the key is not unique the original copy is overwritten
+    void Replace(const T& element)
+    {
+        ReserveExtra(1);
+
+        if (m_Size == 0)
+        {
+            m_Storage[0] = element;
+            m_Size ++;
+            return;
+        }
+
+        // roll a custom inexact binary search
+        size_t candidate = FindLowerBound(element);
+
+        // replace existing entry if the target already exists
+        if (candidate < m_Size && TCompare::Compare(&element, &m_Storage[candidate]) == 0)
+        {
+            m_Storage[candidate] = element;
+            return;
+        }
 
         // move every element larger than or equal to the candidate rightward
         for (size_t movee = m_Size - 1; movee >= candidate && RangeCheck(movee); movee --)
@@ -210,9 +275,9 @@ public:
     }
 
     // EXACT SEARCH
-    size_t Search(const T* key)
+    size_t Search(const T& key)
     {
-        void* foundAddress = SDL_bsearch(key, m_Storage, m_Size, sizeof(T), CompareCore);
+        void* foundAddress = SDL_bsearch(&key, m_Storage, m_Size, sizeof(T), CompareCore);
         if (foundAddress == nullptr)
             return m_Size;
 
@@ -227,6 +292,12 @@ public:
             return m_Size;
 
         return static_cast<T*>(foundAddress) - static_cast<T*>(m_Storage);
+    }
+
+    template <typename TCustomCompare>
+    bool CustomContains(const T& key)
+    {
+        return CustomSearch<TCustomCompare>(key) != m_Size;
     }
 };
 

@@ -38,6 +38,7 @@ public:
     Core::Containers::Uniform::SortedArray<Assets::RenderPipeline, Assets::RenderPipelineComparer> PipelineIndex;
 
     // materials: also stored in a linear buffer but we build a more complicated index for it
+    Core::Containers::Uniform::TrivialSortedArray<Core::Pipeline::HashId> LoadedMaterials;
     Core::Containers::Uniform::SortedArray<Assets::Material, Assets::MaterialComparer> MaterialIndex;
 
     // static meshes

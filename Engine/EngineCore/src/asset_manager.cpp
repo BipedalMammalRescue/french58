@@ -166,6 +166,7 @@ CallbackResult AssetManager::PollEvents()
                                 Pipeline::HashId nextAssetId = stream.Read<Pipeline::HashId>();
                                 size_t nextAssetSize = stream.Read<size_t>();
                                 m_ContextualizeQueue.push_back(AssetManagement::AssetLoadingContext{
+                                    false,
                                     nextAssetSize,
                                     assetGroupId,
                                     nextAssetId,

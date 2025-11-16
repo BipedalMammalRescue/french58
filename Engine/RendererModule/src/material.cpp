@@ -1,4 +1,5 @@
 #include "RendererModule/Assets/material.h"
+#include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Runtime/heap_allocator.h"
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/common.h"
@@ -11,6 +12,10 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
+
+
+
+
 Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
 {
     // calculate the total size needed
@@ -18,7 +23,17 @@ Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::Servi
     size_t incomingSize = 0;
     for (size_t i = 0; i < contextCount; i++)
     {
-        incomingSize += outContext[i].SourceSize;
+        // check if the incoming load is duplicate
+        if (!outContext[i].ReplaceExisting && !state->LoadedMaterials.TryInsert(outContext[i].AssetId))
+        {
+            state->Logger.Information("Material {} is already loaded.", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Core::AssetManagement::LoadBufferType::Invalid;
+        }
+        else 
+        {
+            incomingSize += outContext[i].SourceSize;
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
+        }
     }
 
     // distribute out the pointers
@@ -58,7 +73,7 @@ Core::Runtime::CallbackResult Assets::IndexMaterial(Core::Runtime::ServiceTable 
         fragUniformOffset,
         fragUniformCount
     };
-    state->MaterialIndex.Insert(material);
+    state->MaterialIndex.Replace(material);
     
     return Core::Runtime::CallbackSuccess();
 }

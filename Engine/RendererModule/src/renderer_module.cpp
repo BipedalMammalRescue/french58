@@ -1,6 +1,7 @@
 #include "RendererModule/renderer_module.h"
 
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/container_factory_service.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
@@ -50,6 +51,7 @@ RendererModuleState::RendererModuleState(Core::Runtime::ServiceTable* services)
     EmptyStorageBuffer(CreaetEmptyStorageBuffer(services->GraphicsLayer)),
     Logger(services->LoggerService->CreateLogger("RendererModule")),
     PipelineIndex(services->ContainerFactory->CreateSortedArray<Assets::RenderPipeline, Assets::RenderPipelineComparer>(16)),
+    LoadedMaterials(services->ContainerFactory->CreateSortedArray<Core::Pipeline::HashId>(16)),
     MaterialIndex(services->ContainerFactory->CreateSortedArray<Assets::Material, Assets::MaterialComparer>(16)),
     MeshRenderers(services->ContainerFactory->CreateSortedArray<Components::MeshRenderer, Components::MeshRendererComparer>(16)),
     DirectionalLightBuffer(nullptr)

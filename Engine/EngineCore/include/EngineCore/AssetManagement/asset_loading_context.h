@@ -24,6 +24,7 @@ struct LoadBuffer
 
 struct AssetLoadingContext
 {
+    bool ReplaceExisting;
     size_t SourceSize;
     Pipeline::HashIdTuple AssetGroupId;
     Pipeline::HashId AssetId;
