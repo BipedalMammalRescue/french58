@@ -63,13 +63,13 @@ bool AssetManager::LoadAssetFileAsync(AssetManagement::AsyncAssetEvent* destinat
             void* dest = m_Services->TransientAllocator->GetBuffer(destination->GetContext()->Buffer.Location.TransientBufferId);
             if (dest == nullptr)
             {
-                m_Logger.Error("Error loading asset {}: transient allocator rejected buffer.", destination->GetContext()->AssetId);
+                m_Logger.Error("Error loading asset {}:{}: transient allocator rejected buffer.", destination->GetDefinition()->Name.DisplayName, destination->GetContext()->AssetId);
                 return false;
             }
 
             if (!SDL_ReadAsyncIO(ioObject, dest, 0, destination->GetContext()->SourceSize, m_AsyncQueue, destination))
             {
-                m_Logger.Error("Error loading asset {}: {}", destination->GetContext()->AssetId, SDL_GetError());
+                m_Logger.Error("Error loading asset {}:{}: {}", destination->GetDefinition()->Name.DisplayName, destination->GetContext()->AssetId, SDL_GetError());
                 return false;
             }
 

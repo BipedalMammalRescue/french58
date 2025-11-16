@@ -53,16 +53,24 @@ Engine::Core::Runtime::CallbackResult Assets::ContextualizeRenderPipeline(Engine
 {
     // calculate the total size needed
     RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
-    size_t incomingSize = 0;
     for (size_t i = 0; i < contextCount; i++)
     {
-        incomingSize += outContext[i].SourceSize;
+        if (!state->PipelineIndex.TryInsert({outContext[i].AssetId}) && !outContext->ReplaceExisting)
+        {
+            state->Logger.Information("Render pipeline {} is already loaded.", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Core::AssetManagement::LoadBufferType::Invalid;
+        }
+        else
+        {
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
+        }
     }
 
     // distribute out the pointers
     for (size_t i = 0; i < contextCount; i++)
     {
-        outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
+        if (outContext[i].Buffer.Type == Core::AssetManagement::LoadBufferType::Invalid)
+            continue;
         outContext[i].Buffer.Location.ModuleBuffer = services->HeapAllocator->Allocate(outContext->SourceSize);
     }
 
@@ -146,7 +154,7 @@ Engine::Core::Runtime::CallbackResult Assets::IndexRenderPipeline(Engine::Core::
         LocateInjectedDataFromStream<InjectedStorageBuffer>(stream),
     };
 
-    // TODO: this is the culprit?
-    state->PipelineIndex.Insert(pipeline);
+    // NOTE: non-replace behavior would have been intercepted beforehand
+    state->PipelineIndex.Replace(pipeline);
     return Engine::Core::Runtime::CallbackSuccess();
 }

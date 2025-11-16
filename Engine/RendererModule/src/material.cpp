@@ -8,30 +8,23 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
 
-
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
-
-
-
-
 
 Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
 {
     // calculate the total size needed
     RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
-    size_t incomingSize = 0;
     for (size_t i = 0; i < contextCount; i++)
     {
         // check if the incoming load is duplicate
-        if (!outContext[i].ReplaceExisting && !state->LoadedMaterials.TryInsert(outContext[i].AssetId))
+        if (!state->LoadedMaterials.TryInsert(outContext[i].AssetId) && !outContext[i].ReplaceExisting)
         {
             state->Logger.Information("Material {} is already loaded.", outContext[i].AssetId);
             outContext[i].Buffer.Type = Core::AssetManagement::LoadBufferType::Invalid;
         }
         else 
         {
-            incomingSize += outContext[i].SourceSize;
             outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
         }
     }
@@ -39,7 +32,8 @@ Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::Servi
     // distribute out the pointers
     for (size_t i = 0; i < contextCount; i++)
     {
-        outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
+        if (outContext[i].Buffer.Type == Engine::Core::AssetManagement::LoadBufferType::Invalid)
+            continue;
         outContext[i].Buffer.Location.ModuleBuffer = services->HeapAllocator->Allocate(outContext[i].SourceSize);
     }
 
