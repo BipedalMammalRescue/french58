@@ -16,8 +16,16 @@ Engine::Core::Runtime::CallbackResult Assets::ContextualizeFragmentShader(
     // we need to use transient buffer for this
     for (size_t i = 0; i < contextCount; i++)
     {
-        outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::TransientBuffer;
-        outContext[i].Buffer.Location.TransientBufferSize = outContext[i].SourceSize;
+        if (state->FragmentShaders.find(outContext[i].AssetId) != state->FragmentShaders.end())
+        {
+            state->Logger.Information("Fragment shader {} already loaded (reloading shader is not yet supported).", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
+        }
+        else
+        {        
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::TransientBuffer;
+            outContext[i].Buffer.Location.TransientBufferSize = outContext[i].SourceSize;
+        }
     }
 
     return Engine::Core::Runtime::CallbackSuccess();
