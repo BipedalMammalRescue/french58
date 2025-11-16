@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EngineCore/Runtime/container_factory_service.h"
 namespace Engine::Core::Logging {
 class LoggerService;
 }
@@ -16,6 +15,8 @@ class NetworkLayer;
 class TaskManager;
 class TransientAllocator;
 class AssetManager;
+class ContainerFactoryService;
+class HeapAllocator;
 
 // Table of services that should be accessed to modules.
 struct ServiceTable 
@@ -30,6 +31,7 @@ struct ServiceTable
     TaskManager* TaskManager;
     TransientAllocator* TransientAllocator;
     AssetManager* AssetManager;
+    HeapAllocator* HeapAllocator;
     ContainerFactoryService* ContainerFactory;
 };
 

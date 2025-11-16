@@ -1,4 +1,5 @@
 #include "RendererModule/Assets/material.h"
+#include "EngineCore/Runtime/heap_allocator.h"
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/common.h"
 #include "RendererModule/renderer_module.h"
@@ -20,16 +21,11 @@ Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::Servi
         incomingSize += outContext[i].SourceSize;
     }
 
-    // bulk allocate buffer
-    size_t originalSize = state->MaterialStorage.size();
-    state->MaterialStorage.resize(originalSize + incomingSize);
-
     // distribute out the pointers
     for (size_t i = 0; i < contextCount; i++)
     {
         outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
-        outContext[i].Buffer.Location.ModuleBuffer = state->MaterialStorage.data() + originalSize;
-        originalSize += outContext[i].SourceSize;
+        outContext[i].Buffer.Location.ModuleBuffer = services->HeapAllocator->Allocate(outContext[i].SourceSize);
     }
 
     // allocate space in the index

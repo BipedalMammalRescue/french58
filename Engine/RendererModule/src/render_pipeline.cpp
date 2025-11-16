@@ -1,5 +1,6 @@
 #include "RendererModule/Assets/render_pipeline.h"
 #include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Runtime/heap_allocator.h"
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/renderer_module.h"
 #include "RendererModule/common.h"
@@ -58,16 +59,11 @@ Engine::Core::Runtime::CallbackResult Assets::ContextualizeRenderPipeline(Engine
         incomingSize += outContext[i].SourceSize;
     }
 
-    // bulk allocate buffer
-    size_t originalSize = state->PipelineStorage.size();
-    state->PipelineStorage.resize(originalSize + incomingSize);
-
     // distribute out the pointers
     for (size_t i = 0; i < contextCount; i++)
     {
         outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
-        outContext[i].Buffer.Location.ModuleBuffer = state->PipelineStorage.data() + originalSize;
-        originalSize += outContext[i].SourceSize;
+        outContext[i].Buffer.Location.ModuleBuffer = services->HeapAllocator->Allocate(outContext->SourceSize);
     }
 
     return Engine::Core::Runtime::CallbackSuccess();

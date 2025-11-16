@@ -36,11 +36,9 @@ public:
 
     // pipelines: treated as the hottest path so we keep them in the most uniform storage
     Core::Containers::Uniform::SortedArray<Assets::RenderPipeline, Assets::RenderPipelineComparer> PipelineIndex;
-    std::vector<unsigned char> PipelineStorage;
 
     // materials: also stored in a linear buffer but we build a more complicated index for it
     Core::Containers::Uniform::SortedArray<Assets::Material, Assets::MaterialComparer> MaterialIndex;
-    std::vector<unsigned char*> MaterialStorage;
 
     // static meshes
     std::unordered_map<Core::Pipeline::HashId, RendererModule::Assets::StaticMesh> StaticMeshes;

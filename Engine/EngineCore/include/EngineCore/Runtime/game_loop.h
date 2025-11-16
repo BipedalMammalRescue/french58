@@ -13,6 +13,7 @@
 #include "EngineCore/Runtime/event_manager.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/heap_allocator.h"
 #include "EngineCore/Runtime/input_manager.h"
 #include "EngineCore/Runtime/network_layer.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -72,6 +73,7 @@ private:
         TaskManager m_TaskManager;
         TransientAllocator m_TransientAllocator;
         AssetManager m_AssetManager;
+        HeapAllocator m_HeapAllocator;
         ContainerFactoryService m_ContainerFactory;
         
         ServiceTable m_Services;

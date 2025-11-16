@@ -1,6 +1,7 @@
 #include "RendererModule/renderer_module.h"
 
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Runtime/container_factory_service.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
