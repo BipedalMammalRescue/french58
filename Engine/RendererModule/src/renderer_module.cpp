@@ -261,7 +261,7 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
             {
                 // skip this mesh renderer if the target mesh isn't in yet
                 auto foundMesh = state->StaticMeshes.find(currentMeshRenderer->Mesh);
-                if (foundMesh == state->StaticMeshes.end())
+                if (foundMesh == state->StaticMeshes.end() || foundMesh->second.IndexBuffer == nullptr || foundMesh->second.VertexBuffer == nullptr)
                     continue;
 
                 currentMeshRenderer->IndexBuffer = foundMesh->second.IndexBuffer;

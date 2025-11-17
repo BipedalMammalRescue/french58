@@ -22,38 +22,47 @@ Core::Runtime::CallbackResult Assets::ContextualizeStaticMesh(Core::Runtime::Ser
     // allocate GPU memory
     for (size_t i = 0; i < contextCount; i++)
     {
-        SDL_GPUTransferBufferCreateInfo transBufferCreateInfo 
+        if (!state->StaticMeshes.try_emplace(outContext[i].AssetId, StaticMesh{nullptr, 0, nullptr}).second 
+            && !outContext[i].ReplaceExisting)
         {
-            SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            (uint32_t)outContext[i].SourceSize
-        };
-
-        SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(
-            services->GraphicsLayer->GetDevice(),
-            &transBufferCreateInfo
-        );
-
-        if (transferBuffer == nullptr)
-        {
-            state->Logger.Error("Failed to create transfer buffer for static mesh {}, detail: {}", outContext[i].AssetId, SDL_GetError());
-            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
-            continue;
+            state->Logger.Information("Static mesh {} is already loaded.", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Core::AssetManagement::LoadBufferType::Invalid;
         }
-
-        void *mappedTransferBuffer = SDL_MapGPUTransferBuffer(
-            services->GraphicsLayer->GetDevice(), transferBuffer, false);
-
-        if (mappedTransferBuffer == nullptr)
+        else 
         {
-            state->Logger.Error("Failed to map transfer buffer for static mesh {}, detail: {}", outContext[i].AssetId, SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(services->GraphicsLayer->GetDevice(), transferBuffer);
-            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
-            continue;
-        }
+            SDL_GPUTransferBufferCreateInfo transBufferCreateInfo 
+            {
+                SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+                (uint32_t)outContext[i].SourceSize
+            };
 
-        outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
-        outContext[i].Buffer.Location.ModuleBuffer = mappedTransferBuffer;
-        outContext[i].UserData = transferBuffer;
+            SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(
+                services->GraphicsLayer->GetDevice(),
+                &transBufferCreateInfo
+            );
+
+            if (transferBuffer == nullptr)
+            {
+                state->Logger.Error("Failed to create transfer buffer for static mesh {}, detail: {}", outContext[i].AssetId, SDL_GetError());
+                outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
+                continue;
+            }
+
+            void *mappedTransferBuffer = SDL_MapGPUTransferBuffer(
+                services->GraphicsLayer->GetDevice(), transferBuffer, false);
+
+            if (mappedTransferBuffer == nullptr)
+            {
+                state->Logger.Error("Failed to map transfer buffer for static mesh {}, detail: {}", outContext[i].AssetId, SDL_GetError());
+                SDL_ReleaseGPUTransferBuffer(services->GraphicsLayer->GetDevice(), transferBuffer);
+                outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
+                continue;
+            }
+
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
+            outContext[i].Buffer.Location.ModuleBuffer = mappedTransferBuffer;
+            outContext[i].UserData = transferBuffer;
+        }
     }
 
     return Core::Runtime::CallbackSuccess();
@@ -181,7 +190,23 @@ Core::Runtime::CallbackResult Assets::IndexStaticMesh(Core::Runtime::ServiceTabl
     SDL_ReleaseGPUTransferBuffer(services->GraphicsLayer->GetDevice(), transferBuffer);
 
     Assets::StaticMesh mesh { indexBuffer, indexCount, vertexBuffer };
-    state->StaticMeshes[inContext->AssetId] = mesh;
+
+    auto existingMesh = state->StaticMeshes.try_emplace(inContext->AssetId, mesh);
+
+    // clean up the old value if needed
+    if (!existingMesh.second)
+    {
+        if (existingMesh.first->second.IndexBuffer != nullptr)
+        {
+            SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), existingMesh.first->second.IndexBuffer);
+        }
+        if (existingMesh.first->second.VertexBuffer != nullptr)
+        {
+            SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), existingMesh.first->second.VertexBuffer);
+        }
+
+        existingMesh.first->second = mesh;
+    }
 
     return Core::Runtime::CallbackSuccess();
 }
