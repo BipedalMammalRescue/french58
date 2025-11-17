@@ -1,6 +1,6 @@
-# Sigourney Engine
+# French58
 
-A collection of programming language and game engine-related projects made for fun.
+A 3D game engine powered by SDL3, inspired by Bitsquid and Godot Engine.
 
 ## EngineCore
 
@@ -17,9 +17,12 @@ Modules are high-level engine extensions; each module defines its own asset and 
 
 # Acknowledgements
 
-As this project has become my exploration of setting up a completely FOSS workspace for my personal work, I would like to include a section acknowledging the open source projects I used in Sigourney Engine's development (the list may not be complete):
+CMake: C++ code build system, as well as almost all of her dependencies.
 
-CMake: Sigourney Engine's code build system, as well as almost all of her dependencies.
-Mu-Thr: Data build system SDK used by Sigourney Engine.
+Mu-Thr: Data build system SDK used to construct data build tools including EntityBuilder and AssetBuilder.
+
 vscode: Primary IDE.
+
 clangd, clang: compiler and IDE feature support.
+
+.Net: most tools here are written in C# and runs on .Net rutnime.
