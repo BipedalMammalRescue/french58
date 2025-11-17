@@ -320,6 +320,12 @@ Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopC
     return CallbackSuccess();
 }
 
+CallbackResult GameLoop::GameLoopController::ReloadAsset(Pipeline::HashId module, Pipeline::HashId type, Pipeline::HashId id)
+{
+    m_AssetManager.QueueAsset(module, type, id);
+    return CallbackSuccess();
+}
+
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::PollAsyncIoEvents() 
 {
     m_AssetManager.PollEvents();

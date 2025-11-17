@@ -41,6 +41,7 @@ public:
     virtual CallbackResult UnloadModules() = 0;
 
     virtual CallbackResult LoadEntity(Pipeline::HashId entityId) = 0;
+    virtual CallbackResult ReloadAsset(Pipeline::HashId module, Pipeline::HashId type, Pipeline::HashId id) = 0;
 
     virtual CallbackResult PollAsyncIoEvents() = 0;
 
@@ -89,6 +90,7 @@ private:
         CallbackResult LoadModules() override;
         CallbackResult UnloadModules() override;
         CallbackResult LoadEntity(Pipeline::HashId entityId) override;
+        CallbackResult ReloadAsset(Pipeline::HashId module, Pipeline::HashId type, Pipeline::HashId id) override;
         CallbackResult PollAsyncIoEvents() override;
         CallbackResult BeginFrame() override;
         CallbackResult Preupdate() override;
