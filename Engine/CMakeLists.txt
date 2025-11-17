@@ -24,7 +24,7 @@ target_link_libraries(EngineCore PUBLIC nlohmann_json)
 target_link_libraries(EngineCore PUBLIC glm)
 target_link_libraries(EngineCore PUBLIC constexpr_md5)
 target_link_libraries(EngineCore PUBLIC concurrentqueue)
-target_link_libraries(EngineCore PUBLIC SDL3_net-static)
+target_link_libraries(EngineCore PUBLIC SDL3_net-shared)
 
 target_include_directories(EngineCore PUBLIC lib/komihash)
 
