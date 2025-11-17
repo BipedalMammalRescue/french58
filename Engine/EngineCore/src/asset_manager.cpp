@@ -14,11 +14,25 @@
 #include "SDL3/SDL_asyncio.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_storage.h"
-#include <filesystem>
 #include <md5.h>
 
 using namespace Engine::Core::Runtime;
 using namespace Engine::Utils::Memory;
+
+
+size_t AssetManager::GetAssetSize(Engine::Core::Pipeline::HashId assetId)
+{
+    char nameBuffer[] = "2D87CCD68F05994578FAFA7AF7750AB4.bse_asset";
+    Utils::String::BinaryToHex(sizeof(assetId), assetId.Hash.data(), nameBuffer);
+
+    size_t fileSize = 0;
+    if (!SDL_GetStorageFileSize(m_StorageFolder, nameBuffer, &fileSize))
+    {
+        m_Logger.Error("Failed to get file size for {}, detail: {}", nameBuffer, SDL_GetError());
+    }
+    return fileSize;
+}
+
 
 void AssetManager::QueueEntity(Pipeline::HashId entityId)
 {
@@ -60,15 +74,7 @@ void AssetManager::QueueAsset(Engine::Core::Pipeline::HashId module, Pipeline::H
         return;
     }
 
-    char nameBuffer[] = "2D87CCD68F05994578FAFA7AF7750AB4.bse_asset";
-    Utils::String::BinaryToHex(sizeof(assetId), assetId.Hash.data(), nameBuffer);
-    
-    size_t fileSize = 0;
-    if (!SDL_GetStorageFileSize(m_StorageFolder, nameBuffer, &fileSize))
-    {
-        m_Logger.Error("Failed to get file size for {}, detail: {}", nameBuffer, SDL_GetError());
-        return;
-    }
+    size_t fileSize = GetAssetSize(assetId);
 
     if (fileSize == 0)
     {
@@ -221,10 +227,10 @@ CallbackResult AssetManager::PollEvents()
                             for (int assetIndex = 0; assetIndex < groupSize; assetIndex ++)
                             {
                                 Pipeline::HashId nextAssetId = stream.Read<Pipeline::HashId>();
-                                size_t nextAssetSize = stream.Read<size_t>();
+                                // stream.Read<size_t>();
                                 m_ContextualizeQueue.push_back(AssetManagement::AssetLoadingContext{
                                     false,
-                                    nextAssetSize,
+                                    GetAssetSize(nextAssetId),
                                     assetGroupId,
                                     nextAssetId,
                                     {
@@ -588,8 +594,7 @@ Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::Module
 {
     m_DependencyAgnosticIndexQueue = nullptr;
 
-    auto currentWorkingDirectory = std::filesystem::current_path();
-    m_StorageFolder = SDL_OpenTitleStorage(currentWorkingDirectory.c_str(), 0);
+    m_StorageFolder = SDL_OpenTitleStorage(".", 0);
     if (m_StorageFolder == nullptr)
     {
         m_Logger.Error("SDL failed to open title storage at the working directory, detail: {}", SDL_GetError());

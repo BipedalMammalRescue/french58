@@ -71,6 +71,8 @@ private:
     // Queue an enetity to be loaded at the immediate next possible timing. Assets are loaded based on the implementation of engine (e.g. if eventually asseet bundles/packs are supported they'll go through that path)
     void QueueEntity(Pipeline::HashId entityId);
 
+    size_t GetAssetSize(Pipeline::HashId assetId);
+
 public:
     AssetManager(Engine::Core::Pipeline::ModuleAssembly modules, Logging::LoggerService *loggerService, ServiceTable *services);
     ~AssetManager();

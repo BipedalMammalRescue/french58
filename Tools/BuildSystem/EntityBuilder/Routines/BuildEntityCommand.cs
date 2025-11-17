@@ -248,7 +248,6 @@ public class BuildEntityCommand : Command
         _logger.Information("Assets built.");
 
         // copy the built assets to the output folder
-        Dictionary<string, long> assetFileSizes = [];
         Task copyTask = Task.Run(() =>
         {
             foreach (KeyValuePair<string, BuildResult> output in buildOutput)
@@ -265,9 +264,6 @@ public class BuildEntityCommand : Command
                     string assetFileName = Path.ChangeExtension(Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(output.Key))), "bse_asset");
                     string outFilePath = Path.Combine(outPath.FullName, assetFileName);
                     File.Move(output.Value.OutputPath, outFilePath, overwrite: true);
-
-                    // log file size
-                    assetFileSizes[output.Key] = new FileInfo(outFilePath).Length;
 
                     _logger.Information("Asset task result <{key}> {path}", output.Key, assetFileName);
                 }
@@ -385,10 +381,7 @@ public class BuildEntityCommand : Command
             outEntityFile.Write(group.Tasks.Count());
             foreach (string task in group.Tasks)
             {
-                if (!assetFileSizes.TryGetValue(task, out long length))
-                    continue;
                 outEntityFile.Write(MD5.HashData(Encoding.UTF8.GetBytes(task)));
-                outEntityFile.Write(length);
             }
             _logger.Information("Printed asset group {module}:{type}", group.Module, group.Type);
         }
