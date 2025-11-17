@@ -13,6 +13,7 @@
 #include "EngineUtils/String/hex_strings.h"
 #include "SDL3/SDL_asyncio.h"
 #include "SDL3/SDL_error.h"
+#include "SDL3/SDL_storage.h"
 #include <md5.h>
 
 using namespace Engine::Core::Runtime;
@@ -48,6 +49,38 @@ void AssetManager::QueueEntity(Pipeline::HashId entityId)
     }
 
     m_Logger.Information("Entity {} queued for loading.", entityId);
+}
+
+void AssetManager::QueueAsset(Engine::Core::Pipeline::HashId module, Pipeline::HashId type, Pipeline::HashId assetId)
+{
+    if (m_StorageFolder == nullptr)
+    {
+        m_Logger.Error("Asset reloading for {} skipped, because SDL storage can't be opened for the current working directory.", assetId);
+        return;
+    }
+
+    char nameBuffer[] = "2D87CCD68F05994578FAFA7AF7750AB4.bse_asset";
+    Utils::String::BinaryToHex(sizeof(assetId), assetId.Hash.data(), nameBuffer);
+    
+    size_t fileSize = 0;
+    if (!SDL_GetStorageFileSize(m_StorageFolder, nameBuffer, &fileSize))
+    {
+        m_Logger.Error("Failed to get file size for {}, detail: {}", nameBuffer, SDL_GetError());
+        return;
+    }
+
+    if (fileSize == 0)
+    {
+        m_Logger.Error("Skipped reloading asset {} because file is empty.", assetId);
+        return;
+    }
+
+    m_AssetReloadQueue.push_back({
+        true,
+        fileSize,
+        { module, type },
+        assetId
+    });
 }
 
 bool AssetManager::LoadAssetFileAsync(AssetManagement::AsyncAssetEvent* destination)
@@ -281,6 +314,103 @@ CallbackResult AssetManager::PollEvents()
         moduleLocalQueue.second = newHead;
     }
 
+    // process asset reload requests
+    if (!m_AssetReloadQueue.empty())
+    {
+        size_t transientBufferBudget = 0;
+        size_t transientBufferCount = 0;
+
+        // allocate a new index buffer for all of these: they are processed only in the same order to themselves and all dependency rules are disregarded
+        size_t indexQueueBufferSize = sizeof(IndexQueue) + m_AssetReloadQueue.size() * sizeof(AssetManagement::AsyncAssetEvent);
+        TransientBufferId indexQueueBufferId = m_Services->TransientAllocator->CreateBufferGroup(indexQueueBufferSize, 1);
+        
+        AssetManagement::AsyncAssetEvent* newAsyncAssetEvents =
+            (AssetManagement::AsyncAssetEvent*)((char*)m_Services->TransientAllocator->GetBuffer(indexQueueBufferId) + sizeof(IndexQueue));
+        
+        IndexQueue* newIndexQueue = new (m_Services->TransientAllocator->GetBuffer(indexQueueBufferId)) IndexQueue(
+            indexQueueBufferId, newAsyncAssetEvents, m_AssetReloadQueue.size(), m_Logger, m_Services
+        );
+
+        // link the new queue into the dependency-agnostic queue
+        if (m_DependencyAgnosticIndexQueue == nullptr)
+        {
+            m_DependencyAgnosticIndexQueue = newIndexQueue;
+        }
+        else 
+        {
+            m_DependencyAgnosticIndexQueue->AddTail(newIndexQueue);
+        }
+
+        // queue these objects individually, we are not usually reloading an entire scene's worth of assets all at once
+        for (size_t i = 0; i < m_AssetReloadQueue.size(); i++)
+        {
+            auto& context = m_AssetReloadQueue[i];
+
+            context.Buffer.Type = AssetManagement::LoadBufferType::Invalid;
+
+            auto targetAssetType = m_AssetDefinitions.find(context.AssetGroupId);
+            if (targetAssetType == m_AssetDefinitions.end())
+            {
+                m_Logger.Warning("Definition not found for asset type {}:{}, reloading skipped", 
+                    context.AssetGroupId.First, 
+                    context.AssetGroupId.Second);
+                continue;
+            }
+
+            auto targetModuleState = m_Services->ModuleManager->FindModuleMutable(context.AssetGroupId.First);
+            if (targetModuleState == nullptr)
+            {
+                m_Logger.Warning("Module state not found for asset type {}, reloading skipped.", 
+                    targetAssetType->second.Name.DisplayName);
+                continue;
+            }
+
+            CallbackResult result = targetAssetType->second.Contextualize(m_Services, targetModuleState, &context, 1);
+            if (result.has_value())
+                return result;
+
+            AssetManagement::AsyncAssetEvent* persistentCopy = new (newAsyncAssetEvents + i) AssetManagement::AsyncAssetEvent(context, &targetAssetType->second, targetModuleState);
+
+            switch (context.Buffer.Type)
+            {
+            case AssetManagement::LoadBufferType::TransientBuffer:
+                transientBufferBudget += context.Buffer.Location.TransientBufferSize;
+                transientBufferCount ++;
+                break;
+            case AssetManagement::LoadBufferType::ModuleBuffer:
+                LoadAssetFileAsync(persistentCopy);
+                break;
+            case AssetManagement::LoadBufferType::Invalid:
+                m_Logger.Information("Asset {}:{} rejected by module", targetAssetType->second.Name.DisplayName, context.AssetId);
+                break;
+            }
+        }
+
+        if (transientBufferBudget > 0)
+        {
+            TransientBufferId bufferId = m_Services->TransientAllocator->CreateBufferGroup(transientBufferBudget, transientBufferCount);
+
+            int offset = 0;
+
+            for (size_t i = 0; i < m_AssetReloadQueue.size(); i++)
+            {
+                auto& currentEvent = newAsyncAssetEvents[i];
+
+                if (currentEvent.GetContext()->Buffer.Type != AssetManagement::LoadBufferType::TransientBuffer)
+                    continue;
+
+                // grant a portion of the transient buffer
+                bufferId.Child = offset;
+                offset += currentEvent.GetContext()->Buffer.Location.TransientBufferSize;
+                currentEvent.GetContext()->Buffer.Location.TransientBufferId = bufferId;
+
+                // schedule IO
+                LoadAssetFileAsync(&currentEvent);
+            }
+        }
+    }
+    m_AssetReloadQueue.clear();
+
     // process contextualized assets
     if (!m_ContextualizeQueue.empty())
     {
@@ -435,10 +565,19 @@ void Engine::Core::Runtime::AssetManager::ProcessComponentGroup(Utils::Memory::M
     m_Logger.Information("Loading component group: {}.", targetComponent->second.Name.DisplayName);
     targetComponent->second.Load(componentCount, stream, m_Services, targetModuleState);
 }
+
 Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::ModuleAssembly modules, Logging::LoggerService *loggerService, ServiceTable *services)
     : m_Logger(loggerService->CreateLogger("AssetManager")),
       m_Services(services) 
 {
+    m_DependencyAgnosticIndexQueue = nullptr;
+
+    m_StorageFolder = SDL_OpenTitleStorage(".", 0);
+    if (m_StorageFolder == nullptr)
+    {
+        m_Logger.Error("SDL failed to open title storage at the working directory, detail: {}", SDL_GetError());
+    }
+
     m_AsyncQueue = SDL_CreateAsyncIOQueue();
 
     // process and cache per-module information
@@ -465,4 +604,10 @@ Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::Module
         // allocate a null linked list header
         m_IndexQueues[module.Name.Hash] = nullptr;
     }
+}
+
+AssetManager::~AssetManager()
+{
+    SDL_CloseStorage(m_StorageFolder);
+    SDL_DestroyAsyncIOQueue(m_AsyncQueue);
 }

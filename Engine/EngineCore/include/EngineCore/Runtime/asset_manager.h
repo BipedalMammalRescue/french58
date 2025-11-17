@@ -13,6 +13,7 @@
 #include "EngineUtils/Memory/memstream_lite.h"
 #include "SDL3/SDL_asyncio.h"
 #include "EngineCore/Runtime/index_queue.h"
+#include "SDL3/SDL_storage.h"
 
 #include <unordered_map>
 #include <vector>
@@ -30,6 +31,9 @@ class AssetManager
 private:
     friend class GameLoop;
 
+    // used for utilities
+    SDL_Storage* m_StorageFolder;
+
     // generate them somehow
     std::unordered_map<Pipeline::HashIdTuple, Pipeline::ComponentDefinition> m_Components;
     std::unordered_map<Pipeline::HashIdTuple, Pipeline::AssetDefinition> m_AssetDefinitions;
@@ -38,10 +42,12 @@ private:
     Logging::Logger m_Logger;
     ServiceTable* m_Services;
 
-    // the main thread: manages these task queues
+    // contextualization
+    std::vector<AssetManagement::AssetLoadingContext> m_AssetReloadQueue;
     std::vector<AssetManagement::AssetLoadingContext> m_ContextualizeQueue;
-    // std::vector<AssetManagement::AsyncAssetEvent> m_IndexQueue;
 
+    // indexing
+    IndexQueue* m_DependencyAgnosticIndexQueue;
     std::unordered_map<Pipeline::HashId, IndexQueue*> m_IndexQueues;
 
     std::vector<Pipeline::HashId> m_EntityScheduleQueue;
@@ -61,10 +67,15 @@ private:
     bool LoadAssetFileAsync(AssetManagement::AsyncAssetEvent* destination);
     bool LoadEntityFileAsync(Pipeline::HashId id);
 
+    // Queue an enetity to be loaded at the immediate next possible timing. Assets are loaded based on the implementation of engine (e.g. if eventually asseet bundles/packs are supported they'll go through that path)
+    void QueueEntity(Pipeline::HashId entityId);
+
+    // Queue an individual asset to be loaded at the immeidate next possible timing. Assets are loaded as loose assets regardless of engine implementation.
+    void QueueAsset(Pipeline::HashId moduleId, Pipeline::HashId typeId, Pipeline::HashId assetId);
+
 public:
     AssetManager(Engine::Core::Pipeline::ModuleAssembly modules, Logging::LoggerService *loggerService, ServiceTable *services);
-
-    void QueueEntity(Pipeline::HashId entityId);
+    ~AssetManager();
 };
 
 }
