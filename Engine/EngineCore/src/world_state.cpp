@@ -1,5 +1,6 @@
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Ecs/entity.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 #include "SDL3/SDL_timer.h"
 
 using namespace Engine::Core::Runtime;
@@ -12,21 +13,19 @@ void WorldState::AddEntity(Ecs::Entity* entities, size_t count)
     }
 }
 
-bool WorldState::LoadEntities(std::istream* input) 
+bool WorldState::LoadEntities(Engine::Utils::Memory::MemStreamLite& stream) 
 {
     // reset state
     m_Entities.clear();
     
     // NOTE: the entire region of entities is 4-byte aligned
-    unsigned int count = 0;
-    input->read((char*)&count, sizeof(unsigned int));
+    unsigned int count = stream.Read<unsigned int>();
     m_Entities.reserve(count);
 
     // load all entities and leave the input stream as is
     for (unsigned int i = 0; i < count; i++)
     {
-        Ecs::Entity nextEntity;
-        input->read((char*)&nextEntity, sizeof(Ecs::Entity));
+        Ecs::Entity nextEntity = stream.Read<Ecs::Entity>();
         m_Entities.push_back(nextEntity);
     }
 

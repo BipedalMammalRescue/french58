@@ -6,10 +6,8 @@
 
 using namespace Engine::Core::Runtime;
 
-static const char* LogChannels[] = { "EventManager" };
-
 EventManager::EventManager(Engine::Core::Logging::LoggerService* loggerService)
-    : m_Logger(loggerService->CreateLogger(LogChannels, 1))
+    : m_Logger(loggerService->CreateLogger("EventManager"))
 {
 }
 

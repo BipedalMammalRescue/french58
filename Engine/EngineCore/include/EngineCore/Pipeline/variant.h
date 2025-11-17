@@ -42,9 +42,9 @@ struct Variant
         unsigned char Byte;
         bool Bool;
         int32_t Int32;
-        int64_t Int64;
+        // int64_t Int64;
         uint32_t Uint32;
-        uint64_t Uint64;
+        // uint64_t Uint64;
         float Float;
         glm::vec2 Vec2;
         glm::vec3 Vec3;
@@ -70,6 +70,13 @@ struct Variant
     Variant(const glm::mat3& mat3) : Type(VariantType::Mat3), Data({.Mat3=mat3}) {}
     Variant(const glm::mat4& mat4) : Type(VariantType::Mat4), Data({.Mat4=mat4}) {}
     Variant(const HashId& path) : Type(VariantType::Path), Data({.Path=path.Hash}) {}
+
+    static Variant Invalid()
+    {
+        Variant result;
+        result.Type = VariantType::Invalid;
+        return result;
+    }
 };
 
 size_t GetVariantPayloadSize(const Variant& source);

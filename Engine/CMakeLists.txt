@@ -9,6 +9,8 @@ add_subdirectory(lib/tinyobjloader)
 add_subdirectory(lib/constexpr-md5-cpp)
 add_subdirectory(lib/concurrentqueue)
 add_subdirectory(lib/lua-5.3.6)
+add_subdirectory(lib/SDL_net)
+add_subdirectory(lib/spdlog)
 
 add_subdirectory(EngineUtils)
 
@@ -22,6 +24,7 @@ target_link_libraries(EngineCore PUBLIC nlohmann_json)
 target_link_libraries(EngineCore PUBLIC glm)
 target_link_libraries(EngineCore PUBLIC constexpr_md5)
 target_link_libraries(EngineCore PUBLIC concurrentqueue)
+target_link_libraries(EngineCore PUBLIC SDL3_net-static)
 
 target_include_directories(EngineCore PUBLIC lib/komihash)
 
@@ -35,6 +38,7 @@ add_subdirectory(RendererModule)
 add_subdirectory(ExampleGameplayModule)
 add_subdirectory(InputModule)
 add_subdirectory(LuaScriptingModule)
+add_subdirectory(LiveLinkModule)
 
 # tools
 add_subdirectory(BuildComponent)

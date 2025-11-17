@@ -8,7 +8,7 @@
 namespace Engine::Extension::RendererModule::Components {
 
 bool CompileDirectionalLight(Core::Pipeline::RawComponent input, std::ostream* output);
-Core::Runtime::CallbackResult LoadDirectionalLight(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState);
+Core::Runtime::CallbackResult LoadDirectionalLight(size_t count, Utils::Memory::MemStreamLite& stream, Core::Runtime::ServiceTable* services, void* moduleState);
 
 struct DirectionalLight
 {

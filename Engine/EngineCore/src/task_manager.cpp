@@ -1,4 +1,5 @@
 #include "EngineCore/Runtime/task_manager.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
@@ -8,10 +9,10 @@
 
 using namespace Engine::Core::Runtime;
 
-static const char* LogChannels[] = { "TaskManager" };
-
-TaskManager::TaskManager(Engine::Core::Runtime::ServiceTable* services, size_t workerCount)
-    : m_ServiceTable(services), m_Logger(services->LoggerService->CreateLogger(LogChannels, 1))
+TaskManager::TaskManager(Engine::Core::Runtime::ServiceTable* services, Logging::LoggerService* loggerService, size_t workerCount)
+    : m_ServiceTable(services), 
+    m_Logger(services->LoggerService->CreateLogger("TaskManager")), 
+    m_WorkerLogger(services->LoggerService->CreateLogger("WorkerLogger"))
 {
     m_WorkerThreads.reserve(workerCount);
     for (size_t i = 0; i < workerCount; i++)
@@ -84,8 +85,7 @@ int TaskManager::ThreadRoutine(void* state)
 {
     auto taskManager = (TaskManager*)state;
 
-    static const char* ThreadLogChannels[] = { "TaskWorker" };
-    Logging::Logger logger = taskManager->m_ServiceTable->LoggerService->CreateLogger(ThreadLogChannels, 1);
+    Logging::Logger logger = taskManager->m_WorkerLogger;
 
     logger.Information("Task worker initiated.");
 

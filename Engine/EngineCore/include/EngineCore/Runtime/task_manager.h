@@ -4,8 +4,6 @@
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
-#include "EngineCore/Runtime/service_table.h"
-
 #include "EngineCore/Runtime/task_scheduler.h"
 #include "SDL3/SDL_thread.h"
 #include "blockingconcurrentqueue.h"
@@ -57,11 +55,12 @@ private:
 
     ServiceTable* m_ServiceTable;
     Logging::Logger m_Logger;
+    Logging::Logger m_WorkerLogger;
 
     static int ThreadRoutine(void* state);
 
 public:
-    TaskManager(ServiceTable* services, size_t workerCount);
+    TaskManager(ServiceTable* services, Logging::LoggerService* loggerService, size_t workerCount);
     ~TaskManager();
 
     inline void ScheduleWork(const Task& task)

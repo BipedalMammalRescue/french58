@@ -1,7 +1,9 @@
 #pragma once
 
+
+#include "EngineCore/Pipeline/hash_id.h"
 #include <EngineCore/Pipeline/fwd.h>
-#include <EngineCore/Pipeline/hash_id.h>
+#include <EngineCore/Pipeline/asset_definition.h>
 #include <EngineCore/Runtime/crash_dump.h>
 #include <EngineCore/Runtime/fwd.h>
 #include <SDL3/SDL_gpu.h>
@@ -9,14 +11,8 @@
 
 namespace Engine::Extension::RendererModule::Assets {
 
-Core::Runtime::CallbackResult LoadRenderPipeline(Core::Pipeline::IAssetEnumerator *inputStreams,
-                        Core::Runtime::ServiceTable *services,
-                        void *moduleState);
-                        
-Core::Runtime::CallbackResult UnloadRenderPipeline(Core::Pipeline::HashId *ids, size_t count,
-                          Core::Runtime::ServiceTable *services, void *moduleState);
-
-void DisposeRenderPipeline(Core::Runtime::ServiceTable *services, SDL_GPUShader* shader);
+Core::Runtime::CallbackResult ContextualizeRenderPipeline(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount);
+Core::Runtime::CallbackResult IndexRenderPipeline(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* inContext);
 
 enum class DynamicUniformIdentifier : unsigned char
 {
@@ -42,23 +38,49 @@ struct InjectedStorageBuffer
     unsigned char Identifier;
 };
 
-struct InjectedDataSet
+struct InjectedDataAddress
 {
-    uint32_t UniformStart;
-    uint32_t UniformEnd;
-    uint32_t StorageBufferStart;
-    uint32_t StorageBufferEnd;
+    size_t Count;
+    size_t Offset;
+};
+
+struct RenderPipelineHeader
+{
+    Core::Pipeline::HashId VertexShader;
+    Core::Pipeline::HashId FragmentShader;
+    Core::Pipeline::HashId PrototypeId;
 };
 
 struct RenderPipeline
 {
-    SDL_GPUGraphicsPipeline* GraphicsPipeline;
-    Core::Pipeline::HashId PrototypeId;
+    Core::Pipeline::HashId Id;
+    SDL_GPUGraphicsPipeline* GpuPipeline;
+    RenderPipelineHeader* Header;
 
-    InjectedDataSet StaticVertex;
-    InjectedDataSet StaticFragment;
-    InjectedDataSet DynamicVertex;
-    InjectedDataSet DynamicFragment;
+    InjectedDataAddress StaticVertUniform;
+    InjectedDataAddress StaticFragUniform;
+
+    InjectedDataAddress DynamicVertUniform;
+    InjectedDataAddress DynamicFragUniform;
+
+    InjectedDataAddress StaticVertStorageBuffer;
+    InjectedDataAddress StaticFragStorageBuffer;
+
+    InjectedDataAddress DynamicVertStorageBuffer;
+    InjectedDataAddress DynamicFragStorageBuffer;
+};
+
+// renderer pipelines are only sorted based on their asset id
+struct RenderPipelineComparer
+{
+    static int Compare(const RenderPipeline* a, const RenderPipeline* b)
+    {
+        if (a->Id < b->Id)
+            return -1;
+        if (a->Id > b->Id)
+            return 1;
+        return 0;
+    }
 };
 
 } // namespace Engine::Extension::RendererModule::Assets

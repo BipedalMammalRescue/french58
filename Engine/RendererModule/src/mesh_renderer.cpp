@@ -4,7 +4,10 @@
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/renderer_module.h"
+#include "EngineCore/Logging/logger_service.h"
+
 #include <md5.h>
 
 using namespace Engine::Extension::RendererModule;
@@ -50,60 +53,38 @@ bool Components::CompileMeshRenderer(Core::Pipeline::RawComponent input, std::os
     return true;
 }
 
-Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadMeshRenderer(size_t count, Utils::Memory::MemStreamLite& stream, Core::Runtime::ServiceTable* services, void* moduleState)
 {
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
 
-    const char* logChannels[] = {"MeshRendererLoader"};
-    Core::Logging::Logger logger = services->LoggerService->CreateLogger(logChannels, 1);
+    Core::Logging::Logger logger = services->LoggerService->CreateLogger("MeshRendererLoader");
 
-    for (size_t i = 0; i < count; i++) 
+    struct _BoundStream{
+        size_t Count;
+        Utils::Memory::MemStreamLite* Stream;
+    } boundStream = { count, &stream };
+
+    // insert them into the state
+    state->MeshRenderers.InsertRange<Utils::Memory::MemStreamLite>(count, &stream, [](MeshRenderer* buffer, size_t count, Utils::Memory::MemStreamLite* stream)
     {
-        int entity;
-        Core::Pipeline::HashId pipelineId;
-        Core::Pipeline::HashId materialId;
-        Core::Pipeline::HashId meshId;
-
-        input->read((char*)&entity, sizeof(int));
-        input->read((char*)pipelineId.Hash.data(), 16);
-        input->read((char*)materialId.Hash.data(), 16);
-        input->read((char*)meshId.Hash.data(), 16);
-
-        // find the mesh
-        auto mesh = state->Meshes.find(meshId);
-        if (mesh == state->Meshes.end())
+        for (size_t i = 0; i < count; i++) 
         {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, mesh ({meshId}) not found.", {entity, meshId});
-            continue;
-        }
+            int entity = stream->Read<int>();
+            Core::Pipeline::HashId pipelineId = stream->Read<Core::Pipeline::HashId>();
+            Core::Pipeline::HashId materialId = stream->Read<Core::Pipeline::HashId>();
+            Core::Pipeline::HashId meshId = stream->Read<Core::Pipeline::HashId>();
 
-        // find the material
-        auto material = state->Materials.find(materialId);
-        if (material == state->Materials.end())
-        {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, material ({materialId}) not found.", {entity, materialId});
-            continue;
+            buffer[i] = {
+                entity,
+                pipelineId,
+                materialId,
+                meshId,
+                nullptr,
+                nullptr,
+                0
+            };
         }
-
-        // find the pipeline
-        auto pipelineLocation = state->PipelineIndex.find(pipelineId);
-        if (pipelineLocation == state->PipelineIndex.end())
-        {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline ({pipelineId}) not found.", {entity, pipelineId});
-            continue;
-        }
-        IndexedPipeline& pipeline = state->Pipelines[pipelineLocation->second];
-
-        // verify the pipeline and material are compatible
-        if (pipeline.Pipeline.PrototypeId != material->second.PrototypeId)
-        {
-            logger.Error("Failed to load mesh renderer component for entity {entityId}, pipeline prototype ({pipelinePrototype}) and material prototype ({materialPrototype}) do not match.", {entity, pipeline.Pipeline.PrototypeId, material->second.PrototypeId});
-            continue;
-        }
-
-        // add mesh to pipeline
-        pipeline.Objects.push_back({ entity, mesh->second, material->second });
-    }
+    });
 
     return Core::Runtime::CallbackSuccess();
 }

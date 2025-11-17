@@ -51,6 +51,26 @@ public:
         return LowQuad() != *((size_t*)other.data()) || HighQuad() != *((size_t*) (other.data() + 8));  
     }
 
+    inline bool operator<(const HashId& other) const 
+    { 
+        return HighQuad() < other.HighQuad() || (HighQuad() == other.HighQuad() && LowQuad() < other.LowQuad());
+    }
+
+    inline bool operator<=(const HashId& other) const 
+    { 
+        return HighQuad() <= other.HighQuad() || (HighQuad() == other.HighQuad() && LowQuad() <= other.LowQuad());
+    }
+
+    inline bool operator>(const HashId& other) const 
+    { 
+        return HighQuad() > other.HighQuad() || (HighQuad() == other.HighQuad() && LowQuad() > other.LowQuad());
+    }
+
+    inline bool operator>=(const HashId& other) const 
+    { 
+        return HighQuad() >= other.HighQuad() || (HighQuad() == other.HighQuad() && LowQuad() >= other.LowQuad());
+    }
+
     HashId() = default;
     HashId(const std::array<unsigned char, 16>& hash) : Hash(hash) {}
     HashId(const std::array<unsigned char, 16>&& hash) : Hash(hash) {}

@@ -19,3 +19,9 @@
 [submodule "Engine/lib/concurrentqueue"]
 	path = Engine/lib/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "Engine/lib/SDL_net"]
+	path = Engine/lib/SDL_net
+	url = https://github.com/libsdl-org/SDL_net.git
+[submodule "Engine/lib/spdlog"]
+	path = Engine/lib/spdlog
+	url = https://github.com/gabime/spdlog.git

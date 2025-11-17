@@ -1,6 +1,7 @@
 #include "EngineCore/Ecs/Components/spatial_component.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -53,7 +54,7 @@ bool Components::CompileSpatialComponent(Core::Pipeline::RawComponent input, std
     return true;
 }
 
-Engine::Core::Runtime::CallbackResult Components::LoadSpatialComponent(size_t count, std::istream* input, Core::Runtime::ServiceTable* services, void* moduleState)
+Engine::Core::Runtime::CallbackResult Components::LoadSpatialComponent(size_t count, Utils::Memory::MemStreamLite& stream, Core::Runtime::ServiceTable* services, void* moduleState)
 {
     Runtime::RootModuleState* state = static_cast<Runtime::RootModuleState*>(moduleState);
     state->SpatialComponents.reserve(state->SpatialComponents.size() + count);
@@ -61,11 +62,10 @@ Engine::Core::Runtime::CallbackResult Components::LoadSpatialComponent(size_t co
     for (size_t i = 0; i < count; i++)
     {
         SpatialRelation newComponent;
-        int ownerEntity;
-        input->read((char*)&ownerEntity, sizeof(int))
-            .read((char*)&newComponent.Translation, sizeof(glm::vec3))
-            .read((char*)&newComponent.Scale, sizeof(glm::vec3))
-            .read((char*)&newComponent.Rotation, sizeof(glm::quat));
+        int ownerEntity = stream.Read<int>();
+        newComponent.Translation = stream.Read<glm::vec3>();
+        newComponent.Scale = stream.Read<glm::vec3>();
+        newComponent.Rotation = stream.Read<glm::quat>();
         state->SpatialComponents[ownerEntity] = newComponent;
     }
 

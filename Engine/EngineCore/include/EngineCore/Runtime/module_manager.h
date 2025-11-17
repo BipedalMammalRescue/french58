@@ -7,7 +7,6 @@
 #include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_manager.h"
-#include "EngineCore/Runtime/service_table.h"
 
 #include <unordered_map>
 #include <vector>
@@ -15,6 +14,7 @@
 namespace Engine::Core::Runtime {
 
 struct RootModuleState;
+struct ServiceTable;
 
 struct ModuleInstance
 {
@@ -53,7 +53,10 @@ private:
     CallbackResult UnloadModules();
 
 public:
+    ModuleManager(Logging::LoggerService* loggerService);
     ~ModuleManager();
+
+    void* FindModuleMutable(const Pipeline::HashId& name);
 
     const void* FindModule(const Pipeline::HashId& name) const;
     const void* FindModule(const Pipeline::HashId&& name) const;

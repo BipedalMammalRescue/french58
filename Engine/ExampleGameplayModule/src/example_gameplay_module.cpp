@@ -16,13 +16,10 @@
 using namespace Engine;
 using namespace Engine::Extension::ExampleGameplayModule;
 
-static const char* LogChannels[] = { "ExampleGameplayModule" };
-
 static void* InitModule(Core::Runtime::ServiceTable* services)
 {
     // register event
-    ModuleState* newState = new ModuleState();
-    newState->Logger = services->LoggerService->CreateLogger(LogChannels, 1);
+    ModuleState* newState = new ModuleState(services->LoggerService);
     newState->YellOwner = services->EventManager->RegisterInputEvent<YellEvent>();
 
     return newState;

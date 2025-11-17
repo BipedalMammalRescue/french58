@@ -1,6 +1,8 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -14,18 +16,6 @@ namespace Engine::Extension::LuaScriptingModule {
 class LuaExecutor
 {
 private:
-    struct InstancedApiQuery
-    {
-        const void* ModuleState;
-        const Core::Scripting::ApiQueryBase* Api;
-    };
-
-    struct InstancedApiEvent
-    {
-        const void* ModuleState;
-        const Core::Scripting::ApiEventBase* Api;
-    };
-
     const Engine::Core::Runtime::ServiceTable* m_Services;
 
     Core::Logging::Logger m_Logger;
@@ -33,11 +23,34 @@ private:
     std::vector<InstancedApiQuery> m_ApiQueryList;
     std::vector<InstancedApiEvent> m_ApiEventList;
 
+    std::unordered_map<InstancedScriptParamId, Core::Pipeline::Variant> m_NodeParameters;
+
     lua_State* m_LuaState = nullptr;
 
     static int LuaRaiseEvent(lua_State* luaState);
     static int LuaQuery(lua_State* luaState);
     static int L1CallMultiplexer(lua_State* luaState);
+    static int LuaPrint(lua_State* luaState);
+
+    class StackBalancer
+    {
+    private:
+        lua_State* m_State;
+        int m_InitialStack;
+    
+    public:
+        StackBalancer(lua_State* luaState)
+            : m_State(luaState), m_InitialStack(lua_gettop(luaState)) {}
+
+        ~StackBalancer()
+        {
+            int newStack = lua_gettop(m_State);
+            if (newStack > m_InitialStack)
+            {
+                lua_pop(m_State, newStack - m_InitialStack);
+            }
+        }
+    };
 
 public:
     LuaExecutor(const Engine::Core::Runtime::ServiceTable* services);
@@ -48,9 +61,13 @@ public:
     Core::Runtime::CallbackResult ExecuteFile(const char* path);
     Core::Runtime::CallbackResult ExecuteString(const char* string);
 
-    bool LoadScript(const std::vector<unsigned char> *byteCode, int index);
-    bool SelectScript(int index);
+    bool LoadScript(void* byteCode, size_t codeLength, int index);
     void ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer);
+
+    Core::Pipeline::Variant GetParameter(const Core::Pipeline::HashId &name, const int &component) const;
+
+    void SetParameter(const Core::Pipeline::HashId &name, const int &component,
+                      const Core::Pipeline::Variant &data);
 };
 
 }

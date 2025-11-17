@@ -1,71 +1,73 @@
 #include "RendererModule/Assets/material.h"
-#include "EngineCore/Logging/logger.h"
+#include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Runtime/heap_allocator.h"
+#include "EngineUtils/Memory/memstream_lite.h"
+#include "RendererModule/common.h"
 #include "RendererModule/renderer_module.h"
 #include "RendererModule/Assets/material.h"
-
-#include <EngineCore/Pipeline/hash_id.h>
-#include <EngineCore/Runtime/crash_dump.h>
-#include <EngineUtils/ErrorHandling/exceptions.h>
-
-#include <EngineCore/Pipeline/asset_enumerable.h>
-#include <EngineCore/Runtime/graphics_layer.h>
-#include <EngineCore/Runtime/service_table.h>
-
-#include <SDL3/SDL_gpu.h>
+#include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/service_table.h"
 
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-const char* LoggingChannels[] = {"MaterialLoader"};
-
-Core::Runtime::CallbackResult Assets::LoadMaterial(Core::Pipeline::IAssetEnumerator *inputStreams,
-                  Core::Runtime::ServiceTable *services,
-                  void *moduleState)
+Core::Runtime::CallbackResult Assets::ContextualizeMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
 {
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
-    Core::Logging::Logger logger = services->LoggerService->CreateLogger(LoggingChannels, 1);
-
-    while (inputStreams->MoveNext())
+    // calculate the total size needed
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
+    for (size_t i = 0; i < contextCount; i++)
     {
-        Material material;
-
-        // read prototype
-        inputStreams->GetCurrent().Storage->read((char*)&material.PrototypeId, sizeof(material.PrototypeId));
-
-        // read material data
-        ConfiguredUniform nextUniform;
-
-        material.VertexUniformStart = state->ConfiguredUniforms.size();
-        size_t vertexUniformCount = 0;
-        inputStreams->GetCurrent().Storage->read((char*)&vertexUniformCount, sizeof(vertexUniformCount));
-        for (size_t i = 0; i < vertexUniformCount; i++)
+        // check if the incoming load is duplicate
+        if (!state->LoadedMaterials.TryInsert(outContext[i].AssetId) && !outContext[i].ReplaceExisting)
         {
-            inputStreams->GetCurrent().Storage->read((char*)&nextUniform.Binding, sizeof(nextUniform.Binding));
-            inputStreams->GetCurrent().Storage->read((char*)&nextUniform.Data, sizeof(nextUniform.Data));
-            state->ConfiguredUniforms.push_back(nextUniform);
+            state->Logger.Information("Material {} is already loaded.", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Core::AssetManagement::LoadBufferType::Invalid;
         }
-        material.VertexUniformEnd = state->ConfiguredUniforms.size();
-
-        material.FragmentUniformStart = state->ConfiguredUniforms.size();
-        size_t FragmentUniformCount = 0;
-        inputStreams->GetCurrent().Storage->read((char*)&FragmentUniformCount, sizeof(FragmentUniformCount));
-        for (size_t i = 0; i < FragmentUniformCount; i++)
+        else 
         {
-            inputStreams->GetCurrent().Storage->read((char*)&nextUniform.Binding, sizeof(nextUniform.Binding));
-            inputStreams->GetCurrent().Storage->read((char*)&nextUniform.Data, sizeof(nextUniform.Data));
-            state->ConfiguredUniforms.push_back(nextUniform);
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::ModuleBuffer;
         }
-        material.FragmentUniformEnd = state->ConfiguredUniforms.size();
-
-        state->Materials[inputStreams->GetCurrent().ID] = material;
     }
 
-    return Core::Runtime::CallbackSuccess();
+    // distribute out the pointers
+    for (size_t i = 0; i < contextCount; i++)
+    {
+        if (outContext[i].Buffer.Type == Engine::Core::AssetManagement::LoadBufferType::Invalid)
+            continue;
+        outContext[i].Buffer.Location.ModuleBuffer = services->HeapAllocator->Allocate(outContext[i].SourceSize);
+    }
+
+    // allocate space in the index
+    state->MaterialIndex.ReserveExtra(contextCount);
+
+    return Engine::Core::Runtime::CallbackSuccess();
 }
 
-Core::Runtime::CallbackResult Assets::UnloadMaterial(Core::Pipeline::HashId *ids, size_t count,
-                          Core::Runtime::ServiceTable *services, void *moduleState)
+
+Core::Runtime::CallbackResult Assets::IndexMaterial(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* inContext)
 {
-    // TODO: implement unloading (asset unloading isn't yet performed)
-    return Core::Runtime::Crash(__FILE__, __LINE__, "Unloading material not yet implemented!");
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
+
+    Assets::MaterialHeader *header = static_cast<Assets::MaterialHeader*>(inContext->Buffer.Location.ModuleBuffer);
+    Utils::Memory::MemStreamLite stream = { SkipHeader(header), 0 };
+
+    size_t vertUniformCount = stream.Read<size_t>();
+    size_t vertUniformOffset = stream.GetPosition();
+
+    stream.Seek(vertUniformOffset + vertUniformCount * sizeof(Assets::ConfiguredUniform));
+
+    size_t fragUniformCount = stream.Read<size_t>();
+    size_t fragUniformOffset = stream.GetPosition();
+
+    Assets::Material material = {
+        inContext->AssetId,
+        header,
+        vertUniformOffset,
+        vertUniformCount,
+        fragUniformOffset,
+        fragUniformCount
+    };
+    state->MaterialIndex.Replace(material);
+    
+    return Core::Runtime::CallbackSuccess();
 }

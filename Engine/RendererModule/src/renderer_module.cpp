@@ -1,5 +1,8 @@
 #include "RendererModule/renderer_module.h"
 
+#include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/container_factory_service.h"
 #include "RendererModule/Assets/material.h"
 #include "RendererModule/Assets/fragment_shader.h"
 #include "RendererModule/Assets/mesh.h"
@@ -9,6 +12,7 @@
 #include "RendererModule/Components/directional_light.h"
 #include "RendererModule/Components/mesh_renderer.h"
 #include "RendererModule/configurations.h"
+#include "RendererModule/common.h"
 
 #include <EngineCore/Pipeline/variant.h>
 #include <EngineCore/Runtime/crash_dump.h>
@@ -32,45 +36,70 @@
 using namespace Engine;
 using namespace Engine::Extension::RendererModule;
 
-static void* InitRendererModule(Core::Runtime::ServiceTable* services)
+static SDL_GPUBuffer* CreaetEmptyStorageBuffer(Core::Runtime::GraphicsLayer* gl)
 {
     SDL_GPUBufferCreateInfo createInfo {
         SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
         8
     };
 
-    SDL_GPUBuffer* emptyBuffer = SDL_CreateGPUBuffer(services->GraphicsLayer->GetDevice(), &createInfo);
-
-    return new ModuleState { services->ModuleManager->GetRootModule(), emptyBuffer };
+    return SDL_CreateGPUBuffer(gl->GetDevice(), &createInfo);
 }
 
-// TODO: need a better way to collect
+RendererModuleState::RendererModuleState(Core::Runtime::ServiceTable* services)
+    : RootModule(services->ModuleManager->GetRootModule()),
+    EmptyStorageBuffer(CreaetEmptyStorageBuffer(services->GraphicsLayer)),
+    Logger(services->LoggerService->CreateLogger("RendererModule")),
+    PipelineIndex(services->ContainerFactory->CreateSortedArray<Assets::RenderPipeline, Assets::RenderPipelineComparer>(16)),
+    LoadedMaterials(services->ContainerFactory->CreateSortedArray<Core::Pipeline::HashId>(16)),
+    MaterialIndex(services->ContainerFactory->CreateSortedArray<Assets::Material, Assets::MaterialComparer>(16)),
+    MeshRenderers(services->ContainerFactory->CreateSortedArray<Components::MeshRenderer, Components::MeshRendererComparer>(16)),
+    DirectionalLightBuffer(nullptr)
+{}
+
+static void* InitRendererModule(Core::Runtime::ServiceTable* services)
+{
+    return new RendererModuleState(services);
+}
+
 static void DisposeRendererModule(Core::Runtime::ServiceTable *services, void *moduleState)
 {
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
 
     SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), state->EmptyStorageBuffer);
     SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), state->DirectionalLightBuffer);
 
+    for (const auto& mesh : state->StaticMeshes)
+    {
+        SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), mesh.second.IndexBuffer);
+        SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), mesh.second.VertexBuffer);
+    }
+
+    for (size_t i = 0; i < state->PipelineIndex.GetCount(); i++)
+    {
+        if (state->PipelineIndex.PtrAt(i)->GpuPipeline == nullptr)
+            continue;
+        SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), state->PipelineIndex.PtrAt(i)->GpuPipeline);
+    }
+
     for (const auto& shader : state->FragmentShaders)
     {
-        Assets::DisposeFragmentShader(services, shader.second);
+        if (shader.second == nullptr)
+            continue;
+        SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
     }
 
     for (const auto& shader : state->VertexShaders)
     {
+        if (shader.second == nullptr)
+            continue;
         SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader.second);
     }
 
-    for (const auto& pipeline : state->Pipelines)
-    {
-        SDL_ReleaseGPUGraphicsPipeline(services->GraphicsLayer->GetDevice(), pipeline.Pipeline.GraphicsPipeline);
-    }
-
-    for (const auto& mesh : state->Meshes)
-    {
-        Assets::DisposeMesh(services, mesh.second);
-    }
+    // destroy the borrowed containers
+    state->MaterialIndex.Destroy();
+    state->PipelineIndex.Destroy();
+    state->MeshRenderers.Destroy();
 
     delete state;
 }
@@ -107,67 +136,172 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
     glm::mat4 pvMatrix = projectMatrix * viewMatrix;
 
     // iterate all models
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
     SDL_GPUDevice* device = services->GraphicsLayer->GetDevice();
     SDL_GPURenderPass* pass = services->GraphicsLayer->AddRenderPass();
     SDL_GPUCommandBuffer* commandBuffer = services->GraphicsLayer->GetCurrentCommandBuffer();
 
-    for (const IndexedPipeline& pipeline : state->Pipelines)
+    // cache the mesh renderer position
+    size_t meshRendererPos = 0;
+
+    // foreach pipeline
+    for (size_t pipelinePosition = 0; pipelinePosition < state->PipelineIndex.GetCount(); pipelinePosition++)
     {
-        // set up pipeline
-        SDL_BindGPUGraphicsPipeline(pass, pipeline.Pipeline.GraphicsPipeline);
+        // adjust the mesh renderer id and pipeline id so they match
+        while (meshRendererPos < state->MeshRenderers.GetCount()
+            && pipelinePosition < state->PipelineIndex.GetCount()
+            && state->MeshRenderers.PtrAt(meshRendererPos)->Pipeline != state->PipelineIndex.PtrAt(pipelinePosition)->Id)
+        {
+            if (state->MeshRenderers.PtrAt(meshRendererPos)->Pipeline > state->PipelineIndex.PtrAt(pipelinePosition)->Id)
+            {
+                pipelinePosition ++;
+            }
+            else if (state->MeshRenderers.PtrAt(meshRendererPos)->Pipeline > state->PipelineIndex.PtrAt(pipelinePosition)->Id)
+            {
+                meshRendererPos++;
+            }
+        }
+
+        // if nothing matches after this point, break
+        if (pipelinePosition == state->PipelineIndex.GetCount() || meshRendererPos == state->MeshRenderers.GetCount())
+            break;
+
+        // dereference the pipeline and mesh renderer
+        auto currentPipeline = state->PipelineIndex.PtrAt(pipelinePosition);
+
+        // skip a pipeline if it's not available
+        if (currentPipeline->GpuPipeline == nullptr)
+            continue;
+        SDL_BindGPUGraphicsPipeline(pass, currentPipeline->GpuPipeline);
+
+        // find the first material that matches the prototype id
+        size_t materialPos = state->MaterialIndex.GetCount();
+        {
+            // search for any material with matching prototype (materials are sorted based on prototype first and id second)
+            struct MaterialFinder
+            {
+                static int Compare(const Assets::Material* a, const Assets::Material* b)
+                {
+                    if (a->Header->PrototypeId < b->Header->PrototypeId)
+                        return -1;
+                    if (a->Header->PrototypeId > b->Header->PrototypeId)
+                        return 1;
+                    return 0;
+                }
+            };
+            Assets::MaterialHeader templateMaterialHeader { currentPipeline->Header->PrototypeId };
+            Assets::Material templateMaterial { .Header = &templateMaterialHeader };
+            materialPos = state->MaterialIndex.CustomSearch<MaterialFinder>(&templateMaterial);
+
+            // no compatible materials, abort
+            if (materialPos >= state->MaterialIndex.GetCount())
+                continue;
+
+            // loop back material position to find the first material bearing said prototype id
+            while (materialPos > 0 && state->MaterialIndex.PtrAt(materialPos - 1)->Header->PrototypeId == currentPipeline->Header->PrototypeId)
+            {
+                materialPos --;
+            }
+        }
+
+        // process injections
+        auto loadedPipelineData = static_cast<char*>(SkipHeader(currentPipeline->Header));
 
         // static injections
-        // TODO: we currently don't inject any static uniforms
-        for (uint32_t i = pipeline.Pipeline.StaticVertex.StorageBufferStart; i < pipeline.Pipeline.StaticVertex.StorageBufferEnd; i++)
+        // NOTE: we currently don't inject any static uniforms
+        Assets::InjectedStorageBuffer* staticVertStorageBuffers = (Assets::InjectedStorageBuffer*)(loadedPipelineData + currentPipeline->StaticVertStorageBuffer.Offset);
+        for (size_t i = 0; i < currentPipeline->StaticVertStorageBuffer.Count; i++) 
         {
-            Assets::InjectedStorageBuffer buffer = state->InjectedStorageBuffers[i];
-        
-            switch (buffer.Identifier)
+            switch (staticVertStorageBuffers[i].Identifier) 
             {
             case (unsigned char)Assets::StaticStorageBufferIdentifier::DirectionalLightBuffer:
-                SDL_BindGPUVertexStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
-                break;
-            }
-        }
-        for (uint32_t i = pipeline.Pipeline.StaticFragment.StorageBufferStart; i < pipeline.Pipeline.StaticFragment.StorageBufferEnd; i++)
-        {
-            Assets::InjectedStorageBuffer buffer = state->InjectedStorageBuffers[i];
-        
-            switch (buffer.Identifier)
-            {
-            case (unsigned char)Assets::StaticStorageBufferIdentifier::DirectionalLightBuffer:
-                SDL_BindGPUFragmentStorageBuffers(pass, buffer.Binding, &state->DirectionalLightBuffer, 1);
+                SDL_BindGPUVertexStorageBuffers(pass, staticVertStorageBuffers[i].Binding, &state->DirectionalLightBuffer, 1);
                 break;
             }
         }
 
-        // per-object information
-        for (const Components::MeshRenderer& renderTarget : pipeline.Objects)
+        Assets::InjectedStorageBuffer* staticFragStorageBuffers = (Assets::InjectedStorageBuffer*)(loadedPipelineData + currentPipeline->StaticFragStorageBuffer.Offset);
+        for (size_t i = 0; i < currentPipeline->StaticFragStorageBuffer.Count; i++) 
         {
-            // load material uniforms
-            // TODO: eventually materials should include more information
-            for (uint32_t i = renderTarget.Material.VertexUniformStart; i < renderTarget.Material.VertexUniformEnd; i++)
+            switch (staticFragStorageBuffers[i].Identifier)
             {
-                Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
-                SDL_PushGPUVertexUniformData(
-                    commandBuffer, 
-                    materialUniform.Binding, 
-                    &materialUniform.Data.Data, 
-                    (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+            case (unsigned char)Assets::StaticStorageBufferIdentifier::DirectionalLightBuffer:
+                SDL_BindGPUFragmentStorageBuffers(pass, staticFragStorageBuffers[i].Binding, &state->DirectionalLightBuffer, 1);
+                break;
             }
-            for (uint32_t i = renderTarget.Material.FragmentUniformStart; i < renderTarget.Material.FragmentUniformEnd; i++)
+        }
+
+        // loop through mesh renderers
+        size_t previouslyActiveMaterialPos = state->MaterialIndex.GetCount();
+        for (; meshRendererPos < state->MeshRenderers.GetCount() && state->MeshRenderers.PtrAt(meshRendererPos)->Pipeline == currentPipeline->Id; meshRendererPos ++)
+        {
+            // adjust positions until we have a matching material-object pair
+            while (materialPos < state->MaterialIndex.GetCount()
+                && meshRendererPos < state->MeshRenderers.GetCount()
+                && state->MaterialIndex.PtrAt(materialPos)->Id != state->MeshRenderers.PtrAt(meshRendererPos)->Material)
             {
-                Assets::ConfiguredUniform materialUniform = state->ConfiguredUniforms[i];
-                SDL_PushGPUFragmentUniformData(
-                    commandBuffer, 
-                    materialUniform.Binding, 
-                    &materialUniform.Data.Data, 
-                    (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+                if (state->MaterialIndex.PtrAt(materialPos)->Id < state->MeshRenderers.PtrAt(meshRendererPos)->Material)
+                {
+                    materialPos ++;
+                }
+                else
+                {
+                    meshRendererPos ++;
+                }
+            }
+
+            if (materialPos >= state->MaterialIndex.GetCount() || meshRendererPos >= state->MeshRenderers.GetCount())
+                break;
+
+            auto currentMeshRenderer = state->MeshRenderers.PtrAt(meshRendererPos);
+            auto currentMaterial = state->MaterialIndex.PtrAt(materialPos);
+
+            // handle missing assets here
+            if (currentMeshRenderer->VertexBuffer == nullptr || currentMeshRenderer->IndexBuffer == nullptr)
+            {
+                // skip this mesh renderer if the target mesh isn't in yet
+                auto foundMesh = state->StaticMeshes.find(currentMeshRenderer->Mesh);
+                if (foundMesh == state->StaticMeshes.end() || foundMesh->second.IndexBuffer == nullptr || foundMesh->second.VertexBuffer == nullptr)
+                    continue;
+
+                currentMeshRenderer->IndexBuffer = foundMesh->second.IndexBuffer;
+                currentMeshRenderer->IndexCount = foundMesh->second.IndexCount;
+                currentMeshRenderer->VertexBuffer = foundMesh->second.VertexBuffer;
+            }
+
+            // reapply material if it's changed
+            if (previouslyActiveMaterialPos != materialPos)
+            {
+                previouslyActiveMaterialPos = materialPos;
+
+                auto loadedMaterialData = static_cast<char*>(SkipHeader(currentMaterial->Header));
+
+                // load material uniforms
+                Assets::ConfiguredUniform* vertUniforms = (Assets::ConfiguredUniform*)(loadedMaterialData + currentMaterial->VertUniformOffset);
+                for (size_t i = 0; i < currentMaterial->VertUniformCount; i++)
+                {
+                    Assets::ConfiguredUniform materialUniform = vertUniforms[i];
+                    SDL_PushGPUVertexUniformData(
+                        commandBuffer, 
+                        materialUniform.Binding, 
+                        &materialUniform.Data.Data, 
+                        (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+                }
+
+                Assets::ConfiguredUniform* fragUniforms = (Assets::ConfiguredUniform*)(loadedMaterialData + currentMaterial->FragUniformOffset);
+                for (size_t i = 0; i < currentMaterial->FragUniformCount; i++)
+                {
+                    Assets::ConfiguredUniform materialUniform = fragUniforms[i];
+                    SDL_PushGPUFragmentUniformData(
+                        commandBuffer, 
+                        materialUniform.Binding, 
+                        &materialUniform.Data.Data, 
+                        (uint32_t)Core::Pipeline::GetVariantPayloadSize(materialUniform.Data));
+                }
             }
 
             // load the MVP, skip if the renderer has no spatial relation
-            auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(renderTarget.Entity);
+            auto foundModelSpatialRelation = services->ModuleManager->GetRootModule()->SpatialComponents.find(currentMeshRenderer->Entity);
             if (foundModelSpatialRelation == services->ModuleManager->GetRootModule()->SpatialComponents.end())
                 continue;
 
@@ -175,9 +309,10 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
             glm::mat4 modelMatrix = foundModelSpatialRelation->second.Transform();
 
             // bind dynamic injections (only uniforms rn)
-            for (uint32_t i = pipeline.Pipeline.DynamicVertex.UniformStart; i < pipeline.Pipeline.DynamicVertex.UniformEnd; i++)
+            auto dynamicVertexUniforms = (Assets::InjectedUniform*)(loadedPipelineData + currentPipeline->DynamicVertUniform.Offset);
+            for (size_t i = 0; i < currentPipeline->DynamicVertUniform.Count; i++)
             {
-                Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                Assets::InjectedUniform uniform = dynamicVertexUniforms[i];
                 switch (uniform.Identifier)
                 {
                 case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
@@ -191,9 +326,11 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
                     break;
                 }
             }
-            for (uint32_t i = pipeline.Pipeline.DynamicFragment.UniformStart; i < pipeline.Pipeline.DynamicFragment.UniformEnd; i++)
+
+            auto dynamicFragmentUniforms = (Assets::InjectedUniform*)(loadedPipelineData + currentPipeline->DynamicFragUniform.Offset);
+            for (size_t i = 0; i < currentPipeline->DynamicFragUniform.Count; i++)
             {
-                Assets::InjectedUniform uniform = state->InjectedUniforms[i];
+                Assets::InjectedUniform uniform = dynamicFragmentUniforms[i];
                 switch (uniform.Identifier)
                 {
                 case (unsigned char)Engine::Extension::RendererModule::Assets::DynamicUniformIdentifier::ModelTransform:
@@ -209,13 +346,13 @@ static Core::Runtime::CallbackResult RenderUpdate(Core::Runtime::ServiceTable* s
             }
 
             // bind the mesh
-            SDL_GPUBufferBinding vboBinding{renderTarget.Mesh.VertexBuffer, 0};
+            SDL_GPUBufferBinding vboBinding{currentMeshRenderer->VertexBuffer, 0};
             SDL_BindGPUVertexBuffers(pass, 0, &vboBinding, 1);
-            SDL_GPUBufferBinding iboBinding{renderTarget.Mesh.IndexBuffer, 0};
+            SDL_GPUBufferBinding iboBinding{currentMeshRenderer->IndexBuffer, 0};
             SDL_BindGPUIndexBuffer(pass, &iboBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
             
             // draw
-            SDL_DrawGPUIndexedPrimitives(pass, renderTarget.Mesh.IndexCount, 1, 0, 0, 0);
+            SDL_DrawGPUIndexedPrimitives(pass, currentMeshRenderer->IndexCount, 1, 0, 0, 0);
         }
     }
 
@@ -229,38 +366,38 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::RendererModule::GetM
     {
         {
             HASH_NAME("VertexShader"),
-            Assets::LoadVertexShader,
-            Assets::UnloadVertexShader
+            Assets::ContextualizeVertexShader,
+            Assets::IndexVertexShader
         },
         {
             HASH_NAME("FragmentShader"),
-            Assets::LoadFragmentShader,
-            Assets::UnloadFragmentShader
+            Assets::ContextualizeFragmentShader,
+            Assets::IndexFragmentShader
         },
         {
             HASH_NAME("SlangVertexShader"),
-            Assets::LoadVertexShader,
-            Assets::UnloadVertexShader
+            Assets::ContextualizeVertexShader,
+            Assets::IndexVertexShader
         },
         {
             HASH_NAME("SlangFragmentShader"),
-            Assets::LoadFragmentShader,
-            Assets::UnloadFragmentShader
+            Assets::ContextualizeFragmentShader,
+            Assets::IndexFragmentShader
         },
         {
             HASH_NAME("RenderPipeline"),
-            Assets::LoadRenderPipeline,
-            Assets::UnloadRenderPipeline
+            Assets::ContextualizeRenderPipeline,
+            Assets::IndexRenderPipeline
         },
         {
             HASH_NAME("Material"),
-            Assets::LoadMaterial,
-            Assets::UnloadMaterial
+            Assets::ContextualizeMaterial,
+            Assets::IndexMaterial
         },
         {
             HASH_NAME("Mesh"),
-            Assets::LoadMesh,
-            Assets::UnloadMesh,
+            Assets::ContextualizeStaticMesh,
+            Assets::IndexStaticMesh,
         }
     };
 

@@ -1,91 +1,77 @@
 #include "RendererModule/Assets/fragment_shader.h"
-#include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "RendererModule/renderer_module.h"
-
-#include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/graphics_layer.h"
-#include "EngineUtils/ErrorHandling/exceptions.h"
-
-#include <memory>
 
 using namespace Engine::Extension::RendererModule;
 
-Engine::Core::Runtime::CallbackResult Assets::LoadFragmentShader(Engine::Core::Pipeline::IAssetEnumerator *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::ContextualizeFragmentShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState, Engine::Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
+{
+    // reserve memory for the new shaders
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
+    state->FragmentShaders.reserve(state->FragmentShaders.size() + contextCount);
+
+    // we need to use transient buffer for this
+    for (size_t i = 0; i < contextCount; i++)
+    {
+        if (state->FragmentShaders.find(outContext[i].AssetId) != state->FragmentShaders.end())
+        {
+            state->Logger.Information("Fragment shader {} already loaded (reloading shader is not yet supported).", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
+        }
+        else
+        {        
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::TransientBuffer;
+            outContext[i].Buffer.Location.TransientBufferSize = outContext[i].SourceSize;
+        }
+    }
+
+    return Engine::Core::Runtime::CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Assets::IndexFragmentShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState, Engine::Core::AssetManagement::AssetLoadingContext* inContext)
 {
     using namespace Engine::Core::Runtime;
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
 
-    // reserve memory for the new shaders
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
-    state->FragmentShaders.reserve(state->FragmentShaders.size() + inputStreams->Count());
-
-    SDL_GPUShaderStage shaderStage = SDL_GPUShaderStage::SDL_GPU_SHADERSTAGE_FRAGMENT;
-
-    // load every shader individually
-    while (inputStreams->MoveNext()) 
+    void* buffer = services->TransientAllocator->GetBuffer(inContext->Buffer.Location.TransientBufferId);
+    if (buffer == nullptr)
     {
-        Engine::Core::Pipeline::RawAsset rawAsset = inputStreams->GetCurrent();
-
-        // load prefixed reflection information
-        uint32_t uniformCount = 0;
-        uint32_t stroageBufferCount = 0;
-        rawAsset.Storage->read((char*)&uniformCount, sizeof(uint32_t));
-        rawAsset.Storage->read((char*)&stroageBufferCount, sizeof(uint32_t));
-
-        // load a prefixed length
-        size_t codeLength = 0;
-        rawAsset.Storage->read((char*)&codeLength, sizeof(size_t));
-        
-        // load the code
-        std::unique_ptr<unsigned char[]> code = std::make_unique<unsigned char[]>(codeLength);
-        rawAsset.Storage->read((char*)code.get(), codeLength);
-        
-        // compile shader
-        SDL_GPUShaderCreateInfo shaderInfo = {codeLength,
-                                              code.get(),
-                                              "main",
-                                              SDL_GPU_SHADERFORMAT_SPIRV,
-                                              shaderStage,
-                                              0,
-                                              0,
-                                              stroageBufferCount,
-                                              uniformCount};
-
-        SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
-        
-        // TODO: get a default shader for shader failures
-        if (newShader == nullptr)
-            SE_THROW_GRAPHICS_EXCEPTION;
-
-        state->FragmentShaders[rawAsset.ID] = newShader;
+        state->Logger.Error("Failed to load Fragment shader {} because transient buffer is invalid.");
+        return CallbackSuccess();
     }
 
+    Engine::Utils::Memory::MemStreamLite stream { buffer, 0 };
+
+    // load prefixed reflection information
+    uint32_t uniformCount = stream.Read<uint32_t>();
+    uint32_t stroageBufferCount = stream.Read<uint32_t>();
+
+    // load a prefixed length
+    size_t codeLength = stream.Read<size_t>();
+
+    // compile shader
+    SDL_GPUShaderCreateInfo shaderInfo = {codeLength,
+                                            (unsigned char*)stream.Buffer + stream.Cursor,
+                                            "main",
+                                            SDL_GPU_SHADERFORMAT_SPIRV,
+                                            SDL_GPUShaderStage::SDL_GPU_SHADERSTAGE_FRAGMENT,
+                                            0,
+                                            0,
+                                            stroageBufferCount,
+                                            uniformCount};
+
+    SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
+
+    if (newShader == nullptr)
+    {
+        state->Logger.Information("Failed to compile Fragment shader {} on the GPU, detail: {}", inContext->AssetId, SDL_GetError());
+        return CallbackSuccess();
+    }
+
+    state->FragmentShaders[inContext->AssetId] = newShader;
     return CallbackSuccess();
-}
-
-Engine::Core::Runtime::CallbackResult Assets::UnloadFragmentShader(Engine::Core::Pipeline::HashId *ids, size_t count, Core::Runtime::ServiceTable *services, void *moduleState)
-{
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
-    
-    for (size_t i = 0; i < count; i++) 
-    {
-        // TODO: log something for unrecognized data
-        auto foundShader = state->FragmentShaders.find(ids[i]);
-        if (foundShader == state->FragmentShaders.end())
-            continue;
-
-        // delete shader from GPU
-        DisposeFragmentShader(services, foundShader->second);
-
-        // erase asset
-        state->FragmentShaders.erase(foundShader);
-    }
-
-    return Core::Runtime::CallbackSuccess();
-}
-
-void Assets::DisposeFragmentShader(Core::Runtime::ServiceTable *services, SDL_GPUShader *shader)
-{
-    SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), shader);
 }

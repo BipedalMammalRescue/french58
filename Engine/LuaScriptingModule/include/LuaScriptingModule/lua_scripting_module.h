@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineCore/Logging/logger.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_definition.h"
 #include "LuaScriptingModule/lua_executor.h"
@@ -13,6 +15,7 @@ Engine::Core::Pipeline::ModuleDefinition GetModuleDefinition();
 class LuaScriptingModuleState 
 {
 private:
+    Core::Logging::Logger m_Logger;
     std::unordered_map<Core::Pipeline::HashId, int> m_LoadedScripts;
     std::vector<InstancedScriptNode> m_ScriptNodes;
 
@@ -20,7 +23,10 @@ private:
     int m_ScriptCounter;
 
 public:
-    LuaScriptingModuleState(const Engine::Core::Runtime::ServiceTable* services) : m_Executor(services), m_ScriptCounter(0)
+    LuaScriptingModuleState(const Engine::Core::Runtime::ServiceTable* services) : 
+        m_Logger(services->LoggerService->CreateLogger("LuaScriptingModule")), 
+        m_Executor(services), 
+        m_ScriptCounter(0)
     {
         m_Executor.Initialize();
     }
@@ -53,7 +59,12 @@ public:
     inline int IncrementScriptCounter()
     {
         m_ScriptCounter ++;
-        return m_ScriptCounter - 1;
+        return m_ScriptCounter;
+    }
+
+    inline Core::Logging::Logger* GetLogger()
+    {
+        return &m_Logger;
     }
 };
 

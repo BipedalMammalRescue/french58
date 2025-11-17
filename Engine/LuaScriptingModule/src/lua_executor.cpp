@@ -5,6 +5,7 @@
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Scripting/api_data.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
@@ -14,17 +15,25 @@
 
 using namespace Engine::Extension::LuaScriptingModule;
 
+// not meant for access
 const char SeScriptTable[] = "SE_SCRIPT_TABLE";
 const char SeExecutorInstance[] = "SE_EXECUTOR_INSTANCE";
-const char SeApiTable[] = "SE_API_TABLE";
-const char SeEventTable[] = "SE_EVENT_TABLE";
-const char SeEntityId[] = "SE_COMPONENT_ID";
 const char SeScriptParameters[] = "SE_SCRIPT_PARAMETERS";
 const char SeEventWriter[] = "SE_EVENT_WRITER";
 
+// constants
+const char SeApiTable[] = "SE_API_TABLE";
+const char SeEventTable[] = "SE_EVENT_TABLE";
+
+// changes every node
+const char SeEntityId[] = "__entity_id";
+const char SeComponentId[] = "__component_id";
+
+// functions
 const char SeGetParameter[] = "GetParameter";
 const char SeQuery[] = "EngineQuery";
 const char SeEvent[] = "RaiseEvent";
+
 
 template <typename T>
 struct VariantLite
@@ -48,7 +57,7 @@ static void WriteVariantLite(lua_State* luaState, const T& src)
 
 
 template <typename T>
-static Engine::Core::Scripting::ApiData PopFullUserData(lua_State* luaState, unsigned char identifier, int index)
+static Engine::Core::Scripting::ApiData PopVariantLite(lua_State* luaState, unsigned char identifier, int index)
 {
     if (!lua_isuserdata(luaState, index))
         return { Engine::Core::Scripting::ApiDataType::Invalid };
@@ -186,19 +195,19 @@ static Engine::Core::Scripting::ApiData ReadApiData(lua_State* luaState, Engine:
             }
 
         case Engine::Core::Pipeline::VariantType::Vec2:
-            return PopFullUserData<glm::vec2>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec3:
-            return PopFullUserData<glm::vec3>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Vec4:
-            return PopFullUserData<glm::vec4>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::vec4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat2:
-            return PopFullUserData<glm::mat2>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat2>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat3:
-            return PopFullUserData<glm::mat3>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat3>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Mat4:
-            return PopFullUserData<glm::mat4>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<glm::mat4>(luaState, (unsigned char)type.SubType.Variant, index);
         case Engine::Core::Pipeline::VariantType::Path:
-            return PopFullUserData<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant, index);
+            return PopVariantLite<Engine::Core::Pipeline::HashId>(luaState, (unsigned char)type.SubType.Variant, index);
         default:
             return { Engine::Core::Scripting::ApiDataType::Invalid };
         }
@@ -262,25 +271,47 @@ static int GetLuaScriptParameter(lua_State* luaState)
     const char* paramName = lua_tostring(luaState, -1);
     Engine::Core::Pipeline::HashId paramId = md5::compute(paramName);
 
-    lua_getglobal(luaState, SeScriptParameters);
-    if (!lua_isuserdata(luaState, -1))
-        return 0;
+    lua_getglobal(luaState, SeComponentId);
+    int componentId = lua_tointeger(luaState, -1);
 
-    auto parameters = static_cast<std::unordered_map<Engine::Core::Pipeline::HashId, Engine::Core::Pipeline::Variant>*>(lua_touserdata(luaState, -1));
-    auto foundParam = parameters->find(paramId);
+    lua_getglobal(luaState, SeExecutorInstance);
+    auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
 
-    if (foundParam == parameters->end())
-        return 0;
+    auto foundParam = executor->GetParameter(paramId, componentId);
+    if (foundParam.Type == Engine::Core::Pipeline::VariantType::Invalid)
+    {
+        lua_pushnil(luaState);
+        return 1;
+    }
+    else 
+    {
+        Engine::Core::Scripting::ApiData data;
+        data.Type = Engine::Core::Scripting::ApiDataType::Variant;
+        data.Data.Variant = foundParam;
 
-    Engine::Core::Scripting::ApiData data;
-    data.Type = Engine::Core::Scripting::ApiDataType::Variant;
-    data.Data.Variant = foundParam->second;
-
-    return WriteApiData(luaState, 
-        { .Type = Engine::Core::Scripting::ApiDataType::Variant, .SubType = { .Variant = foundParam->second.Type } }, 
-        &data) ? 1 : 0;
+        return WriteApiData(luaState, 
+            { .Type = Engine::Core::Scripting::ApiDataType::Variant, .SubType = { .Variant = foundParam.Type } }, 
+            &data) ? 1 : 0;
+    }
 }
 
+int LuaExecutor::LuaPrint(lua_State* luaState)
+{
+    lua_getglobal(luaState, SeExecutorInstance);
+    auto executor = static_cast<LuaExecutor*>(lua_touserdata(luaState, -1));
+
+    const char* str = lua_tostring(luaState, -2);
+    if (str != nullptr)
+    {
+        executor->m_Logger.Information("[lua] {}", str);
+    }
+    else 
+    {
+        executor->m_Logger.Information("[lua] <n/a>");
+    }
+
+    return 0;
+}
 
 int LuaExecutor::LuaRaiseEvent(lua_State* luaState)
 {
@@ -517,6 +548,9 @@ void LuaExecutor::Initialize()
     lua_pushcfunction(m_LuaState, GetLuaScriptParameter);
     lua_setglobal(m_LuaState, SeGetParameter);
 
+    lua_pushcfunction(m_LuaState, LuaPrint);
+    lua_setglobal(m_LuaState, "LogInfo");
+
     // library functions
     lua_pushcfunction(m_LuaState, CreateVec2);
     lua_setglobal(m_LuaState, "vec2");
@@ -532,11 +566,8 @@ void LuaExecutor::Initialize()
     m_Logger.Information("Lua executor initialized.");
 }
 
-LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services)
+LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : m_Services(services), m_Logger(services->LoggerService->CreateLogger("LuaExecutor"))
 {
-    static const char* LogChannel[] = { "LuaExecutor" };
-    m_Logger = services->LoggerService->CreateLogger(LogChannel, 1);
-
     m_LuaState = luaL_newstate();
     luaL_openlibs(m_LuaState);
 }
@@ -544,49 +575,67 @@ LuaExecutor::LuaExecutor(const Engine::Core::Runtime::ServiceTable* services) : 
 LuaExecutor::~LuaExecutor() 
 {
     lua_close(m_LuaState);
+    m_Logger.Information("Lua executor disposed.");
 }
 
+// hot path
 void Engine::Extension::LuaScriptingModule::LuaExecutor::ExecuteNode(const InstancedScriptNode &node, Engine::Core::Runtime::EventWriter* writer) 
 {
-    if (!lua_isfunction(m_LuaState, -1))
-        return;
+    StackBalancer balancer(m_LuaState);
+    
+    lua_getglobal(m_LuaState, SeScriptTable);
+    lua_rawgeti(m_LuaState, -1, node.ScriptIndex);
 
-    Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
-
-    lua_pushinteger(m_LuaState, node.Entity);
-    lua_setglobal(m_LuaState, SeEntityId);
-
-    lua_pushlightuserdata(m_LuaState, (void*)&node.Parameters);
-    lua_setglobal(m_LuaState, SeScriptParameters);
-
-    lua_pushlightuserdata(m_LuaState, writer);
-    lua_setglobal(m_LuaState, SeEventWriter);
-
-    auto result = lua_pcall(m_LuaState, 0, 0, 0);
-    if (result != LUA_OK)
+    if (lua_isfunction(m_LuaState, -1))
     {
-        // TODO: this is a hack, it's not memory safe: we need a real string passing mechanism
-        writer->Rollback(checkpoint);
-        m_Logger.Error("Lua script execution failed, return code: {return}, error: {error}", { result, lua_tostring(m_LuaState, -1) });
+        Core::Runtime::EventWriterCheckpoint checkpoint = writer->CreateCheckpoint();
+
+        lua_pushinteger(m_LuaState, node.Entity);
+        lua_setglobal(m_LuaState, SeEntityId);
+
+        lua_pushinteger(m_LuaState, node.Component);
+        lua_setglobal(m_LuaState, SeComponentId);
+
+        lua_pushlightuserdata(m_LuaState, writer);
+        lua_setglobal(m_LuaState, SeEventWriter);
+
+        auto result = lua_pcall(m_LuaState, 0, 0, 0);
+        if (result != LUA_OK)
+        {
+            writer->Rollback(checkpoint);
+            m_Logger.Error("Lua script execution failed, return code: {}, error: {}", result, lua_tostring(m_LuaState, -1));
+        }
     }
 }
 
-bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(const std::vector<unsigned char> *byteCode, int index) 
+// cold path
+bool Engine::Extension::LuaScriptingModule::LuaExecutor::LoadScript(void* byteCode, size_t codeLength, int index) 
 {
+    StackBalancer balancer(m_LuaState);
+
     lua_getglobal(m_LuaState, SeScriptTable);
     lua_pushinteger(m_LuaState, index);
 
-    auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode->data(), byteCode->size(), "");
+    auto result = luaL_loadbuffer(m_LuaState, (const char*)byteCode, codeLength, "");
     if (result != LUA_OK)
+    {
+        m_Logger.Error("Failed to load lua script, error: {}", lua_tostring(m_LuaState, -1));
         return false;
+    }
     
     lua_settable(m_LuaState, -3);
     return true;
 }
 
-bool LuaExecutor::SelectScript(int index)
+Engine::Core::Pipeline::Variant Engine::Extension::LuaScriptingModule::LuaExecutor::GetParameter(const Core::Pipeline::HashId &name, const int &component) const 
 {
-    lua_getglobal(m_LuaState, SeScriptTable);
-    lua_rawgeti(m_LuaState, -1, index);
-    return lua_isfunction(m_LuaState, -1);
+    auto foundParam = m_NodeParameters.find({ name, component });
+    if (foundParam == m_NodeParameters.end())
+        return Core::Pipeline::Variant::Invalid();
+
+    return foundParam->second;
+}
+void Engine::Extension::LuaScriptingModule::LuaExecutor::SetParameter(const Core::Pipeline::HashId& name, const int& component, const Core::Pipeline::Variant& data)
+{
+    m_NodeParameters[{ name, component }] = data;
 }

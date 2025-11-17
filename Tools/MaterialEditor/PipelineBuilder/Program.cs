@@ -39,7 +39,7 @@ internal class Program
         foreach (StaticInjectedShaderUniform uniform in staticInjectedVertexShaderUniforms)
         {
             outputStream.Write(uniform.Binding);
-            outputStream.Write((byte)uniform.Identifier);
+            outputStream.Write(uniform.Identifier);
         }
 
         // static fragment uniform
@@ -48,7 +48,7 @@ internal class Program
         foreach (StaticInjectedShaderUniform uniform in staticInjectedFragmentShaderUniforms)
         {
             outputStream.Write(uniform.Binding);
-            outputStream.Write((byte)uniform.Identifier);
+            outputStream.Write(uniform.Identifier);
         }
 
         // Dynamic vertex uniform
@@ -57,7 +57,7 @@ internal class Program
         foreach (DynamicInjectedShaderUniform uniform in dynamicInjectedVertexShaderUniforms)
         {
             outputStream.Write(uniform.Binding);
-            outputStream.Write((byte)uniform.Identifier);
+            outputStream.Write(uniform.Identifier);
         }
 
         // Dynamic fragment uniform
@@ -66,7 +66,7 @@ internal class Program
         foreach (DynamicInjectedShaderUniform uniform in dynamicInjectedFragmentShaderUniforms)
         {
             outputStream.Write(uniform.Binding);
-            outputStream.Write((byte)uniform.Identifier);
+            outputStream.Write(uniform.Identifier);
         }
 
         // static vertex storage buffers
@@ -75,7 +75,7 @@ internal class Program
         foreach (StaticInjectedShaderStorageBuffer buffer in staticInjectedVertexShaderStorageBuffers)
         {
             outputStream.Write(buffer.Binding);
-            outputStream.Write((byte)buffer.Identifier);
+            outputStream.Write(buffer.Identifier);
         }
 
         // static Fragment storage buffers
@@ -84,7 +84,7 @@ internal class Program
         foreach (StaticInjectedShaderStorageBuffer buffer in staticInjectedFragmentShaderStorageBuffers)
         {
             outputStream.Write(buffer.Binding);
-            outputStream.Write((byte)buffer.Identifier);
+            outputStream.Write(buffer.Identifier);
         }
 
         // Dynamic vertex storage buffers
@@ -93,7 +93,7 @@ internal class Program
         foreach (DynamicInjectedShaderStorageBuffer buffer in dynamicInjectedVertexShaderStorageBuffers)
         {
             outputStream.Write(buffer.Binding);
-            outputStream.Write((byte)buffer.Identifier);
+            outputStream.Write(buffer.Identifier);
         }
 
         // Dynamic Fragment storage buffers
@@ -102,7 +102,7 @@ internal class Program
         foreach (DynamicInjectedShaderStorageBuffer buffer in dynamicInjectedFragmentShaderStorageBuffers)
         {
             outputStream.Write(buffer.Binding);
-            outputStream.Write((byte)buffer.Identifier);
+            outputStream.Write(buffer.Identifier);
         }
     }
 }

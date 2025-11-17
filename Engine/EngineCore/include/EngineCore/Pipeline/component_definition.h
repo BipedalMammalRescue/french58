@@ -4,9 +4,9 @@
 #include "EngineCore/Pipeline/name_pair.h"
 #include "EngineCore/Pipeline/variant.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 
 #include <ostream>
-#include <istream>
 
 namespace Engine::Core::Runtime {
 struct ServiceTable;
@@ -22,6 +22,7 @@ struct Field
 
 struct RawComponent
 {
+    int Id;
     int Entity;
     Field* FieldV;
     size_t FieldC;
@@ -31,7 +32,7 @@ struct ComponentDefinition
 {
     NamePair Name;
     bool (*Compile)(RawComponent input, std::ostream* output);
-    Runtime::CallbackResult (*Load)(size_t count, std::istream* input, Runtime::ServiceTable* services, void* moduleState);
+    Runtime::CallbackResult (*Load)(size_t count, Utils::Memory::MemStreamLite& stream, Runtime::ServiceTable* services, void* moduleState);
 };
 
 }

@@ -1,43 +1,44 @@
 #include "LuaScriptingModule/Assets/lua_script.h"
-#include "EngineCore/Pipeline/asset_enumerable.h"
-#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "LuaScriptingModule/lua_scripting_module.h"
 
 using namespace Engine::Extension::LuaScriptingModule;
 
-Engine::Core::Runtime::CallbackResult Assets::LoadLuaScript(Core::Pipeline::IAssetEnumerator *inputStreams, Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::ContextualizeLuaScript(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
 {
-    auto state = static_cast<LuaScriptingModuleState*>(moduleState);
-
-    state->GetLoadedScripts().reserve(state->GetLoadedScripts().size() + inputStreams->Count());
-    while (inputStreams->MoveNext())
+    for (size_t i = 0; i < contextCount; i++)
     {
-        auto code = std::vector<unsigned char>(std::istreambuf_iterator<char>(*inputStreams->GetCurrent().Storage), {});
+        Core::AssetManagement::AssetLoadingContext &currentContext = outContext[i];
 
-        auto foundScript = state->GetLoadedScripts().find(inputStreams->GetCurrent().ID);
-        if (foundScript != state->GetLoadedScripts().end())
-        {
-            state->GetExecutor()->LoadScript(&code, foundScript->second);
-        }
-        else 
-        {
-            int newIndex = state->IncrementScriptCounter();
-            state->GetExecutor()->LoadScript(&code, newIndex);
-            state->GetLoadedScripts()[inputStreams->GetCurrent().ID] = { newIndex };
-        }
+        currentContext.Buffer.Type = Core::AssetManagement::LoadBufferType::TransientBuffer;
+        currentContext.Buffer.Location.TransientBufferSize = currentContext.SourceSize;
     }
 
     return Core::Runtime::CallbackSuccess();
 }
 
-Engine::Core::Runtime::CallbackResult Assets::UnloadLuaScript(Core::Pipeline::HashId *ids, size_t count, Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::IndexLuaScript(Core::Runtime::ServiceTable *services, void *moduleState, Core::AssetManagement::AssetLoadingContext* inContext)
 {
     auto state = static_cast<LuaScriptingModuleState*>(moduleState);
 
-    for (size_t i = 0; i < count; i++)
+    auto code = services->TransientAllocator->GetBuffer(inContext->Buffer.Location.TransientBufferId);
+    if (code == nullptr)
     {
-        state->GetLoadedScripts().erase(ids[i]);
+        state->GetLogger()->Error("Failed to load lua script {}, transient buffer rejected.", inContext->AssetId);
+        return Core::Runtime::CallbackSuccess();
+    }
+
+    auto foundScript = state->GetLoadedScripts().find(inContext->AssetId);
+    if (foundScript != state->GetLoadedScripts().end())
+    {
+        state->GetExecutor()->LoadScript(code, inContext->SourceSize, foundScript->second);
+    }
+    else 
+    {
+        int newIndex = state->IncrementScriptCounter();
+        state->GetExecutor()->LoadScript(code, inContext->SourceSize, newIndex);
+        state->GetLoadedScripts()[inContext->AssetId] = { newIndex };
     }
 
     return Core::Runtime::CallbackSuccess();

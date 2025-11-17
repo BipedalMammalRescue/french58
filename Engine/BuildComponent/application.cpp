@@ -69,12 +69,12 @@ int main()
             fieldReadBuffer.push_back({fieldName, fieldData});
         }
 
-        Pipeline::RawComponent nextInput {entityId, fieldReadBuffer.data(), fieldReadBuffer.size()};
+        Pipeline::RawComponent nextInput {componentId, entityId, fieldReadBuffer.data(), fieldReadBuffer.size()};
         bool success = targetComponentType.Compile(nextInput, &std::cout);
 
         if (!success)
         {
-            // TODO: logging?
+            // TODO: make the builder callbacks return callback result
             std::cerr << "Error: component failed to compile." << std::endl;
             return 1;
         }

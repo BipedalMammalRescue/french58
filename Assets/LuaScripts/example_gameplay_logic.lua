@@ -1,4 +1,3 @@
--- trigger on tick
 if EngineQuery(SE_API_TABLE.EngineRootModule.CheckTickEvent) then
     rotation_speed = GetParameter("rotation_speed")
     delta_time = EngineQuery(SE_API_TABLE.EngineRootModule.GetDeltaTime)
@@ -8,5 +7,5 @@ if EngineQuery(SE_API_TABLE.EngineRootModule.CheckTickEvent) then
     scale = vec3(1, 1, 1)
     rotation = vec3(0, rotation_angle, 0)
 
-    RaiseEvent(SE_EVENT_TABLE.EngineRootModule.TransformUpdateEvent, SE_COMPONENT_ID, translation, scale, rotation)
+    RaiseEvent(SE_EVENT_TABLE.EngineRootModule.TransformUpdateEvent, __entity_id, translation, scale, rotation)
 end

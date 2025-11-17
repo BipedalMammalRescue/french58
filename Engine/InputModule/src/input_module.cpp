@@ -1,5 +1,7 @@
 #include "InputModule/input_module.h"
+#include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Pipeline/name_pair.h"
+#include "EngineCore/Runtime/input_manager.h"
 #include "InputModule/Assets/input_action.h"
 
 #include <EngineCore/Pipeline/asset_definition.h>
@@ -12,9 +14,14 @@
 
 using namespace Engine::Extension::InputModule;
 
+InputModuleState::InputModuleState(Core::Runtime::ServiceTable* services)
+    : Logger(services->LoggerService->CreateLogger("InputModule"))
+{}
+
+
 static void* InitInputModule(Engine::Core::Runtime::ServiceTable *services)
 {
-    return new InputModuleState();
+    return new InputModuleState(services);
 }
 
 static void DisposeInputModule(Engine::Core::Runtime::ServiceTable *services, void *moduleState)
@@ -91,8 +98,8 @@ Engine::Core::Pipeline::ModuleDefinition Engine::Extension::InputModule::GetModu
     static const Core::Pipeline::AssetDefinition assets[] {
         {
             HASH_NAME("InputAction"),
-            Assets::LoadInputAction,
-            Assets::UnloadInputAction
+            Assets::ContextualizeInputAction,
+            Assets::IndexInputAction
         }
     };
 

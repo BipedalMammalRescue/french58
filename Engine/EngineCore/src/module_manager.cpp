@@ -3,7 +3,9 @@
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/root_module.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "EngineUtils/String/hex_strings.h"
+#include "EngineCore/Logging/logger_service.h"
 #include <string>
 
 using namespace Engine::Core::Runtime;
@@ -23,10 +25,11 @@ static std::string ModuleLoadingError(const char* reason, Engine::Core::Pipeline
     return message;
 }
 
+ModuleManager::ModuleManager(Engine::Core::Logging::LoggerService* loggerService) : m_Logger(loggerService->CreateLogger("ModuleManager")) {}
+
 CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& modules, ServiceTable* services)
 {
     m_Services = services;
-    m_Logger = services->LoggerService->CreateLogger(LogChannels, 1);
 
     // load modules
     for (size_t i = 0; i < modules.ModuleCount; i++)
@@ -67,7 +70,7 @@ CallbackResult ModuleManager::LoadModules(const Pipeline::ModuleAssembly& module
             m_EventCallbacks.push_back({ callback.Callback, newState });
         }
 
-        m_Logger.Information("Loaded module {moduleName}:{moduleId}", { moduleDef.Name.DisplayName, moduleDef.Name.Hash });
+        m_Logger.Information("Loaded module {}:{}", moduleDef.Name.DisplayName, moduleDef.Name.Hash);
     }
 
     return CallbackSuccess();
@@ -78,7 +81,7 @@ CallbackResult ModuleManager::UnloadModules()
     for (auto module : m_LoadedModules)
     {
         module.second.Definition.Dispose(m_Services, module.second.State);
-        m_Logger.Information("Unloaded module {moduleId}", { module.first });
+        m_Logger.Information("Unloaded module {}:{}", module.second.Definition.Name.DisplayName, module.second.Definition.Name.Hash);
     }
 
     m_LoadedModules.clear();
@@ -88,6 +91,15 @@ CallbackResult ModuleManager::UnloadModules()
 ModuleManager::~ModuleManager()
 {
     UnloadModules();
+}
+
+void* ModuleManager::FindModuleMutable(const Pipeline::HashId& name)
+{
+    auto foundModule = m_LoadedModules.find(name);
+    if (foundModule == m_LoadedModules.end())
+        return nullptr;
+    
+    return foundModule->second.State;
 }
 
 const void* ModuleManager::FindModule(const Pipeline::HashId& name) const

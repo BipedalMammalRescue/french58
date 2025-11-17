@@ -9,6 +9,7 @@ int asset_group_count
     int asset_count
     {
         byte[16] asset_id
+        long asset_size
     }[asset_count] assets
 }[asset_group_count] asset_groups
 
@@ -28,8 +29,13 @@ int component_group_count
     byte[16] module_id 
     byte[16] component_type_id
     int component_count
+    long storage_offset
+}[component_group_count] component_groups
+
+{
     {
         // this field is built and interpreted by engine code
-        byte[*] data
+        long data_length
+        byte[data_length] data
     }[component_count] components
-}[component_group_count] component_groups
+}[component_group_count] component_storage

@@ -1,0 +1,7 @@
+#!/bin/bash
+build_asset $1
+
+project_root=$(dirname $(dirname "$0"))
+cd $project_root
+
+LiveLink.ReloadAsset $1

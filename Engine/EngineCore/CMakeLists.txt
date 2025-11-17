@@ -1,4 +1,5 @@
 add_library(EngineCore STATIC
+    src/asset_manager.cpp
 	src/logger_service.cpp
     src/logger.cpp
 	src/graphics_layer.cpp
@@ -14,7 +15,11 @@ add_library(EngineCore STATIC
     src/event_writer.cpp
     src/task_manager.cpp
     src/input_manager.cpp
+    src/network_layer.cpp
+    src/transient_allocator.cpp
+    src/index_queue.cpp
     )
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(EngineCore PRIVATE cxx_std_17)
+target_link_libraries(EngineCore PUBLIC spdlog::spdlog)

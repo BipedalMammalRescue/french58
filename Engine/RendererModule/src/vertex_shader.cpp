@@ -1,86 +1,85 @@
 #include "RendererModule/Assets/vertex_shader.h"
-#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineUtils/Memory/memstream_lite.h"
 #include "RendererModule/renderer_module.h"
-
-#include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/graphics_layer.h"
-#include "EngineUtils/ErrorHandling/exceptions.h"
+#include "SDL3/SDL_error.h"
 
-#include <memory>
+#include <cstdint>
 
 using namespace Engine::Extension::RendererModule;
 
-Engine::Core::Runtime::CallbackResult Assets::LoadVertexShader(Engine::Core::Pipeline::IAssetEnumerator *inputStreams, Engine::Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::ContextualizeVertexShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState, Engine::Core::AssetManagement::AssetLoadingContext* outContext, size_t contextCount)
 {
-    using namespace Engine::Core::Runtime;
-
     // reserve memory for the new shaders
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
-    state->VertexShaders.reserve(state->VertexShaders.size() + inputStreams->Count());
-
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
+    state->VertexShaders.reserve(state->VertexShaders.size() + contextCount);
+    
     SDL_GPUShaderStage shaderStage = SDL_GPUShaderStage::SDL_GPU_SHADERSTAGE_VERTEX;
 
-    // load every shader individually
-    while (inputStreams->MoveNext()) 
+    // we need to use transient buffer for this
+    for (size_t i = 0; i < contextCount; i++)
     {
-        Engine::Core::Pipeline::RawAsset rawAsset = inputStreams->GetCurrent();
-
-        // load prefixed reflection information
-        uint32_t uniformCount = 0;
-        uint32_t stroageBufferCount = 0;
-        rawAsset.Storage->read((char*)&uniformCount, sizeof(uint32_t));
-        rawAsset.Storage->read((char*)&stroageBufferCount, sizeof(uint32_t));
-
-        // load a prefixed length
-        size_t codeLength = 0;
-        rawAsset.Storage->read((char*)&codeLength, sizeof(size_t));
-        
-        // load the code
-        std::unique_ptr<unsigned char[]> code = std::make_unique<unsigned char[]>(codeLength);
-        rawAsset.Storage->read((char*)code.get(), codeLength);
-        
-        // compile shader
-        SDL_GPUShaderCreateInfo shaderInfo = {codeLength,
-                                              code.get(),
-                                              "main",
-                                              SDL_GPU_SHADERFORMAT_SPIRV,
-                                              shaderStage,
-                                              0,
-                                              0,
-                                              stroageBufferCount,
-                                              uniformCount};
-
-        SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
-        
-        // TODO: get a default shader for shader failures
-        if (newShader == nullptr)
-            SE_THROW_GRAPHICS_EXCEPTION;
-
-        state->VertexShaders[rawAsset.ID] = newShader;
+        if (state->VertexShaders.find(outContext[i].AssetId) != state->VertexShaders.end())
+        {
+            state->Logger.Information("Vertex shader {} already loaded (reloading shader is not yet supported).", outContext[i].AssetId);
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::Invalid;
+        }
+        else
+        {
+            outContext[i].Buffer.Type = Engine::Core::AssetManagement::LoadBufferType::TransientBuffer;
+            outContext[i].Buffer.Location.TransientBufferSize = outContext[i].SourceSize;
+        }
     }
 
-    return CallbackSuccess();
+    return Engine::Core::Runtime::CallbackSuccess();
 }
 
-Engine::Core::Runtime::CallbackResult Assets::UnloadVertexShader(Engine::Core::Pipeline::HashId *ids, size_t count, Core::Runtime::ServiceTable *services, void *moduleState)
+Engine::Core::Runtime::CallbackResult Assets::IndexVertexShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState, Engine::Core::AssetManagement::AssetLoadingContext* inContext)
 {
-    ModuleState* state = static_cast<ModuleState*>(moduleState);
-    
-    for (size_t i = 0; i < count; i++) 
+    using namespace Engine::Core::Runtime;
+    RendererModuleState* state = static_cast<RendererModuleState*>(moduleState);
+
+    void* buffer = services->TransientAllocator->GetBuffer(inContext->Buffer.Location.TransientBufferId);
+    if (buffer == nullptr)
     {
-        // TODO: log something for unrecognized data
-        auto foundShader = state->VertexShaders.find(ids[i]);
-        if (foundShader == state->VertexShaders.end())
-            continue;
-
-        // delete shader from GPU
-        SDL_ReleaseGPUShader(services->GraphicsLayer->GetDevice(), foundShader->second);
-
-        // erase asset
-        state->VertexShaders.erase(foundShader);
+        state->Logger.Error("Failed to load vertex shader {} because transient buffer is invalid.");
+        return CallbackSuccess();
     }
 
-    return Core::Runtime::CallbackSuccess();
+    Engine::Utils::Memory::MemStreamLite stream { buffer, 0 };
+
+    // load prefixed reflection information
+    uint32_t uniformCount = stream.Read<uint32_t>();
+    uint32_t stroageBufferCount = stream.Read<uint32_t>();
+
+    // load a prefixed length
+    size_t codeLength = stream.Read<size_t>();
+
+    // compile shader
+    SDL_GPUShaderCreateInfo shaderInfo = {codeLength,
+                                            (unsigned char*)stream.Buffer + stream.Cursor,
+                                            "main",
+                                            SDL_GPU_SHADERFORMAT_SPIRV,
+                                            SDL_GPUShaderStage::SDL_GPU_SHADERSTAGE_VERTEX,
+                                            0,
+                                            0,
+                                            stroageBufferCount,
+                                            uniformCount};
+
+    SDL_GPUShader *newShader = SDL_CreateGPUShader(services->GraphicsLayer->GetDevice(), &shaderInfo);
+
+    if (newShader == nullptr)
+    {
+        state->Logger.Information("Failed to compile vertex shader {} on the GPU, detail: {}", inContext->AssetId, SDL_GetError());
+        return CallbackSuccess();
+    }
+
+    state->VertexShaders[inContext->AssetId] = newShader;
+    return CallbackSuccess();
 }

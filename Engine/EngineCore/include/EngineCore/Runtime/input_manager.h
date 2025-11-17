@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EngineCore/Runtime/game_loop.h"
 #include "SDL3/SDL_scancode.h"
 #include <vector>
 namespace Engine::Core::Runtime {

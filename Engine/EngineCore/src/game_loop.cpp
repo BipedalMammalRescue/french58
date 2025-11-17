@@ -3,16 +3,14 @@
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
-#include "EngineCore/Pipeline/asset_definition.h"
-#include "EngineCore/Pipeline/asset_enumerable.h"
 #include "EngineCore/Pipeline/engine_callback.h"
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Pipeline/module_assembly.h"
-#include "EngineCore/Pipeline/module_definition.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_writer.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/input_manager.h"
+#include "EngineCore/Runtime/network_layer.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "EngineCore/Runtime/world_state.h"
 #include "EngineCore/Runtime/module_manager.h"
@@ -23,11 +21,8 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
-#include <fstream>
 #include <md5.h>
 #include <string>
-
-#define IoCrashOut(error) Engine::Core::Runtime::Crash(__FILE__, __LINE__, )
 
 using namespace Engine::Core::Runtime;
 
@@ -35,29 +30,6 @@ GameLoop::GameLoop(Pipeline::ModuleAssembly modules, const Configuration::Config
     m_ConfigurationProvider(configs),
     m_Modules(modules)
 {
-    // build component table
-    for (size_t i = 0; i < modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition module = modules.Modules[i];
-        for (size_t j = 0; j < module.ComponentCount; j ++)
-        {
-            Pipeline::ComponentDefinition component = module.Components[j];
-            Pipeline::HashIdTuple tuple { module.Name.Hash, component.Name.Hash };
-            m_Components[tuple] = component;
-        }
-    }
-
-    // build asset table
-    for (size_t i = 0; i < modules.ModuleCount; i++)
-    {
-        Pipeline::ModuleDefinition module = modules.Modules[i];
-        for (size_t j = 0; j < module.AssetsCount; j ++)
-        {
-            Pipeline::AssetDefinition asset = module.Assets[j];
-            Pipeline::HashIdTuple tuple { module.Name.Hash, asset.Name.Hash };
-            m_Assets[tuple] = asset;
-        }
-    }
 }
 
 bool GameLoop::AddEventSystem(EventSystemDelegate delegate, const char* userName)
@@ -78,198 +50,14 @@ bool GameLoop::RemoveEventSystem(const char* userName)
 
 CallbackResult GameLoop::DiagnsoticModeCore(std::function<void(IGameLoopController*)> executor)
 {
-    class GameLoopController : public IGameLoopController
-    {
-    private:
-        friend class GameLoop;
-        ServiceTable* m_Services;
-        Logging::Logger* m_Logger;
-        TaskManager* m_TaskManager;
-        EventWriter m_EventWriter;
-        GameLoop* m_Owner;
-
-    public:
-        const ServiceTable* GetServices() const override {
-            return m_Services;
-        }
-
-        CallbackResult Initialize() override
-        {
-            CallbackResult loggerStartResult = m_Services->LoggerService->StartLogger();
-            if (loggerStartResult.has_value())
-                return loggerStartResult;
-
-            CallbackResult serviceInitResult = m_Services->GraphicsLayer->InitializeSDL();
-            if (serviceInitResult.has_value())
-                return serviceInitResult;
-
-            return CallbackSuccess();
-        }
-
-        CallbackResult LoadModules() override 
-        {
-            return m_Services
-                ->ModuleManager->LoadModules(m_Owner->m_Modules, m_Services);
-        }
-
-        CallbackResult UnloadModules() override
-        {
-            return m_Services->ModuleManager->UnloadModules();
-        }
-
-        CallbackResult LoadEntity(Pipeline::HashId entityId) override 
-        {
-            // load the first scene
-            return m_Owner->LoadEntity(entityId, *m_Services, m_Logger);
-        }
-
-        CallbackResult BeginFrame() override 
-        {
-            // tick the timer
-            m_Services->WorldState->Tick();
-
-            // input handling
-            m_Services->InputManager->ProcessSdlEvents();
-
-            // begin update loop
-            return m_Services->GraphicsLayer->BeginFrame();
-        }
-
-        CallbackResult Preupdate() override 
-        {
-            // pre-update
-            for (InstancedSynchronousCallback callback : m_Services->ModuleManager->m_PreupdateCallbacks) 
-            {
-                auto result = callback.Callback(m_Services, callback.InstanceState);
-                if (result.has_value())
-                    return result;
-            }
-
-            return CallbackSuccess();
-        }
-
-        CallbackResult EventUpdate() override
-        {
-            // task-based event update
-            while (m_Services->EventManager->ExecuteAllSystems(m_Services, m_EventWriter))
-            {
-                // mid-update events
-                for (const InstancedSynchronousCallback& callback : m_Services->ModuleManager->m_MidupdateCallbacks) 
-                {
-                    callback.Callback(m_Services, callback.InstanceState);
-                }
-
-                for (const InstancedEventCallback& routine : m_Services->ModuleManager->m_EventCallbacks)
-                {
-                    Task task { TaskType::ProcessInputEvents };
-                    task.Payload.ProcessInputEventsTask = { routine, &m_EventWriter, 1 };
-                    m_TaskManager->ScheduleWork(task);
-                }
-
-                size_t tasksLeft = m_Services->ModuleManager->m_EventCallbacks.size();
-
-                while (tasksLeft > 0)
-                {
-                    TaskResult nextResult = m_TaskManager->WaitOne();
-                    tasksLeft += nextResult.AdditionalTasks - 1;
-
-                    if (nextResult.Result.has_value())
-                        return nextResult.Result;
-                }
-
-                // post-update events
-                for (const InstancedSynchronousCallback& callback : m_Services->ModuleManager->m_PostupdateCallbacks) 
-                {
-                    auto result = callback.Callback(m_Services, callback.InstanceState);
-                    if (result.has_value())
-                        return result;
-                }
-            }
-
-            return CallbackSuccess();
-        }
-
-        CallbackResult RenderPass() override 
-        {
-            // render pass
-            for (auto& callback : m_Services->ModuleManager->m_RenderCallbacks)
-            {
-                CallbackResult callbackResult = callback.Callback(m_Services, callback.InstanceState);
-                if (callbackResult.has_value())
-                    return callbackResult;
-            }
-
-            return CallbackSuccess();
-        }
-
-        CallbackResult EndFrame() override 
-        {
-            // last step in the update loop
-            return m_Services->GraphicsLayer->EndFrame();
-        }
-    };
-
-    if (!SDL_Init(SDL_INIT_VIDEO))
-    {
-        std::string error("SDL initialization failed, error: ");
-        error.append(SDL_GetError());
-        return Crash(__FILE__, __LINE__, error);
-    }
-
-    // create logger
-    Logging::LoggerService loggerService(m_ConfigurationProvider);
-
-    // create other services
-    GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
-    WorldState worldState(&m_ConfigurationProvider);
-    ModuleManager moduleManager;
-    EventManager eventManager(&loggerService);
-    InputManager inputManager;
-
-    // insert systems
-    for (auto pair : m_EventSystems)
-    {
-        eventManager.RegisterEventSystem(&pair.second, 1);
-    }
-
-    // initialize a local logger
-    static const char* topLevelChannels[] = { "GameLoop" };
-    Logging::Logger topLevelLogger = loggerService.CreateLogger(topLevelChannels, 1);
-
-    // initialize services
-    ServiceTable services {
-        &loggerService,
-        &graphicsLayer,
-        &worldState,
-        &moduleManager,
-        &eventManager,
-        &inputManager
-    };
-
-    TaskManager taskManager(&services, m_ConfigurationProvider.WorkerCount);
-
-    GameLoopController controller;
-    controller.m_Services = &services;
-    controller.m_Logger = &topLevelLogger;
-    controller.m_Owner = this;
-    controller.m_TaskManager = &taskManager;
+    GameLoopController controller(m_Modules, m_ConfigurationProvider, this);
 
     executor(&controller);
 
-    topLevelLogger.Information("Game exiting without error.");
     return CallbackSuccess();
 }
 
 CallbackResult GameLoop::DiagnsoticMode(std::function<void(IGameLoopController*)> executor)
-{
-    auto result = DiagnsoticModeCore(executor);
-
-    // quit SDL
-    SDL_Quit();
-    return result;
-}
-
-CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
 {
     // initialize sdl
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -279,202 +67,87 @@ CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
         return Crash(__FILE__, __LINE__, error);
 	}
 
-    // create logger
-    Logging::LoggerService loggerService(m_ConfigurationProvider);
-    CallbackResult loggerStartResult = loggerService.StartLogger();
-    if (loggerStartResult.has_value())
-        return loggerStartResult;
+    auto result = DiagnsoticModeCore(executor);
 
-    // create other services
-    GraphicsLayer graphicsLayer(&m_ConfigurationProvider, &loggerService);
-    WorldState worldState(&m_ConfigurationProvider);
-    ModuleManager moduleManager;
-    EventManager eventManager(&loggerService);
-    InputManager inputManager;
+    // quit SDL
+    SDL_Quit();
+    return result;
+}
 
-    // insert systems
-    for (auto pair : m_EventSystems)
-    {
-        eventManager.RegisterEventSystem(&pair.second, 1);
-    }
+CallbackResult GameLoop::RunCore(Pipeline::HashId initialEntityId)
+{
+    GameLoopController controller(m_Modules, m_ConfigurationProvider, this);
 
-    // initialize a local logger
-    static const char* topLevelChannels[] = { "GameLoop" };
-    Logging::Logger topLevelLogger = loggerService.CreateLogger(topLevelChannels, 1);
+    CallbackResult gameresult = controller.Initialize();
+    if (gameresult.has_value())
+        return gameresult;
 
-    // initialize services
-    ServiceTable services {
-        &loggerService,
-        &graphicsLayer,
-        &worldState,
-        &moduleManager,
-        &eventManager,
-        &inputManager
-    };
-
-    CallbackResult serviceInitResult = graphicsLayer.InitializeSDL();
-    if (serviceInitResult.has_value())
-        return serviceInitResult;
-
-    serviceInitResult = moduleManager.LoadModules(m_Modules, &services);
-    if (serviceInitResult.has_value())
-        return serviceInitResult;
+    gameresult = controller.LoadModules();
+    if (gameresult.has_value())
+        return gameresult;
 
     // load the first scene
-    CallbackResult loadResult = LoadEntity(initialEntityId, services, &topLevelLogger);
-    if (loadResult.has_value())
-        return loadResult;
-
-    TaskManager taskManager(&services, m_ConfigurationProvider.WorkerCount);
-
-    EventWriter eventWriter;
+    gameresult = controller.LoadEntity(initialEntityId);
+    if (gameresult.has_value())
+        return gameresult;
 
     // game loop
     bool quit = false;
-    SDL_Event e;
     while (!quit)
     {
-        // tick the timer
-        worldState.Tick();
+        gameresult = controller.PollAsyncIoEvents();
+        if (gameresult.has_value())
+            return gameresult;
 
-        // input handling
-        inputManager.ProcessSdlEvents();
-        quit = inputManager.m_QuitRequested;
-
-        // begin update loop
-        CallbackResult beginFrameResult = graphicsLayer.BeginFrame();
-        if (beginFrameResult.has_value())
-            return beginFrameResult;
+        quit = controller.m_InputManager.m_QuitRequested;
 
         // pre-update
-        for (InstancedSynchronousCallback callback : moduleManager.m_PreupdateCallbacks) 
-        {
-            callback.Callback(&services, callback.InstanceState);
-        }
+        gameresult = controller.Preupdate();
+        if (gameresult.has_value())
+            return gameresult;
 
-        // task-based event update
-        while (eventManager.ExecuteAllSystems(&services, eventWriter))
-        {
-            // mid-update events
-            for (const InstancedSynchronousCallback& callback : moduleManager.m_MidupdateCallbacks) 
-            {
-                callback.Callback(&services, callback.InstanceState);
-            }
+        // event loop
+        gameresult = controller.EventUpdate();
+        if (gameresult.has_value())
+            return gameresult;
 
-            for (const InstancedEventCallback& routine : moduleManager.m_EventCallbacks)
-            {
-                Task task { TaskType::ProcessInputEvents };
-                task.Payload.ProcessInputEventsTask = { routine, &eventWriter, 1 };
-                taskManager.ScheduleWork(task);
-            }
-
-            size_t tasksLeft = moduleManager.m_EventCallbacks.size();
-
-            while (tasksLeft > 0)
-            {
-                TaskResult nextResult = taskManager.WaitOne();
-                tasksLeft += nextResult.AdditionalTasks - 1;
-
-                if (nextResult.Result.has_value())
-                    return nextResult.Result;
-            }
-
-            // post-update events
-            for (const InstancedSynchronousCallback& callback : moduleManager.m_PostupdateCallbacks) 
-            {
-                callback.Callback(&services, callback.InstanceState);
-            }
-        }
+        // enter rendering critical path
+        gameresult = controller.BeginFrame();
+        if (gameresult.has_value())
+            return gameresult;
 
         // render pass
-        for (auto& callback : moduleManager.m_RenderCallbacks)
-        {
-            CallbackResult callbackResult = callback.Callback(&services, callback.InstanceState);
-            if (callbackResult.has_value())
-                return callbackResult;
-        }
+        gameresult = controller.RenderPass();
+        if (gameresult.has_value())
+            return gameresult;
         
         // last step in the update loop
-        CallbackResult endFrameResult = graphicsLayer.EndFrame();
-        if (endFrameResult.has_value())
-            return endFrameResult;
+        gameresult = controller.EndFrame();
+        if (gameresult.has_value())
+            return gameresult;
     }
 
-    topLevelLogger.Information("Game exiting without error.");
+    controller.UnloadModules();
     return CallbackSuccess();
 }
 
-int GameLoop::Run(Pipeline::HashId initialEntityId) 
+CallbackResult GameLoop::Run(Pipeline::HashId initialEntityId) 
 {
+    // initialize sdl
+	if (!SDL_Init(SDL_INIT_VIDEO))
+	{
+        std::string error("SDL initialization failed, error: ");
+        error.append(SDL_GetError());
+        return Crash(__FILE__, __LINE__, error);
+	}
+
     // allow crash to persistent outside the game loop
     CallbackResult gameError = RunCore(initialEntityId);
 
     // quit SDL
     SDL_Quit();
 
-    if (!gameError.has_value())
-        return 0;
-
-    printf("*** GAME CRASHED ***\n");
-    printf("location: %s : %d\n", gameError->File.c_str(), gameError->Line);
-    printf("crash dump: %s\n", gameError->ErrorDetail.c_str());
-    return 1;
-}
-
-class StreamAssetEnumerator : public Engine::Core::Pipeline::IAssetEnumerator
-{
-private:
-    int m_Cursor = -1;
-    int m_Count = 0;
-    std::istream* m_Source = nullptr;
-    std::ifstream m_AssetFile;
-    Engine::Core::Pipeline::HashId m_AssetId = { {0} };
-    char m_NameBuffer[43] = "CD0ED230BD87479C61DB68677CAA9506.bse_asset";
-
-public:
-    StreamAssetEnumerator(std::istream* source)
-    {
-        source->read((char*)&m_Count, sizeof(int));
-        m_Source = source;
-    }
-
-    size_t Count() override 
-    {
-        return m_Count;
-    };
-
-    bool MoveNext() override 
-    {
-        if (m_Cursor + 1 >= m_Count)
-            return false;
-
-        m_Cursor ++;
-
-        // close the original file
-        if (m_AssetFile.is_open())
-        {
-            m_AssetFile.close();
-        }
-
-        // open the new file
-        m_Source->read((char*)m_AssetId.Hash.data(), 16);
-        Engine::Utils::String::BinaryToHex(16, m_AssetId.Hash.data(), m_NameBuffer);
-        m_AssetFile.open(m_NameBuffer, std::ios::binary);
-
-        return m_AssetFile.is_open();
-    }
-
-    Engine::Core::Pipeline::RawAsset GetCurrent() override 
-    {
-        return { &m_AssetFile, m_AssetId };
-    }
-};
-
-static bool CheckMagicWord(unsigned int target, std::istream* input)
-{
-    unsigned int getWord = 0;
-    input->read((char*)&getWord, sizeof(unsigned int));
-    return target == getWord;
+    return gameError;
 }
 
 static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, const char* reason)
@@ -489,98 +162,172 @@ static std::string EntityLoadingError(Engine::Core::Pipeline::HashId entityId, c
     return errorMessage;
 }
 
-CallbackResult GameLoop::LoadEntity(Pipeline::HashId entityId, ServiceTable services, Logging::Logger* logger)
+static const char* TopLevelLogChannels[] = { "GameLoop" };
+
+GameLoop::GameLoopController::GameLoopController(Engine::Core::Pipeline::ModuleAssembly modules, Engine::Core::Configuration::ConfigurationProvider configs, GameLoop* owner)
+    : m_LoggerService(configs),
+    m_GraphicsLayer(&configs, &m_LoggerService),
+    m_WorldState(&configs),
+    m_ModuleManager(&m_LoggerService),
+    m_EventManager(&m_LoggerService),
+    m_InputManager(),
+    m_NetworkLayer(&m_LoggerService),
+    m_TaskManager(&m_Services, &m_LoggerService, configs.WorkerCount),
+    m_TransientAllocator(&m_LoggerService),
+    m_AssetManager(modules, &m_LoggerService, &m_Services),
+    m_HeapAllocator(),
+    m_ContainerFactory(&m_LoggerService),
+    m_Services {
+        &m_LoggerService,
+        &m_GraphicsLayer,
+        &m_WorldState,
+        &m_ModuleManager,
+        &m_EventManager,
+        &m_InputManager,
+        &m_NetworkLayer,
+        &m_TaskManager,
+        &m_TransientAllocator,
+        &m_AssetManager,
+        &m_HeapAllocator,
+        &m_ContainerFactory
+    },
+    m_Owner(owner),
+    m_TopLevelLogger(m_LoggerService.CreateLogger("GameLoop")),
+    m_EventWriter()
 {
-    logger->Information("Loading entity {id}", {entityId});
-
-    char pathBuffer[] = "CD0ED230BD87479C61DB68677CAA9506.bse_entity";
-    Utils::String::BinaryToHex(16, entityId.Hash.data(), pathBuffer);
-
-    std::ifstream entityFile;
-    entityFile.open(pathBuffer);
-
-    if (!entityFile.is_open())
+    for (const auto& system : owner->m_EventSystems)
     {
-        static const char errorMessage[] = "Entity file can't be opened.";
-        logger->Fatal(errorMessage);
-        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
+        m_EventManager.RegisterEventSystem(&system.second, 1);
+    }
+}
+
+const Engine::Core::Runtime::ServiceTable *Engine::Core::Runtime::GameLoop::GameLoopController::GetServices() const 
+{
+    return &m_Services;
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::Initialize() 
+{
+    CallbackResult graphicsInitResult = m_GraphicsLayer.InitializeSDL();
+    if (graphicsInitResult.has_value())
+        return graphicsInitResult;
+
+    CallbackResult networkInitResult = m_NetworkLayer.Initialize();
+    if (networkInitResult.has_value())
+        return networkInitResult;
+
+    return CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::LoadModules() 
+{
+    return m_ModuleManager.LoadModules(m_Owner->m_Modules, &m_Services);
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::UnloadModules() 
+{
+    return m_ModuleManager.UnloadModules();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::BeginFrame() 
+{
+    // begin update loop
+    return m_GraphicsLayer.BeginFrame();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::Preupdate() 
+{
+    // tick the timer
+    m_WorldState.Tick();
+
+    // input handling
+    m_InputManager.ProcessSdlEvents();
+
+    // pre-update
+    for (InstancedSynchronousCallback callback : m_ModuleManager.m_PreupdateCallbacks) 
+    {
+        CallbackResult result = callback.Callback(&m_Services, callback.InstanceState);
+        if (result.has_value())
+        return result;
     }
 
-    // read the asset section
-    if (!CheckMagicWord(0xCCBBFFF1, &entityFile))
-    {
-        static const char errorMessage[] = "Entity magic word for asset section mismatch.";
-        logger->Fatal(errorMessage);
-        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
-    }
+    return CallbackSuccess();
+}
 
-    int assetGroupCount = 0;
-    entityFile.read((char*)&assetGroupCount, sizeof(int));
-    for (int assetGroupIndex = 0; assetGroupIndex < assetGroupCount; assetGroupIndex ++)
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::EventUpdate() 
+{
+    // task-based event update
+    while (m_EventManager.ExecuteAllSystems(&m_Services, m_EventWriter)) 
     {
-        Pipeline::HashIdTuple assetGroupId;
-        entityFile.read((char*)&assetGroupId, 32);
-
-        auto targetAssetType = m_Assets.find(assetGroupId);
-        if (targetAssetType == m_Assets.end())
+        // mid-update events
+        for (const InstancedSynchronousCallback &callback : m_ModuleManager.m_MidupdateCallbacks) 
         {
-            logger->Fatal("Module state not found for asset: {module}:{type}.", {assetGroupId.First, assetGroupId.Second});
-            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
+            callback.Callback(&m_Services, callback.InstanceState);
         }
 
-        auto targetModuleState = services.ModuleManager->m_LoadedModules.find(assetGroupId.First);
-        if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
+        for (const InstancedEventCallback &routine : m_ModuleManager.m_EventCallbacks) 
         {
-            logger->Fatal("Module state not found: {module}.", {assetGroupId.First});
-            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
+            Task task{TaskType::ProcessInputEvents};
+            task.Payload.ProcessInputEventsTask = {routine, &m_EventWriter, 1};
+            m_TaskManager.ScheduleWork(task);
         }
 
-        StreamAssetEnumerator enumerator(&entityFile);
-        targetAssetType->second.Load(&enumerator, &services, targetModuleState->second.State);
-    }
+        size_t tasksLeft = m_ModuleManager.m_EventCallbacks.size();
 
-    // read the entities
-    if (!CheckMagicWord(0xCCBBFFF2, &entityFile) || !services.WorldState->LoadEntities(&entityFile))
-    {
-        static const char errorMessage[] = "Entity magic word for entity section mismatch.";
-        logger->Fatal(errorMessage);
-        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
-    }
-
-    // read the components
-    if (!CheckMagicWord(0xCCBBFFF3, &entityFile))
-    {
-        static const char errorMessage[] = "Entity magic word for component section mismatch.";
-        logger->Fatal(errorMessage);
-        return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, errorMessage));
-    }
-
-    int componentGroupCount = 0;
-    entityFile.read((char*)&componentGroupCount, sizeof(int));
-    for (int componentGroupIndex = 0; componentGroupIndex < componentGroupCount; componentGroupIndex ++)
-    {
-        Pipeline::HashIdTuple componentGroupId;
-        entityFile.read((char*)&componentGroupId, 32);
-        
-        auto targetComponent = m_Components.find(componentGroupId);
-        if (targetComponent == m_Components.end())
+        while (tasksLeft > 0) 
         {
-            logger->Fatal("Module state not found for component: {module}:{type}.", {componentGroupId.First, componentGroupId.Second});
-            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Asset definition not found."));
+            TaskResult nextResult = m_TaskManager.WaitOne();
+            tasksLeft += nextResult.AdditionalTasks - 1;
+
+            if (nextResult.Result.has_value())
+                return nextResult.Result;
         }
 
-        auto targetModuleState = services.ModuleManager->m_LoadedModules.find(componentGroupId.First);
-        if (targetModuleState == services.ModuleManager->m_LoadedModules.end())
+        // post-update events
+        for (const InstancedSynchronousCallback &callback : m_ModuleManager.m_PostupdateCallbacks) 
         {
-            logger->Fatal("Module state not found: {module}.", {componentGroupId.First});
-            return Crash(__FILE__, __LINE__, EntityLoadingError(entityId, "Module state not found for asset."));
+            auto result = callback.Callback(&m_Services, callback.InstanceState);
+            if (result.has_value())
+                return result;
         }
-
-        int componentCount = 0;
-        entityFile.read((char*)&componentCount, sizeof(int));
-        targetComponent->second.Load(componentCount, &entityFile, &services, targetModuleState->second.State);
     }
 
-    logger->Verbose("Loaded {assetC} asset groups, {componentCount} component groups.", {assetGroupCount, componentGroupCount});
+    return CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::RenderPass() 
+{
+    // render pass
+    for (auto &callback : m_ModuleManager.m_RenderCallbacks) {
+        CallbackResult callbackResult =
+            callback.Callback(&m_Services, callback.InstanceState);
+        if (callbackResult.has_value())
+        return callbackResult;
+    }
+
+    return CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::EndFrame() 
+{
+    // last step in the update loop
+    return m_GraphicsLayer.EndFrame();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::LoadEntity(Pipeline::HashId entityId)
+{
+    m_AssetManager.QueueEntity(entityId);
+    return CallbackSuccess();
+}
+
+CallbackResult GameLoop::GameLoopController::ReloadAsset(Pipeline::HashId module, Pipeline::HashId type, Pipeline::HashId id)
+{
+    m_AssetManager.QueueAsset(module, type, id);
+    return CallbackSuccess();
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::PollAsyncIoEvents() 
+{
+    m_AssetManager.PollEvents();
     return CallbackSuccess();
 }
