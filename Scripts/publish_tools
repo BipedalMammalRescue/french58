@@ -52,3 +52,11 @@ cd $project_root
 mkdir -p bin/src/LiveLink.Ping
 cp -r Tools/LiveLink/LiveLink.Ping/bin/Release/net9.0/publish/* bin/src/LiveLink.Ping
 ln -s src/LiveLink.Ping/LiveLink.Ping bin/LiveLink.Ping
+
+echo "Building LiveLink.ReloadAsset ..."
+cd $project_root/Tools/LiveLink/LiveLink.ReloadAsset
+dotnet publish
+cd $project_root
+mkdir -p bin/src/LiveLink.ReloadAsset
+cp -r Tools/LiveLink/LiveLink.ReloadAsset/bin/Release/net9.0/publish/* bin/src/LiveLink.ReloadAsset
+ln -s src/LiveLink.ReloadAsset/LiveLink.ReloadAsset bin/LiveLink.ReloadAsset

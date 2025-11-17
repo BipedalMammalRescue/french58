@@ -1,4 +1,8 @@
 #include "LiveLinkModule/live_link_session.h"
+
+#include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/asset_manager.h"
+
 #include "SDL3_net/SDL_net.h"
 
 using namespace Engine::Extension::LiveLinkModule;
@@ -6,7 +10,8 @@ using namespace Engine::Extension::LiveLinkModule;
 enum class PacketType : unsigned char
 {
     Invalid,
-    Ping
+    Ping,
+    HotReload
 };
 
 void LiveLinkSession::Dispose()
@@ -40,11 +45,19 @@ void LiveLinkSession::ReadToExhaustion()
     }
 }
 
+struct AssetReloadRequest
+{
+    Engine::Core::Pipeline::HashId Module;
+    Engine::Core::Pipeline::HashId Type;
+    Engine::Core::Pipeline::HashId Asset;
+};
+
 int LiveLinkSession::ProcessInputData(int validLength)
 {
     int readLength = 0;
+    bool keepReading = true;
 
-    while (readLength < validLength)
+    while (readLength < validLength && keepReading)
     {
         PacketType type = (PacketType)m_ReadBuffer[readLength];
         readLength++;
@@ -54,8 +67,25 @@ int LiveLinkSession::ProcessInputData(int validLength)
         case PacketType::Invalid:
             break;
         case PacketType::Ping:
-            m_Logger->Information("Received ping from connection slot {}.", m_Slot);
+            m_Logger->Information("Received ping from connection #{}.", m_Slot);
             break;
+        case PacketType::HotReload:
+            if (validLength - readLength < sizeof(AssetReloadRequest))
+            {
+                // stop here and revert the read status
+                readLength --;
+                keepReading = false;
+                break;
+            }
+            else 
+            {
+                AssetReloadRequest* requestBody = (AssetReloadRequest*)&m_ReadBuffer[readLength];
+                readLength += sizeof(AssetReloadRequest);
+
+                m_Logger->Information("Received request from connection #{} to reload asset {} (module: {}, type: {}).", m_Slot, requestBody->Asset, requestBody->Module, requestBody->Type);
+                m_Services->AssetManager->QueueAsset(requestBody->Module, requestBody->Type, requestBody->Asset);
+                break;
+            }
         }
     }
 

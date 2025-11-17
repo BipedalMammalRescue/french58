@@ -54,6 +54,7 @@ private:
     std::vector<AssetManagement::AsyncEntityEvent> m_EntityLoadingQueue;
 
     // asynchronous event handling
+    CallbackResult ProcessIndexQueue(IndexQueue*& queue);
     CallbackResult PollEvents();
     
     void OnEntityReady(TransientBufferId buffer, Pipeline::HashId id);
@@ -70,12 +71,12 @@ private:
     // Queue an enetity to be loaded at the immediate next possible timing. Assets are loaded based on the implementation of engine (e.g. if eventually asseet bundles/packs are supported they'll go through that path)
     void QueueEntity(Pipeline::HashId entityId);
 
-    // Queue an individual asset to be loaded at the immeidate next possible timing. Assets are loaded as loose assets regardless of engine implementation.
-    void QueueAsset(Pipeline::HashId moduleId, Pipeline::HashId typeId, Pipeline::HashId assetId);
-
 public:
     AssetManager(Engine::Core::Pipeline::ModuleAssembly modules, Logging::LoggerService *loggerService, ServiceTable *services);
     ~AssetManager();
+
+    // Queue an individual asset to be loaded at the immeidate next possible timing. Assets are loaded as loose assets regardless of engine implementation.
+    void QueueAsset(Pipeline::HashId moduleId, Pipeline::HashId typeId, Pipeline::HashId assetId);
 };
 
 }

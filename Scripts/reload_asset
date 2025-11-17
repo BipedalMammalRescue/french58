@@ -1,0 +1,4 @@
+#!/bin/bash
+
+build_asset $1
+LiveLink.ReloadAsset $1

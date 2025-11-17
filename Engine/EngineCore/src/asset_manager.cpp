@@ -14,6 +14,7 @@
 #include "SDL3/SDL_asyncio.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_storage.h"
+#include <filesystem>
 #include <md5.h>
 
 using namespace Engine::Core::Runtime;
@@ -140,6 +141,29 @@ static bool CheckMagicWord(unsigned int target, MemStreamLite& stream)
 {
     unsigned int getWord = stream.Read<unsigned int>();
     return target == getWord;
+}
+
+
+CallbackResult AssetManager::ProcessIndexQueue(IndexQueue*& queue)
+{
+    if (queue == nullptr)
+        return CallbackSuccess();
+
+    // try to flush elements
+    CallbackResult result = queue->Flush();
+    if (result.has_value())
+        return result;
+
+    // update the head
+    IndexQueue* newHead = queue;
+    while (newHead != nullptr && newHead->IsCompleted())
+    {
+        m_Services->TransientAllocator->Return(newHead->GetBufferId());
+        newHead = newHead->GetNext();
+    }
+
+    queue = newHead;
+    return CallbackSuccess();
 }
 
 
@@ -293,25 +317,17 @@ CallbackResult AssetManager::PollEvents()
     }
 
     // process all index queues
-    for (auto& moduleLocalQueue : m_IndexQueues)
+    if (m_DependencyAgnosticIndexQueue != nullptr)
     {
-        if (moduleLocalQueue.second == nullptr)
-            continue;
-
-        // try to flush elements
-        CallbackResult result = moduleLocalQueue.second->Flush();
+        CallbackResult result = ProcessIndexQueue(m_DependencyAgnosticIndexQueue);
         if (result.has_value())
             return result;
-
-        // update the head
-        IndexQueue* newHead = moduleLocalQueue.second;
-        while (newHead != nullptr && newHead->IsCompleted())
-        {
-            m_Services->TransientAllocator->Return(newHead->GetBufferId());
-            newHead = newHead->GetNext();
-        }
-
-        moduleLocalQueue.second = newHead;
+    }
+    for (auto& moduleLocalQueue : m_IndexQueues)
+    {
+        CallbackResult result = ProcessIndexQueue(moduleLocalQueue.second);
+        if (result.has_value())
+            return result;
     }
 
     // process asset reload requests
@@ -572,7 +588,8 @@ Engine::Core::Runtime::AssetManager::AssetManager(Engine::Core::Pipeline::Module
 {
     m_DependencyAgnosticIndexQueue = nullptr;
 
-    m_StorageFolder = SDL_OpenTitleStorage(".", 0);
+    auto currentWorkingDirectory = std::filesystem::current_path();
+    m_StorageFolder = SDL_OpenTitleStorage(currentWorkingDirectory.c_str(), 0);
     if (m_StorageFolder == nullptr)
     {
         m_Logger.Error("SDL failed to open title storage at the working directory, detail: {}", SDL_GetError());
