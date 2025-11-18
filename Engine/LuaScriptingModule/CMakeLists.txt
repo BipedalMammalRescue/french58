@@ -1,4 +1,4 @@
-add_library(LuaScriptingModule
+add_library(LuaScriptingModule STATIC
     src/api.cpp
     src/lua_executor.cpp
     src/lua_script.cpp

@@ -1,4 +1,4 @@
-add_library(ExampleGameplayModule 
+add_library(ExampleGameplayModule STATIC
     src/example_gameplay_module.cpp
     src/auto_rotate_marker.cpp
 )

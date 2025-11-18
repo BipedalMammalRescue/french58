@@ -1,5 +1,5 @@
 add_library(
-    LiveLinkModule
+    LiveLinkModule STATIC
     src/live_link_module.cpp
     src/live_link_session.cpp
 )
