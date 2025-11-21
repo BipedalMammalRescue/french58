@@ -20,7 +20,7 @@ public class AssetTaskProvider(ImmutableDictionary<string, ImmutableDictionary<s
         using FileStream assetFile = File.OpenRead(Path.Combine(key));
 
         // load asset and update the table
-        Asset asset = JsonSerializer.Deserialize<Asset>(assetFile) ?? throw new Exception($"Can't find valid asset in input file: {key}");
+        Asset asset = JsonSerializer.Deserialize<JsonAsset>(assetFile)?.ToAsset() ?? throw new Exception($"Can't find valid asset in input file: {key}");
         AssetRelations.TryAdd(key, asset.Data.AssetReferences);
         AssetTable.AddOrUpdate(asset.Module, ImmutableDictionary<string, ImmutableList<string>>.Empty.Add(asset.Type, [key]), (_, old) =>
         {

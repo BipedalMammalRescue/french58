@@ -3,17 +3,13 @@
     "Type": "RenderPipeline",
     "Data":
     {
-        "$type": "obj",
         "VertexShader": {
-            "$type": "leaf",
             "Path": "Shaders/slang_vertex_shader.se_asset"
         },
         "FragmentShader": {
-            "$type": "leaf",
             "Path": "Shaders/slang_fragment_shader.se_asset"
         },
         "Prototype": {
-            "$type": "leaf",
             "Path": "PipelinePrototypes/monochrome_phong.json"
         }
     }

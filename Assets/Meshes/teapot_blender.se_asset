@@ -1,12 +1,8 @@
 {
     "Module": "RendererModule",
     "Type": "Mesh",
-    "Data":
-    {
-        "$type": "obj",
-        "Source": 
-        {
-            "$type": "leaf",
+    "Data": {
+        "Source": {
             "Path": "Meshes/teapot_blender.obj"
         }
     }

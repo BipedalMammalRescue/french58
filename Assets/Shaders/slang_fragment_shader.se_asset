@@ -3,20 +3,13 @@
     "Type": "SlangFragmentShader",
     "Data":
     {
-        "$type": "obj",
-        "Source": 
-        {
-            "$type": "leaf",
+        "Source": {
             "Path": "Shaders/basic.frag.slang"
         },
-        "UniformCount": 
-        {
-            "$type": "leaf",
+        "UniformCount": {
             "Uint32": 5
         },
-        "StorageBufferCount":
-        {
-            "$type": "leaf",
+        "StorageBufferCount": {
             "Uint32": 1
         }
     }

@@ -3,7 +3,7 @@
         "testing ground": {
             "commandName": "Project",
             "workingDirectory": "../../../Assets",
-            "commandLineArgs": "build-entity --out=../built_data --recipe-root=Recipes/ Entities/example.se_entity",
+            "commandLineArgs": "build-asset --log-path=../logs --asset-out=../built_data --recipe-root=Recipes Metadata/LuaScripts/example_gameplay_logic.se_asset",
         }
     }
 }

@@ -25,7 +25,7 @@ public enum VariantType : byte
     Invalid
 };
 
-public class Variant : ILeafDataPoint
+public class Variant
 {
     [JsonIgnore]
     public VariantType Type { get; private set; } = VariantType.Invalid;

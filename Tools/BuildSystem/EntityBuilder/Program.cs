@@ -4,7 +4,6 @@ using EntityBuilder.Routines;
 using MuThr.DataModels.Diagnostic;
 using MuThr.Sdk;
 using Serilog;
-using Serilog.Formatting.Display;
 using Serilog.Formatting.Json;
 
 internal class Program
@@ -12,7 +11,7 @@ internal class Program
     private static async Task<int> Main(string[] args)
     {
         // create the command
-        RootCommand rootCommand = new("Entity Builder: a Sigourney Engine companion application.");
+        RootCommand rootCommand = new("Entity Builder: a french58 companion application.");
 
         // get logger configs
         Option<DirectoryInfo> logOption = new("--log-path");
