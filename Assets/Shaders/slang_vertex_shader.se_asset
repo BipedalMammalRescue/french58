@@ -3,20 +3,13 @@
     "Type": "SlangVertexShader",
     "Data":
     {
-        "$type": "obj",
-        "Source": 
-        {
-            "$type": "leaf",
+        "Source": {
             "Path": "Shaders/basic.vert.slang"
         },
-        "UniformCount": 
-        {
-            "$type": "leaf",
+        "UniformCount": {
             "Uint32": 3
         },
-        "StorageBufferCount":
-        {
-            "$type": "leaf",
+        "StorageBufferCount": {
             "Uint32": 0
         }
     }

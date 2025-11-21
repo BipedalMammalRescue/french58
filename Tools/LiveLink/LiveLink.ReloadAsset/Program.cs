@@ -26,7 +26,7 @@ internal class Program
         try
         {
             using FileStream inputfs = File.OpenRead(sourceFile);
-            Asset? asset = JsonSerializer.Deserialize<Asset>(inputfs);
+            Asset? asset = JsonSerializer.Deserialize<JsonAsset>(inputfs)?.ToAsset();
             if (asset == null)
             {
                 Console.WriteLine("Invalid asset file in input.");
