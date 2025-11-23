@@ -52,6 +52,10 @@ public:
     inline SDL_GPUCommandBuffer* GetCurrentCommandBuffer() { return m_CommandBuffer; }
     SDL_GPURenderPass* AddRenderPass();
     void CommitRenderPass(SDL_GPURenderPass* pass);
+
+// new renderer interface
+public:
+
 };
 
 }

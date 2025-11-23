@@ -39,6 +39,7 @@ add_subdirectory(ExampleGameplayModule)
 add_subdirectory(InputModule)
 add_subdirectory(LuaScriptingModule)
 add_subdirectory(LiveLinkModule)
+add_subdirectory(OrcaRendererModule)
 
 # tools
 add_subdirectory(BuildComponent)
