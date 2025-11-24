@@ -1,0 +1,21 @@
+{
+    "Module": "OrcaRendererModule",
+    "Type": "RenderGraph",
+    "Data": {
+        "Stages": [
+            {
+                "Pass": { "Path": "Source/OrcaRenderer/RenderPasses/forward_opaque_pass.json" },
+                "Resources": [
+                    {
+                        "Name": { "Path": "DirectionalLights" },
+                        "Source": { "Path": "Source/OrcaRenderer/RenderResources/directional_light_buffer.json" }
+                    },
+                    {
+                        "Name": { "Path": "OutTexture" },
+                        "Source": { "Path": "Source/OrcaRenderer/RenderResources/swapchain_texture.json" }
+                    }
+                ]
+            }
+        ]
+    }
+}

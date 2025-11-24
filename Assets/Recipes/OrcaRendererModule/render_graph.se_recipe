@@ -1,0 +1,72 @@
+{
+    "Module": "OrcaRendererModule",
+    "Type": "RenderGraph",
+    "Action": {
+        "$type": "command",
+        "Process": "RenderGraphBuilder",
+        "Args": [],
+        "Children": [
+            {
+                "$type": "enumerate",
+                "SourcePath": "Stages",
+                "Implementation": {
+                    "$type": "derive",
+                    "SourcePath": "Pass"
+                }
+            },
+            {
+                "$type": "enumerate",
+                "SourcePath": "Stages",
+                "Implementation": {
+                    "$type": "enumerate",
+                    "SourcePath": "Resources",
+                    "Implementation": {
+                        "$type": "derive",
+                        "SourcePath": "Source"
+                    }
+                }
+            },
+            {
+                "$type": "enumerate",
+                "SourcePath": "Stages",
+                "Implementation": {
+                    "$type": "command",
+                    "Process": "RenderStageBuilder",
+                    "Args": [
+                        "#(Pass)"
+                    ],
+                    "InputComponents": [
+                        {
+                            "$type": "enumerate",
+                            "SourcePath": "Resources",
+                            "Delegate": {
+                                "$type": "concat",
+                                "Sources": [
+                                    {
+                                        "$type": "binary",
+                                        "SourcePath": "Name"
+                                    },
+                                    {
+                                        "$type": "binary",
+                                        "SourcePath": "Source"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "InputComponents": [
+            {
+                "$type": "concat",
+                "Sources": [
+                    {
+                        "$type": "count",
+                        "SourcePath": "Stages"
+                    }
+                ]
+            }
+        ]
+    }
+}

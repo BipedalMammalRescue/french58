@@ -1,0 +1,16 @@
+{
+    "Type": "Graphics",
+    "Name": "ForwardOpaquePass",
+    "Inputs": [
+        {
+            "Type": "StorageBuffer",
+            "Name": "DirectionalLights"
+        }
+    ],
+    "Outputs": [
+        {
+            "Type": "Texture",
+            "Name": "OutTexture"
+        }
+    ]
+}
