@@ -2,6 +2,7 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader_effect.h"
 #include <unordered_map>
@@ -15,16 +16,17 @@ class ModuleState
 private:
     Core::Logging::Logger m_Logger;
 
-    // no limit on the number of shaders
-    std::vector<Assets::ShaderHeader*> m_LoadedShaders;
+    // at most we can have 65535 shaders activated simultaneously
     std::unordered_map<Core::Pipeline::HashId, uint32_t> m_ShaderIndex;
+
+    // meshes only contain VBO and IBO for now
+    std::unordered_map<Core::Pipeline::HashId, Assets::Mesh> m_Meshes;
 
     // maximum 16 render graph slots (refcounted)
     struct RenderGraphContainer
     {
         Assets::RenderGraphHeader* Graph;
         bool Valid;
-        uint32_t RefCount;
     };
     RenderGraphContainer m_RenderGraphs[16];
 

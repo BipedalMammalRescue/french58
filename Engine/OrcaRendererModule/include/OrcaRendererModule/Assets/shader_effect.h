@@ -2,6 +2,7 @@
 
 #include "EngineCore/Pipeline/hash_id.h"
 #include "SDL3/SDL_gpu.h"
+
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
 struct RenderGraphHeader;
@@ -39,9 +40,6 @@ struct ShaderResourceBinding
 
 struct ShaderEffect
 {
-    // a loaded render graph never moves its relative location; this location does need to be runtime-generated tho
-    // another note: we only allow 16 render graphs and 16 passes each so the chars actually aren't fully used
-    // negative number means it's invalid
     Core::Pipeline::HashId RenderGraphName;
     char RenderPassId;
 
@@ -52,7 +50,6 @@ struct ShaderEffect
     ShaderResourceBinding Resources[16];
 };
 
-// when a shader is loaded into memory, we can pre-calculate their size and prepend this header
 struct ShaderHeader
 {
     size_t EffectCount;

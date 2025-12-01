@@ -67,7 +67,10 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
 
         // command that creates the render pass
         size_t beginCommandSortKey = CreateSortKey(
-            graph->Altitude, passIndex, RenderPassRelation::BeginPass, 0, 0);
+            graph->Altitude, 
+            passIndex, 
+            RenderPassRelation::BeginPass, 
+            0, 0);
 
         m_Commands.push_back({
             .SortKey = beginCommandSortKey,

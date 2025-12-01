@@ -45,6 +45,7 @@ private:
 public:
     void PopulateCommandForRenderGraph(Assets::RenderGraphHeader* graph);
     void PopulateCommandForShader(Assets::ShaderHeader* shader, size_t shaderIndex);
+    void PopulateCommandForObject();
 
     // TODO: populate command for material
     // TODO: populate command for object
