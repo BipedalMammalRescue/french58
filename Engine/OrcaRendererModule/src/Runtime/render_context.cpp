@@ -4,11 +4,34 @@
 #include <cassert>
 #include <cstdint>
 
-enum class RenderPassRelation : char
+enum class RenderPassRelation : unsigned char
 {
-    Begin,
-    Use,
+    BeginPass,
+    BindShader,
+    Draw,
     End
+};
+
+class SortKeyGenerator
+{
+private:
+    size_t m_Key = 0;
+    int m_Width = 0;
+
+public:
+    void Push(int value, int width)
+    {
+        assert(m_Width + width <= 64);
+        m_Width += width;
+
+        m_Key <<= width;
+        m_Key += value & ((1 << (width + 1)) - 1);
+    }
+
+    size_t Get() const
+    {
+        return m_Key;
+    }
 };
 
 // we have an implicit hard limit of 65536 shaders and 65536 materials in totoal
@@ -19,24 +42,20 @@ static size_t CreateSortKey(char graphBits, char passBits, RenderPassRelation pa
     assert(graphBits < 16 && graphBits >= 0);
     assert(passBits < 16 && passBits >= 0);
 
-    size_t result = 0;
+    SortKeyGenerator key;
 
     // graph and pass form a 8 bit integer
-    result += graphBits;
-    result <<= 4;
-    result += passBits;
+    key.Push(graphBits, 4);
+    key.Push(passBits, 4);
 
     // pass relation takes up 2 bits
-    result <<= 2;
-    result += (char)passRelation;
+    key.Push((unsigned char)passRelation, 2);
 
     // shader and material form a 32 bit integer
-    result <<= 16;
-    result += shaderBits;
-    result <<= 16;
-    result += materialBits;
+    key.Push(shaderBits, 16);
+    key.Push(materialBits, 16);
 
-    return result;
+    return key.Get();
 }
 
 void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForRenderGraph(
@@ -48,11 +67,11 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
 
         // command that creates the render pass
         size_t beginCommandSortKey = CreateSortKey(
-            graph->Altitude, passIndex, RenderPassRelation::Begin, 0, 0);
+            graph->Altitude, passIndex, RenderPassRelation::BeginPass, 0, 0);
 
         m_Commands.push_back({
             .SortKey = beginCommandSortKey,
-            .Type = RenderCommandType::BeginShaderPass,
+            .Type = RenderCommandType::BeginRenderPass,
             .BeginShaderPass = {
                 pass
             }
@@ -64,7 +83,7 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
 
         m_Commands.push_back({
             .SortKey = endCommandSortKey,
-            .Type = RenderCommandType::EndShaderPass
+            .Type = RenderCommandType::EndRenderPass
         });
     }
 }
@@ -75,13 +94,28 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
     {
         Assets::ShaderEffect* effect = shader->GetShaderEffects() + effectIndex;
 
-        // we assume the validity of the render pass referenced by this shader has already been checked
-        size_t sortKey = CreateSortKey(
-            effect->RenderGraph->Altitude, effect->RenderPassId, RenderPassRelation::Use, shaderIndex, 0);
+        // find the render graph
+        Assets::RenderGraphHeader* targetGraph = m_Module->FindGraph(effect->RenderGraphName);
+        if (targetGraph == nullptr)
+            continue;
+        
+        // check render graph states
+        if (effect->RenderPassId >= targetGraph->RenderPassCount)
+            continue;
 
-        // TODO: based on static bindings in the shader, bind parameters
-        // TODO: does the shader binding command also arrive in the form of a package?
+        // shader binding takes up a special relation in the sort key
+        size_t sortKey = CreateSortKey(
+            targetGraph->Altitude, 
+            effect->RenderPassId, 
+            RenderPassRelation::BindShader, 
+            shaderIndex, 0);
+
+        m_Commands.push_back({
+            .SortKey = sortKey,
+            .Type = RenderCommandType::BindShader,
+            .BindShader = {
+                effect
+            }
+        });
     }
 }
-
-// TODO: note to self: when sorting materials the actual commands that use the material needs to be added by one to make sure 

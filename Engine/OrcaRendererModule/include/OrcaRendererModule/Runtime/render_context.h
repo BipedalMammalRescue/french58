@@ -2,18 +2,25 @@
 
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader_effect.h"
+#include "OrcaRendererModule/orca_renderer_module.h"
 
 namespace Engine::Extension::OrcaRendererModule::Runtime {
 
 enum class RenderCommandType
 {
-    BeginShaderPass,
-    EndShaderPass
+    BeginRenderPass,
+    EndRenderPass,
+    BindShader
 };
 
 struct BeginShaderPassCommand
 {
     Assets::RenderPass* Definition;
+};
+
+struct BindShaderCommand
+{
+    Assets::ShaderEffect* ShaderEffect;
 };
 
 struct RenderCommand 
@@ -24,6 +31,7 @@ struct RenderCommand
     
     union {
         BeginShaderPassCommand BeginShaderPass;
+        BindShaderCommand BindShader;
     };
 };
 
@@ -32,6 +40,7 @@ class RenderContext
 private:
     // TODO: temp implementation, the real one should directly pump data into the concurrent queue
     std::vector<RenderCommand> m_Commands;
+    ModuleState* m_Module;
 
 public:
     void PopulateCommandForRenderGraph(Assets::RenderGraphHeader* graph);

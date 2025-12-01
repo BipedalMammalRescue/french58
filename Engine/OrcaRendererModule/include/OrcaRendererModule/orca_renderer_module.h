@@ -32,6 +32,7 @@ public:
     inline Core::Logging::Logger* GetLogger() { return &m_Logger; }
 
     void PopulateDrawCalls();
+    Assets::RenderGraphHeader* FindGraph(const Core::Pipeline::HashId& name);
 };
 
 }

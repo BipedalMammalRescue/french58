@@ -42,7 +42,7 @@ struct ShaderEffect
     // a loaded render graph never moves its relative location; this location does need to be runtime-generated tho
     // another note: we only allow 16 render graphs and 16 passes each so the chars actually aren't fully used
     // negative number means it's invalid
-    RenderGraphHeader* RenderGraph;
+    Core::Pipeline::HashId RenderGraphName;
     char RenderPassId;
 
     SDL_GPUGraphicsPipeline* Pipeline;
