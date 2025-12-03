@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL3/SDL_gpu.h"
+
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
 struct Mesh

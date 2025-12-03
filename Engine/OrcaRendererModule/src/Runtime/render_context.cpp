@@ -1,6 +1,10 @@
 #include "OrcaRendererModule/Runtime/render_context.h"
+#include "OrcaRendererModule/Assets/material.h"
+#include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader_effect.h"
+#include "OrcaRendererModule/Runtime/renderer_resource.h"
+#include "OrcaRendererModule/orca_renderer_module.h"
 #include <cassert>
 #include <cstdint>
 
@@ -8,6 +12,7 @@ enum class RenderPassRelation : unsigned char
 {
     BeginPass,
     BindShader,
+    BindMaterial,
     Draw,
     End
 };
@@ -91,34 +96,72 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
     }
 }
 
-void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForShader(Assets::ShaderHeader* shader, size_t shaderIndex)
+void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForShaderEffect(
+    Assets::RenderGraphHeader* targetGraph, 
+    Assets::ShaderEffect* effect, size_t shaderIndex)
 {
-    for (size_t effectIndex = 0; effectIndex < shader->EffectCount; effectIndex ++)
-    {
-        Assets::ShaderEffect* effect = shader->GetShaderEffects() + effectIndex;
+    // we have an arbitrary count limit for shaders due to bit width; at a time only ushort_max shaders can be loaded in memory
+    assert(shaderIndex < 65536);
 
-        // find the render graph
-        Assets::RenderGraphHeader* targetGraph = m_Module->FindGraph(effect->RenderGraphName);
-        if (targetGraph == nullptr)
-            continue;
-        
-        // check render graph states
-        if (effect->RenderPassId >= targetGraph->RenderPassCount)
-            continue;
+    // shader binding takes up a special relation in the sort key, and a shader can only define one effect for every shader pass
+    size_t sortKey = CreateSortKey(
+        targetGraph->Altitude, 
+        effect->RenderPassId, 
+        RenderPassRelation::BindShader, 
+        shaderIndex, 0);
 
-        // shader binding takes up a special relation in the sort key
-        size_t sortKey = CreateSortKey(
-            targetGraph->Altitude, 
-            effect->RenderPassId, 
-            RenderPassRelation::BindShader, 
-            shaderIndex, 0);
+    m_Commands.push_back({
+        .SortKey = sortKey,
+        .Type = RenderCommandType::BindShader,
+        .BindShader = {
+            effect
+        }
+    });
+}
 
-        m_Commands.push_back({
-            .SortKey = sortKey,
-            .Type = RenderCommandType::BindShader,
-            .BindShader = {
-                effect
-            }
-        });
-    }
+void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForMaterial(
+    Assets::RenderGraphHeader* targetGraph, 
+    Assets::Material* material, size_t materialIndex, 
+    Assets::ShaderEffect* effect, size_t shaderIndex)
+{
+    assert(materialIndex < 65536);
+    assert(shaderIndex < 65536);
+
+    size_t sortKey = CreateSortKey(
+        targetGraph->Altitude, 
+        effect->RenderPassId, 
+        RenderPassRelation::BindMaterial, 
+        shaderIndex, materialIndex);
+
+    m_Commands.push_back({
+        .SortKey = sortKey,
+        .Type = RenderCommandType::BindMaterial,
+        .BindMaterial = {
+            material
+        }
+    });
+}
+
+void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForObject(
+    Assets::RenderGraphHeader* targetGraph, 
+    size_t renderPassId,
+    size_t materialIndex, 
+    size_t shaderIndex, 
+    Assets::Mesh* mesh, 
+    RendererResourceCollection objectData)
+{
+    size_t sortKey = CreateSortKey(
+        targetGraph->Altitude, 
+        renderPassId, 
+        RenderPassRelation::Draw, 
+        shaderIndex, materialIndex);
+
+    m_Commands.push_back({
+        .SortKey = sortKey,
+        .Type = RenderCommandType::Draw,
+        .Draw = {
+            mesh,
+            objectData
+        }
+    });
 }
