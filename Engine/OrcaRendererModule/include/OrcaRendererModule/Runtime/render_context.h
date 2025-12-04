@@ -66,6 +66,10 @@ public:
     void PopulateCommandForShaderEffect(Assets::RenderGraphHeader *graph, Assets::ShaderEffect *effect,
                                         size_t shaderIndex);
 
+    // TODO: material commands also need information from graphs and such, what if we just generate material commands
+    // and have the renderer figure out when it needs to parse the render graph data? From the caller's side this
+    // multi-layered memory seeking is very time consuming
+
     void PopulateCommandForMaterial(Assets::RenderGraphHeader *targetGraph, Assets::Material *material,
                                     size_t materialIndex, Assets::ShaderEffect *effect, size_t shaderIndex);
 
