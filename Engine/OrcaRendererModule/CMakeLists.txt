@@ -1,5 +1,5 @@
 add_library(OrcaRendererModule STATIC
-	src/module_definition.cpp
+	src/orca_renderer_module.cpp
     src/Assets/shader_effect.cpp
     src/Assets/shader.cpp
     src/Runtime/render_context.cpp)

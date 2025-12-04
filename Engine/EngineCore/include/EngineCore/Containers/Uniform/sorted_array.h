@@ -20,6 +20,26 @@ struct TrivialComparer
     }
 };
 
+template <typename TKey, typename TValue>
+struct AnnotatedNode
+{
+    TKey Key;
+    TValue Value;
+};
+
+template <typename TKey, typename TValue>
+struct AnnotatedNodeComparer
+{
+    static int Compare(const AnnotatedNode<TKey, TValue>* a, const AnnotatedNode<TKey, TValue>* b)
+    {
+        if (a->Key < b->Key)
+            return -1;
+        if (a->Key > b->Key)
+            return 1;
+        return 0;
+    }
+};
+
 // Always continuous, always sorted in ascending order.
 template <typename T, typename TCompare>
 class SortedArray
@@ -303,5 +323,8 @@ public:
 
 template <typename T>
 using TrivialSortedArray = SortedArray<T, TrivialComparer<T>>;
+
+template <typename TKey, typename TValue>
+using AnnotationSortedArray = SortedArray<AnnotatedNode<TKey, TValue>, AnnotatedNodeComparer<TKey, TValue>>;
 
 }

@@ -2,9 +2,9 @@
 #include "OrcaRendererModule/Assets/material.h"
 #include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
-#include "OrcaRendererModule/Assets/shader_effect.h"
+#include "OrcaRendererModule/Assets/shader.h"
 #include "OrcaRendererModule/Runtime/renderer_resource.h"
-#include "OrcaRendererModule/orca_renderer_module.h"
+
 #include <cassert>
 #include <cstdint>
 

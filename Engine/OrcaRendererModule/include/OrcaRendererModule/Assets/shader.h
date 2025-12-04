@@ -7,7 +7,7 @@ namespace Engine::Extension::OrcaRendererModule::Assets {
 
 struct RenderGraphHeader;
 
-enum class ShaderStage 
+enum class ShaderStage
 {
     Vertex,
     Fragment
@@ -43,21 +43,29 @@ struct ShaderEffect
     Core::Pipeline::HashId RenderGraphName;
     char RenderPassId;
 
-    SDL_GPUGraphicsPipeline* Pipeline;
+    // TODO: the shader effect is loaded directly from memory, therefore it can't really be laid out this way, we'll
+    // need to separate them from the main shader effect data
+    struct
+    {
+        bool Attempted;
+        RenderGraphHeader *Graph;
+    } RenderGraphCache;
+
+    SDL_GPUGraphicsPipeline *Pipeline;
 
     // bindings (only allow 16 of them)
     size_t ResourceCount;
     ShaderResourceBinding Resources[16];
 };
 
-struct ShaderHeader
+struct Shader
 {
     size_t EffectCount;
 
-    inline ShaderEffect* GetShaderEffects()
+    inline ShaderEffect *GetShaderEffects()
     {
-        return (ShaderEffect*)(this + 1);
+        return (ShaderEffect *)(this + 1);
     }
 };
 
-}
+} // namespace Engine::Extension::OrcaRendererModule::Assets

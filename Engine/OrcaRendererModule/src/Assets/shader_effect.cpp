@@ -1,4 +1,4 @@
-#include "OrcaRendererModule/Assets/shader_effect.h"
+#include "OrcaRendererModule/Assets/shader.h"
 #include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/graphics_layer.h"
