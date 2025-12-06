@@ -1,6 +1,5 @@
 #pragma once
 
-#include "OrcaRendererModule/Runtime/renderer_resource.h"
 #include <cstddef>
 
 namespace Engine::Extension::OrcaRendererModule::Components {
@@ -13,7 +12,6 @@ struct StaticMeshRenderer
     size_t MaterialRef;
     size_t RenderGraphRef;
     size_t MeshRef;
-    Runtime::RendererResourceCollection DataCollection;
 };
 
 } // namespace Engine::Extension::OrcaRendererModule::Components

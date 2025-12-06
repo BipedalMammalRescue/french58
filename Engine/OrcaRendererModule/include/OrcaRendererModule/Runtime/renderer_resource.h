@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+
 #include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::OrcaRendererModule::Runtime {
@@ -17,24 +18,22 @@ enum class ResourceType
 
 struct RendererResource
 {
-    Core::Pipeline::HashId Name;
     ResourceType Type;
     union {
-        SDL_GPUTexture* Texture;
-        SDL_GPUBuffer* StorageBuffer;
-        struct {
-            void* Data;
+        SDL_GPUTexture *Texture;
+        SDL_GPUBuffer *StorageBuffer;
+        struct
+        {
+            void *Data;
             size_t Length;
-        } UniformProvider;
+        } Uniform;
     };
 };
 
-struct RendererResourceCollection
+class IRendererResourceProvider
 {
-    RendererResource* Resources;
-    size_t Count;
-
-    RendererResource* Find(Core::Pipeline::HashId name);
+public:
+    virtual RendererResource *Find(Core::Pipeline::HashId name) = 0;
 };
 
-}
+} // namespace Engine::Extension::OrcaRendererModule::Runtime

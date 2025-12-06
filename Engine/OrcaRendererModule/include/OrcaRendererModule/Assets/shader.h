@@ -1,7 +1,6 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
-#include "OrcaRendererModule/Runtime/reference_list.h"
 #include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
@@ -23,8 +22,8 @@ struct ShaderResrouceBindingLocation
 enum class ResourceProviderType
 {
     RenderGraph,
-    EngineInjection,
-    Material
+    Material,
+    Object
 };
 
 struct ShaderResourceSource

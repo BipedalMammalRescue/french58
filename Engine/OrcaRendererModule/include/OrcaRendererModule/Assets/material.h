@@ -1,8 +1,6 @@
 #pragma once
 
-#include "OrcaRendererModule/Assets/shader.h"
-#include "OrcaRendererModule/Runtime/reference_list.h"
-#include "OrcaRendererModule/Runtime/renderer_resource.h"
+#include <stddef.h>
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
@@ -12,9 +10,6 @@ struct Material
 {
     // material points to a shader by reference
     size_t ShaderRef;
-
-    // A series of named resources (material is one of the root sources of renderer resource)
-    Runtime::RendererResourceCollection Resources;
 };
 
 } // namespace Engine::Extension::OrcaRendererModule::Assets
