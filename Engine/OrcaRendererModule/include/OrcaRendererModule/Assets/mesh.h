@@ -6,8 +6,9 @@ namespace Engine::Extension::OrcaRendererModule::Assets {
 
 struct Mesh
 {
-    SDL_GPUBuffer* VertexBuffer;
-    SDL_GPUBuffer* IndexBuffer;
+    size_t IndexCount;
+    SDL_GPUBuffer *VertexBuffer;
+    SDL_GPUBuffer *IndexBuffer;
 };
 
-}
+} // namespace Engine::Extension::OrcaRendererModule::Assets

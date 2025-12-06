@@ -201,7 +201,19 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
                 if (binding->Source.ProviderType != Assets::ResourceProviderType::Object)
                     continue;
 
-                // TODO:
+                // bind the data provided by the graph
+                if (!BindShaderResourcesFromSource(
+                        m_CurrentShader, commands[commandIndex].Draw.ResourceCount,
+                        commands[commandIndex].Draw.Resources, Assets::ResourceProviderType::Object,
+                        cmdBuffer, m_CurrentGpuPass, &m_Logger))
+                {
+                    m_Logger.Error("Draw call skipped due to resource binding error, see "
+                                   "previous logs for details.");
+                    continue;
+                }
+
+                // draw call!
+                SDL_DrawGPUIndexedPrimitives(m_CurrentGpuPass, mesh->IndexCount, 1, 0, 0, 0);
             }
         }
         break;
