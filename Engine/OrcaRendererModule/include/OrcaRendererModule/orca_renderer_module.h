@@ -2,11 +2,12 @@
 
 #include "EngineCore/Containers/Uniform/sorted_array.h"
 #include "EngineCore/Logging/logger.h"
-#include "EngineCore/Pipeline/hash_id.h"
 #include "OrcaRendererModule/Assets/material.h"
+#include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader.h"
 #include "OrcaRendererModule/Components/static_mesh_renderer.h"
+#include "OrcaRendererModule/Runtime/reference_list.h"
 
 namespace Engine::Extension::OrcaRendererModule {
 
@@ -21,23 +22,13 @@ class ModuleState
 private:
     Core::Logging::Logger m_Logger;
 
-    // maximum 16 render graph slots (refcounted)
-    struct RenderGraphContainer
-    {
-        Core::Pipeline::HashId Name;
-        Assets::RenderGraphHeader *Graph;
-        bool Valid;
-    };
-    RenderGraphContainer m_RenderGraphs[16];
+    Runtime::ReferenceList<Assets::RenderGraph> m_RenderGraphs;
+    Runtime::ReferenceList<Assets::Shader> m_Shaders;
+    Runtime::ReferenceList<Assets::Material> m_Materials;
 
-    // since the renderer doesn't ever need to reference the shaders by their index, this sorted array is never visible
-    // to the renderer maximum 65536
-    Core::Containers::Uniform::AnnotationSortedArray<Core::Pipeline::HashId, Assets::Shader *> m_Shaders;
+    Runtime::ReferenceList<Assets::Mesh> m_Meshes;
 
-    // since the renderer doesn't ever need to reference the material by their index, this sorted array is never visible
-    // to the renderer maximum 65536
-    Core::Containers::Uniform::AnnotationSortedArray<Core::Pipeline::HashId, Assets::Material *> m_Materials;
-
+    // note: nothing references the static mesh renderer (or any kind of renderer) directly
     Core::Containers::Uniform::AnnotationSortedArray<int, Components::StaticMeshRenderer *> m_StaticMeshRenderers;
 
 public:

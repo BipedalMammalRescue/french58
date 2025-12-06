@@ -1,11 +1,12 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "OrcaRendererModule/Runtime/reference_list.h"
 #include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
-struct RenderGraphHeader;
+struct RenderGraph;
 
 enum class ShaderStage
 {
@@ -38,18 +39,12 @@ struct ShaderResourceBinding
     ShaderResourceSource Source;
 };
 
+// All the information used to define a single pipeline state object and how to use it.
+// This data structure is serialized directly to disk so don't put runtime-dependent data here.
 struct ShaderEffect
 {
     Core::Pipeline::HashId RenderGraphName;
     char RenderPassId;
-
-    // TODO: the shader effect is loaded directly from memory, therefore it can't really be laid out this way, we'll
-    // need to separate them from the main shader effect data
-    struct
-    {
-        bool Attempted;
-        RenderGraphHeader *Graph;
-    } RenderGraphCache;
 
     SDL_GPUGraphicsPipeline *Pipeline;
 
@@ -65,6 +60,11 @@ struct Shader
     inline ShaderEffect *GetShaderEffects()
     {
         return (ShaderEffect *)(this + 1);
+    }
+
+    inline size_t *GetRenderGraphReferences()
+    {
+        return (size_t *)(GetShaderEffects() + EffectCount);
     }
 };
 

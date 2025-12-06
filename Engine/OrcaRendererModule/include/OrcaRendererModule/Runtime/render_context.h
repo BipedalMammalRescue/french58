@@ -60,21 +60,28 @@ private:
     std::vector<RenderCommand> m_Commands;
     ModuleState *m_Module;
 
-public:
-    void PopulateCommandForRenderGraph(Assets::RenderGraphHeader *graph);
+    size_t m_MaxGraphAltitude;
+    size_t m_MaxPassCount;
+    size_t m_ShaderCount;
+    size_t m_MaterialCount;
 
-    void PopulateCommandForShaderEffect(Assets::RenderGraphHeader *graph, Assets::ShaderEffect *effect,
-                                        size_t shaderIndex);
+public:
+    void PopulateCommandForRenderGraph(Assets::RenderGraph *graph);
+
+    void PopulateCommandForShaderEffect(Assets::RenderGraph *graph, Assets::ShaderEffect *effect, size_t shaderIndex);
 
     // TODO: material commands also need information from graphs and such, what if we just generate material commands
     // and have the renderer figure out when it needs to parse the render graph data? From the caller's side this
     // multi-layered memory seeking is very time consuming
 
-    void PopulateCommandForMaterial(Assets::RenderGraphHeader *targetGraph, Assets::Material *material,
-                                    size_t materialIndex, Assets::ShaderEffect *effect, size_t shaderIndex);
+    void PopulateCommandForMaterial(Assets::RenderGraph *targetGraph, Assets::Material *material, size_t materialIndex,
+                                    Assets::ShaderEffect *effect, size_t shaderIndex);
 
-    void PopulateCommandForObject(Assets::RenderGraphHeader *targetGraph, size_t renderPassId, size_t materialIndex,
+    void PopulateCommandForObject(Assets::RenderGraph *targetGraph, size_t renderPassId, size_t materialIndex,
                                   size_t shaderIndex, Assets::Mesh *mesh, RendererResourceCollection objectData);
+
+    void FinalizeCommands();
+    void Clear();
 };
 
 } // namespace Engine::Extension::OrcaRendererModule::Runtime

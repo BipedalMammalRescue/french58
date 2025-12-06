@@ -1,6 +1,7 @@
 #pragma once
 
-#include "EngineCore/Pipeline/hash_id.h"
+#include "OrcaRendererModule/Runtime/renderer_resource.h"
+#include <cstddef>
 
 namespace Engine::Extension::OrcaRendererModule::Components {
 
@@ -9,8 +10,10 @@ namespace Engine::Extension::OrcaRendererModule::Components {
 struct StaticMeshRenderer
 {
     int Entity;
-    Core::Pipeline::HashId Mesh;
-    Core::Pipeline::HashId Material;
+    size_t MaterialRef;
+    size_t RenderGraphRef;
+    size_t MeshRef;
+    Runtime::RendererResourceCollection DataCollection;
 };
 
-}
+} // namespace Engine::Extension::OrcaRendererModule::Components
