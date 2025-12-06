@@ -2,10 +2,53 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/shader.h"
+#include "OrcaRendererModule/Runtime/renderer_resource.h"
+#include "SDL3/SDL_error.h"
 #include "SDL3/SDL_gpu.h"
 #include "SDL3/SDL_stdinc.h"
 
 using namespace Engine::Extension::OrcaRendererModule::Runtime;
+using namespace Engine::Extension::OrcaRendererModule;
+
+static void BindShaderResource(Assets::ShaderResourceBinding *binding, RendererResource *resource,
+                               SDL_GPUCommandBuffer *cmdBuffer, SDL_GPURenderPass *pass)
+{
+    switch (resource->Type)
+    {
+    case ResourceType::Texture: {
+        // TODO: I don't know how to deal with textures yet
+    }
+    break;
+    case ResourceType::StorageBuffer: {
+        switch (binding->Location.Stage)
+        {
+        case Assets::ShaderStage::Vertex:
+            SDL_BindGPUVertexStorageBuffers(pass, binding->Location.Slot, &resource->StorageBuffer,
+                                            1);
+            break;
+        case Assets::ShaderStage::Fragment:
+            SDL_BindGPUFragmentStorageBuffers(pass, binding->Location.Slot,
+                                              &resource->StorageBuffer, 1);
+            break;
+        }
+    }
+    break;
+    case ResourceType::UniformBuffer: {
+        switch (binding->Location.Stage)
+        {
+        case Assets::ShaderStage::Vertex:
+            SDL_PushGPUVertexUniformData(cmdBuffer, binding->Location.Slot, resource->Uniform.Data,
+                                         resource->Uniform.Length);
+            break;
+        case Assets::ShaderStage::Fragment:
+            SDL_PushGPUFragmentUniformData(cmdBuffer, binding->Location.Slot,
+                                           resource->Uniform.Data, resource->Uniform.Length);
+            break;
+        }
+    }
+    break;
+    }
+}
 
 Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmdBuffer,
                                                        RenderCommand *commands, size_t commandCount)
@@ -46,8 +89,8 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
                 cmdBuffer, colorTargets, effectiveColorTargetCount, &depthStencilTargetInfo);
             if (m_CurrentGpuPass == nullptr)
             {
-                // TODO: need a better crash dump system to automatically tag resource paths
-                return Core::Runtime::Crash(__FILE__, __LINE__, "Failed to create render pass.");
+                m_Logger.Error("Failed to bind render pass, details: {}", SDL_GetError());
+                continue;
             }
 
             m_CurrentGraphPass = pass;
@@ -60,30 +103,62 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
         break;
         case RenderCommandType::BindShader: {
             if (m_CurrentGpuPass == nullptr || m_CurrentGraphPass == nullptr)
-                return Core::Runtime::Crash(
-                    __FILE__, __LINE__, "Attempting to bind shader before binding a render pass.");
+            {
+                m_Logger.Warning("Shader binding skipped due to invalid render pass binding.");
+                continue;
+            }
 
             Assets::ShaderEffect *shader = commands[commandIndex].BindShader.ShaderEffect;
             SDL_BindGPUGraphicsPipeline(m_CurrentGpuPass, shader->Pipeline);
-            m_CurrentShader = shader;
 
             // bind the data provided by the graph
+            size_t cursor = 0;
+            bool invalid = false;
             for (size_t i = 0; i < shader->ResourceCount; i++)
             {
                 Assets::ShaderResourceBinding *binding = &shader->Resources[i];
                 if (binding->Source.ProviderType != Assets::ResourceProviderType::RenderGraph)
                     continue;
 
-                // TODO: how does the renderer actually handle the resources provided by the graph?
-                // I assume when a graph is loaded it needs a companion location in memory to store
-                // all of its loaded resource
+                // bi-linear search
+                while (cursor < m_CurrentGraphPass->InputResourceCount &&
+                       m_CurrentGraphPass->InputResources[cursor].InterfaceName <
+                           binding->Source.Name)
+                {
+                    cursor++;
+                }
+
+                if (cursor >= m_CurrentGraphPass->InputResourceCount ||
+                    m_CurrentGraphPass->InputResources[cursor].InterfaceName !=
+                        binding->Source.Name)
+                {
+                    // the shader used invalid parameters, need to skip it
+                    // TODO: need to attach debug information into shaders
+                    m_Logger.Error("Shader references invalid parameter {}", binding->Source.Name);
+                    invalid = true;
+                    break;
+                }
+
+                BindShaderResource(binding,
+                                   m_CurrentGraphPass->InputResources[cursor].ResourceIndex,
+                                   cmdBuffer, m_CurrentGpuPass);
             }
+
+            if (invalid)
+            {
+                m_Logger.Error("Shader binding skipped due to logical error.");
+                continue;
+            }
+
+            m_CurrentShader = shader;
         }
         break;
         case RenderCommandType::BindMaterial: {
             if (m_CurrentShader == nullptr)
-                return Core::Runtime::Crash(__FILE__, __LINE__,
-                                            "Attempting to bind material before binding shader.");
+            {
+                m_Logger.Warning("Material binding skipped due to invalid shader binding.");
+                continue;
+            }
 
             for (size_t i = 0; i < m_CurrentShader->ResourceCount; i++)
             {
@@ -97,8 +172,10 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
         break;
         case RenderCommandType::Draw: {
             if (m_CurrentShader == nullptr || m_CurrentGpuPass == nullptr)
-                return Core::Runtime::Crash(__FILE__, __LINE__,
-                                            "Attempting to draw object before binding shader.");
+            {
+                m_Logger.Warning("Draw skipped due to invalid shader or render pass binding.");
+                continue;
+            }
 
             // bind geometry
             // TODO: client code should be able to configure vertex binding shape as well

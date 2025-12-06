@@ -47,7 +47,7 @@ struct ShaderEffect
 
     SDL_GPUGraphicsPipeline *Pipeline;
 
-    // bindings (only allow 16 of them)
+    // bindings (only allow 16 of them) (make sure resources are sorted by name)
     size_t ResourceCount;
     ShaderResourceBinding Resources[16];
 };

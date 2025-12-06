@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader.h"
@@ -14,6 +15,8 @@ namespace Engine::Extension::OrcaRendererModule::Runtime {
 class Renderer
 {
 private:
+    Core::Logging::Logger m_Logger;
+
     SDL_GPURenderPass *m_CurrentGpuPass;
     Assets::RenderPass *m_CurrentGraphPass;
     Assets::ShaderEffect *m_CurrentShader;

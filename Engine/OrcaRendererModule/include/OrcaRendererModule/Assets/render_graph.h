@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "OrcaRendererModule/Runtime/renderer_resource.h"
 #include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
@@ -32,7 +33,7 @@ struct RenderPass
     struct
     {
         Core::Pipeline::HashId InterfaceName;
-        size_t ResourceIndex;
+        Runtime::RendererResource *ResourceIndex;
     } InputResources[8];
 
     // output color targets are much more straight forward, they are a series of textures to be
@@ -54,17 +55,22 @@ struct RenderPass
     } DepthStencilTarget;
 };
 
+// RenderGraph the first region of the deserialized/loaded render graph blob, since we have variable
+// number of passesdefined in a pass.
 struct RenderGraph
 {
-    // this field is hand authored
     size_t Altitude;
-
-    // this count is limited to 0~16
+    size_t RenderResourceCount;
     size_t RenderPassCount;
+
+    inline Runtime::RendererResource *GetResrouces()
+    {
+        return (Runtime::RendererResource *)(this + 1);
+    }
 
     inline RenderPass *GetRenderPasses()
     {
-        return (RenderPass *)(this + 1);
+        return (RenderPass *)(GetResrouces() + RenderResourceCount);
     }
 };
 
