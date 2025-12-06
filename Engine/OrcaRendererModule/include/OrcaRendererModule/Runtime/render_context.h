@@ -12,7 +12,6 @@ namespace Engine::Extension::OrcaRendererModule::Runtime {
 enum class RenderCommandType
 {
     BeginRenderPass,
-    EndRenderPass,
     BindShader,
     BindMaterial,
     Draw,
@@ -49,7 +48,8 @@ struct RenderCommand
         struct
         {
             Assets::Mesh *Mesh;
-            IRendererResourceProvider *ObjectData;
+            size_t ResourceCount;
+            NamedRendererResource *Resources;
         } Draw;
     };
 };
@@ -82,7 +82,7 @@ public:
 
     void PopulateCommandForObject(Assets::RenderGraph *targetGraph, size_t renderPassId,
                                   size_t materialIndex, size_t shaderIndex, Assets::Mesh *mesh,
-                                  IRendererResourceProvider *objectData);
+                                  size_t objectResCount, NamedRendererResource *objectResources);
 
     void FinalizeCommands();
     void Clear();

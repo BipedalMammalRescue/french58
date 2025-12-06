@@ -1,4 +1,5 @@
 #include "OrcaRendererModule/Runtime/renderer.h"
+#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/shader.h"
@@ -10,44 +11,71 @@
 using namespace Engine::Extension::OrcaRendererModule::Runtime;
 using namespace Engine::Extension::OrcaRendererModule;
 
-static void BindShaderResource(Assets::ShaderResourceBinding *binding, RendererResource *resource,
-                               SDL_GPUCommandBuffer *cmdBuffer, SDL_GPURenderPass *pass)
+static bool BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t resourceCount,
+                                          NamedRendererResource *resources,
+                                          Assets::ResourceProviderType type,
+                                          SDL_GPUCommandBuffer *cmdBuffer, SDL_GPURenderPass *pass,
+                                          Engine::Core::Logging::Logger *logger)
 {
-    switch (resource->Type)
+    size_t cursor = 0;
+    for (size_t i = 0; i < shader->ResourceCount; i++)
     {
-    case ResourceType::Texture: {
-        // TODO: I don't know how to deal with textures yet
-    }
-    break;
-    case ResourceType::StorageBuffer: {
-        switch (binding->Location.Stage)
+        Assets::ShaderResourceBinding *binding = &shader->Resources[i];
+        if (binding->Source.ProviderType != Assets::ResourceProviderType::Material)
+            continue;
+
+        while (cursor < resourceCount && resources[cursor].InterfaceName < binding->Source.Name)
         {
-        case Assets::ShaderStage::Vertex:
-            SDL_BindGPUVertexStorageBuffers(pass, binding->Location.Slot, &resource->StorageBuffer,
-                                            1);
-            break;
-        case Assets::ShaderStage::Fragment:
-            SDL_BindGPUFragmentStorageBuffers(pass, binding->Location.Slot,
-                                              &resource->StorageBuffer, 1);
+            cursor++;
+        }
+
+        if (cursor >= resourceCount || resources[cursor].InterfaceName != binding->Source.Name)
+        {
+            logger->Error("Shader required resource {} not provided.", binding->Source.Name);
+            return false;
             break;
         }
-    }
-    break;
-    case ResourceType::UniformBuffer: {
-        switch (binding->Location.Stage)
+
+        Runtime::RendererResource *resource = resources[cursor].Resource;
+
+        switch (resource->Type)
         {
-        case Assets::ShaderStage::Vertex:
-            SDL_PushGPUVertexUniformData(cmdBuffer, binding->Location.Slot, resource->Uniform.Data,
-                                         resource->Uniform.Length);
-            break;
-        case Assets::ShaderStage::Fragment:
-            SDL_PushGPUFragmentUniformData(cmdBuffer, binding->Location.Slot,
-                                           resource->Uniform.Data, resource->Uniform.Length);
-            break;
+        case ResourceType::Texture: {
+            // TODO: I don't know how to deal with textures yet
+        }
+        break;
+        case ResourceType::StorageBuffer: {
+            switch (binding->Location.Stage)
+            {
+            case Assets::ShaderStage::Vertex:
+                SDL_BindGPUVertexStorageBuffers(pass, binding->Location.Slot,
+                                                &resource->StorageBuffer, 1);
+                break;
+            case Assets::ShaderStage::Fragment:
+                SDL_BindGPUFragmentStorageBuffers(pass, binding->Location.Slot,
+                                                  &resource->StorageBuffer, 1);
+                break;
+            }
+        }
+        break;
+        case ResourceType::UniformBuffer: {
+            switch (binding->Location.Stage)
+            {
+            case Assets::ShaderStage::Vertex:
+                SDL_PushGPUVertexUniformData(cmdBuffer, binding->Location.Slot,
+                                             resource->Uniform.Data, resource->Uniform.Length);
+                break;
+            case Assets::ShaderStage::Fragment:
+                SDL_PushGPUFragmentUniformData(cmdBuffer, binding->Location.Slot,
+                                               resource->Uniform.Data, resource->Uniform.Length);
+                break;
+            }
+        }
+        break;
         }
     }
-    break;
-    }
+
+    return true;
 }
 
 Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmdBuffer,
@@ -58,6 +86,12 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
         switch (commands[commandIndex].Type)
         {
         case RenderCommandType::BeginRenderPass: {
+            if (m_CurrentGpuPass != nullptr)
+            {
+                SDL_EndGPURenderPass(m_CurrentGpuPass);
+                m_CurrentGpuPass = nullptr;
+            }
+
             Assets::RenderPass *pass = commands[commandIndex].BeginShaderPass.Definition;
 
             // since the render pass is only permitted a very small list
@@ -96,11 +130,6 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
             m_CurrentGraphPass = pass;
         }
         break;
-        case RenderCommandType::EndRenderPass: {
-            SDL_EndGPURenderPass(m_CurrentGpuPass);
-            m_CurrentGpuPass = nullptr;
-        }
-        break;
         case RenderCommandType::BindShader: {
             if (m_CurrentGpuPass == nullptr || m_CurrentGraphPass == nullptr)
             {
@@ -108,45 +137,19 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
                 continue;
             }
 
+            m_CurrentShader = nullptr;
             Assets::ShaderEffect *shader = commands[commandIndex].BindShader.ShaderEffect;
             SDL_BindGPUGraphicsPipeline(m_CurrentGpuPass, shader->Pipeline);
 
             // bind the data provided by the graph
-            size_t cursor = 0;
-            bool invalid = false;
-            for (size_t i = 0; i < shader->ResourceCount; i++)
+            if (!BindShaderResourcesFromSource(shader, m_CurrentGraphPass->InputResourceCount,
+                                               m_CurrentGraphPass->InputResources,
+                                               Assets::ResourceProviderType::RenderGraph, cmdBuffer,
+                                               m_CurrentGpuPass, &m_Logger))
             {
-                Assets::ShaderResourceBinding *binding = &shader->Resources[i];
-                if (binding->Source.ProviderType != Assets::ResourceProviderType::RenderGraph)
-                    continue;
-
-                // bi-linear search
-                while (cursor < m_CurrentGraphPass->InputResourceCount &&
-                       m_CurrentGraphPass->InputResources[cursor].InterfaceName <
-                           binding->Source.Name)
-                {
-                    cursor++;
-                }
-
-                if (cursor >= m_CurrentGraphPass->InputResourceCount ||
-                    m_CurrentGraphPass->InputResources[cursor].InterfaceName !=
-                        binding->Source.Name)
-                {
-                    // the shader used invalid parameters, need to skip it
-                    // TODO: need to attach debug information into shaders
-                    m_Logger.Error("Shader references invalid parameter {}", binding->Source.Name);
-                    invalid = true;
-                    break;
-                }
-
-                BindShaderResource(binding,
-                                   m_CurrentGraphPass->InputResources[cursor].ResourceIndex,
-                                   cmdBuffer, m_CurrentGpuPass);
-            }
-
-            if (invalid)
-            {
-                m_Logger.Error("Shader binding skipped due to logical error.");
+                m_Logger.Error(
+                    "Shader binding skipped due to resource binding error, see previous logs for "
+                    "details.");
                 continue;
             }
 
@@ -160,25 +163,31 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
                 continue;
             }
 
-            for (size_t i = 0; i < m_CurrentShader->ResourceCount; i++)
-            {
-                Assets::ShaderResourceBinding *binding = &m_CurrentShader->Resources[i];
-                if (binding->Source.ProviderType != Assets::ResourceProviderType::Material)
-                    continue;
+            m_CurrentMaterial = nullptr;
+            Assets::Material *material = commands[commandIndex].BindMaterial.Material;
 
-                // TODO: find the reosurces provided by material (by name)
+            if (!BindShaderResourcesFromSource(
+                    m_CurrentShader, material->ResourceCount, material->GetResources(),
+                    Assets::ResourceProviderType::Material, cmdBuffer, m_CurrentGpuPass, &m_Logger))
+            {
+                m_Logger.Error(
+                    "Material not bound due to logical error, see previous logs for detail.");
+                continue;
             }
+
+            m_CurrentMaterial = material;
         }
         break;
         case RenderCommandType::Draw: {
-            if (m_CurrentShader == nullptr || m_CurrentGpuPass == nullptr)
+            if (m_CurrentShader == nullptr || m_CurrentGpuPass == nullptr ||
+                m_CurrentMaterial == nullptr)
             {
-                m_Logger.Warning("Draw skipped due to invalid shader or render pass binding.");
+                m_Logger.Warning(
+                    "Draw skipped due to invalid shader, render pass or material binding.");
                 continue;
             }
 
             // bind geometry
-            // TODO: client code should be able to configure vertex binding shape as well
             Assets::Mesh *mesh = commands[commandIndex].Draw.Mesh;
             SDL_GPUBufferBinding vboBinding{mesh->VertexBuffer, 0};
             SDL_BindGPUVertexBuffers(m_CurrentGpuPass, 0, &vboBinding, 1);

@@ -17,7 +17,6 @@ enum class RenderPassRelation : unsigned char
     BindShader,
     BindMaterial,
     Draw,
-    End,
     Count
 };
 
@@ -73,13 +72,6 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
         m_Commands.push_back({.SortKey = beginCommandSortKey,
                               .Type = RenderCommandType::BeginRenderPass,
                               .BeginShaderPass = {pass}});
-
-        // command that ends the render pass
-        size_t endCommandSortKey = CreateSortKey(
-            graph->Altitude, m_MaxGraphAltitude, passIndex, m_MaxPassCount, RenderPassRelation::End,
-            (size_t)RenderPassRelation::Count, 0, m_ShaderCount, 0, m_MaterialCount);
-        m_Commands.push_back(
-            {.SortKey = endCommandSortKey, .Type = RenderCommandType::EndRenderPass});
     }
 }
 
@@ -116,15 +108,16 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
 
 void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForObject(
     Assets::RenderGraph *targetGraph, size_t renderPassId, size_t materialIndex, size_t shaderIndex,
-    Assets::Mesh *mesh, IRendererResourceProvider *objectData)
+    Assets::Mesh *mesh, size_t resourceCount, NamedRendererResource *objectResources)
 {
     size_t sortKey =
         CreateSortKey(targetGraph->Altitude, m_MaxGraphAltitude, renderPassId, m_MaxPassCount,
                       RenderPassRelation::Draw, (size_t)RenderPassRelation::Count, shaderIndex,
                       m_ShaderCount, materialIndex, m_MaterialCount);
 
-    m_Commands.push_back(
-        {.SortKey = sortKey, .Type = RenderCommandType::Draw, .Draw = {mesh, objectData}});
+    m_Commands.push_back({.SortKey = sortKey,
+                          .Type = RenderCommandType::Draw,
+                          .Draw = {mesh, resourceCount, objectResources}});
 }
 
 static int SortCommand(const void *a, const void *b)

@@ -2,6 +2,7 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "OrcaRendererModule/Assets/material.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
 #include "OrcaRendererModule/Assets/shader.h"
 #include "OrcaRendererModule/Runtime/render_context.h"
@@ -20,6 +21,7 @@ private:
     SDL_GPURenderPass *m_CurrentGpuPass;
     Assets::RenderPass *m_CurrentGraphPass;
     Assets::ShaderEffect *m_CurrentShader;
+    Assets::Material *m_CurrentMaterial;
 
 public:
     Core::Runtime::CallbackResult Render(SDL_GPUCommandBuffer *cmdBuffer, RenderCommand *commands,

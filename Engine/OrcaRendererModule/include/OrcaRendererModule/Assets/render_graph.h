@@ -27,14 +27,8 @@ struct RenderPass
     unsigned char InputResourceCount;
     unsigned char ColorTargetCount;
 
-    // input resources is actually a translation map: shader effects would reference a provided
-    // name, and get an implementation name out of it that can be used to get the real resource from
-    // the resource database
-    struct
-    {
-        Core::Pipeline::HashId InterfaceName;
-        Runtime::RendererResource *ResourceIndex;
-    } InputResources[8];
+    // maximum 8 individual named resources that a shader can use
+    Runtime::NamedRendererResource InputResources[8];
 
     // output color targets are much more straight forward, they are a series of textures to be
     // written into

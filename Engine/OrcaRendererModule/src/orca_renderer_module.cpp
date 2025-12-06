@@ -16,8 +16,8 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
 
     for (size_t materialIndex = 0; materialIndex < m_Materials.GetCount(); materialIndex++)
     {
-        // potential optimization opportunity here: cache the referenced shader in each material so we don't have to
-        // seek on ever frame
+        // potential optimization opportunity here: cache the referenced shader in each material so
+        // we don't have to seek on ever frame
         Assets::Material *material = m_Materials.Get(materialIndex);
 
         // look for a shader
@@ -35,7 +35,8 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
             if (graph == nullptr)
                 continue;
 
-            context->PopulateCommandForMaterial(graph, material, materialIndex, effect, material->ShaderRef);
+            context->PopulateCommandForMaterial(graph, material, materialIndex, effect,
+                                                material->ShaderRef);
         }
     }
 
@@ -57,10 +58,11 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
     }
 
     // generate commands for objects
-    for (size_t staticMeshIndex = 0; staticMeshIndex < m_StaticMeshRenderers.GetCount(); staticMeshIndex++)
+    for (size_t staticMeshIndex = 0; staticMeshIndex < m_StaticMeshRenderers.GetCount();
+         staticMeshIndex++)
     {
-        Core::Containers::Uniform::AnnotatedNode<int, Components::StaticMeshRenderer *> *rendererComponent =
-            m_StaticMeshRenderers.PtrAt(staticMeshIndex);
+        Core::Containers::Uniform::AnnotatedNode<int, Components::StaticMeshRenderer *>
+            *rendererComponent = m_StaticMeshRenderers.PtrAt(staticMeshIndex);
 
         Assets::Mesh *mesh = m_Meshes.Get(rendererComponent->Value->MeshRef);
         if (mesh == nullptr)
@@ -91,8 +93,9 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
 
             Assets::RenderPass *pass = &graph->GetRenderPasses()[effect->RenderPassId];
 
-            context->PopulateCommandForObject(graph, effect->RenderPassId, rendererComponent->Value->MaterialRef,
-                                              material->ShaderRef, mesh, rendererComponent->Value->DataCollection);
+            context->PopulateCommandForObject(
+                graph, effect->RenderPassId, rendererComponent->Value->MaterialRef,
+                material->ShaderRef, mesh, 1, &rendererComponent->Value->Mvp);
         }
     }
 }

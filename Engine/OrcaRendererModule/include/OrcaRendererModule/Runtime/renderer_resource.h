@@ -30,6 +30,12 @@ struct RendererResource
     };
 };
 
+struct NamedRendererResource
+{
+    Core::Pipeline::HashId InterfaceName;
+    Runtime::RendererResource *Resource;
+};
+
 class IRendererResourceProvider
 {
 public:
