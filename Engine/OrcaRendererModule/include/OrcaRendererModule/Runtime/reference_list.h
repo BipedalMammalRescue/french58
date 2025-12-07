@@ -26,30 +26,35 @@ public:
     // found. The return value is an index into the storage buffer.
     size_t CreateReference(Core::Pipeline::HashId name)
     {
-        size_t foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
+        auto foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
 
-        if (foundItem == m_Storage.size())
+        if (foundItem->Value == m_Storage.size())
         {
             m_Storage.push_back({nullptr});
         }
 
-        return foundItem;
+        return foundItem->Value;
     }
 
     // Overwrite the valued referenced under the given name, adds the new value if not found.
     // Returns the overwritten value if any.
     TElement *UpdateReference(Core::Pipeline::HashId name, TElement *newValue)
     {
-        size_t foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
+        auto foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
 
-        if (foundItem == m_Storage.size())
+        TElement *oldValue = nullptr;
+
+        if (foundItem->Value == m_Storage.size())
         {
             m_Storage.push_back({newValue});
         }
         else
         {
-            m_Storage[foundItem] = {newValue};
+            oldValue = m_Storage[foundItem->Value].Asset;
+            m_Storage[foundItem->Value] = {newValue};
         }
+
+        return oldValue;
     }
 
     TElement *Get(size_t index)
