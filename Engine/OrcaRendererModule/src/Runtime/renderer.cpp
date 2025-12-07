@@ -1,8 +1,11 @@
 #include "OrcaRendererModule/Runtime/renderer.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/heap_allocator.h"
 #include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/shader.h"
+#include "OrcaRendererModule/Runtime/render_context.h"
 #include "OrcaRendererModule/Runtime/renderer_resource.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_gpu.h"
@@ -10,6 +13,17 @@
 
 using namespace Engine::Extension::OrcaRendererModule::Runtime;
 using namespace Engine::Extension::OrcaRendererModule;
+
+void Renderer::FreeShader(Assets::Shader *shader)
+{
+    // TODO: when the renderer is moved to multi-threaded, make this call a delayed command
+    for (uint32_t effectId = 0; effectId < shader->EffectCount; effectId++)
+    {
+        SDL_ReleaseGPUGraphicsPipeline(m_Services->GraphicsLayer->GetDevice(),
+                                       shader->GetShaderEffects()[effectId].Pipeline);
+    }
+    m_Services->HeapAllocator->Deallocate(shader);
+}
 
 static bool BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t resourceCount,
                                           NamedRendererResource *resources,

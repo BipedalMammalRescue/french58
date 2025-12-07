@@ -45,14 +45,13 @@ struct ShaderResourceBinding
 // This data structure is serialized directly to disk so don't put runtime-dependent data here.
 struct ShaderEffect
 {
-    Core::Pipeline::HashId RenderGraphName;
-    char RenderPassId;
-
+    size_t RenderGraphReference;
+    uint32_t RenderPassId;
     SDL_GPUGraphicsPipeline *Pipeline;
 
     // bindings (only allow 16 of them) (make sure resources are sorted by name)
-    size_t ResourceCount;
     ShaderResourceBinding Resources[16];
+    uint32_t ResourceCount;
 };
 
 struct Shader
@@ -62,11 +61,6 @@ struct Shader
     inline ShaderEffect *GetShaderEffects()
     {
         return (ShaderEffect *)(this + 1);
-    }
-
-    inline size_t *GetRenderGraphReferences()
-    {
-        return (size_t *)(GetShaderEffects() + EffectCount);
     }
 };
 

@@ -22,8 +22,8 @@ private:
     Core::Containers::Uniform::AnnotationSortedArray<Core::Pipeline::HashId, size_t> m_Index;
 
 public:
-    // Ensures the existence of a reference object in the storage/index, add an invalid one if not found. The return
-    // value is an index into the storage buffer.
+    // Ensures the existence of a reference object in the storage/index, add an invalid one if not
+    // found. The return value is an index into the storage buffer.
     size_t CreateReference(Core::Pipeline::HashId name)
     {
         size_t foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
@@ -37,7 +37,8 @@ public:
     }
 
     // Overwrite the valued referenced under the given name, adds the new value if not found.
-    void UpdateReference(Core::Pipeline::HashId name, TElement *newValue)
+    // Returns the overwritten value if any.
+    TElement *UpdateReference(Core::Pipeline::HashId name, TElement *newValue)
     {
         size_t foundItem = m_Index.GetOrAdd({.Key = name, .Value = m_Storage.size()});
 
