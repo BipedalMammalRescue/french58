@@ -1,5 +1,8 @@
 #pragma once
 
+#include "EngineCore/AssetManagement/asset_loading_context.h"
+#include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "OrcaRendererModule/Runtime/renderer_resource.h"
 #include <stddef.h>
 
@@ -19,5 +22,12 @@ struct Material
         return (Runtime::NamedRendererResource *)(this + 1);
     }
 };
+Engine::Core::Runtime::CallbackResult ContextualizeMaterial(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState,
+    Engine::Core::AssetManagement::AssetLoadingContext *outContext, size_t contextCount);
+
+Engine::Core::Runtime::CallbackResult IndexFragmentMaterial(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState,
+    Engine::Core::AssetManagement::AssetLoadingContext *inContext);
 
 } // namespace Engine::Extension::OrcaRendererModule::Assets

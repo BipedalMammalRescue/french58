@@ -2,6 +2,7 @@
 
 #include "EngineCore/Containers/Uniform/sorted_array.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Pipeline/hash_id.h"
 #include "OrcaRendererModule/Assets/material.h"
 #include "OrcaRendererModule/Assets/mesh.h"
 #include "OrcaRendererModule/Assets/render_graph.h"
@@ -29,7 +30,8 @@ private:
     Runtime::ReferenceList<Assets::Mesh> m_Meshes;
 
     // note: nothing references the static mesh renderer (or any kind of renderer) directly
-    Core::Containers::Uniform::AnnotationSortedArray<int, Components::StaticMeshRenderer *> m_StaticMeshRenderers;
+    Core::Containers::Uniform::AnnotationSortedArray<int, Components::StaticMeshRenderer *>
+        m_StaticMeshRenderers;
 
 public:
     inline Core::Logging::Logger *GetLogger()
@@ -37,6 +39,10 @@ public:
         return &m_Logger;
     }
     void PopulateRenderCommands(Runtime::RenderContext *context);
+
+    const Assets::Shader *FindShader(Core::Pipeline::HashId name) const;
+    const Assets::Material *FindMaterial(Core::Pipeline::HashId name) const;
+    const Assets::RenderGraph *FindGraph(Core::Pipeline::HashId name) const;
 };
 
 } // namespace Engine::Extension::OrcaRendererModule

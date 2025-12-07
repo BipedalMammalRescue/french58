@@ -1,6 +1,9 @@
 #pragma once
 
+#include "EngineCore/AssetManagement/asset_loading_context.h"
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_gpu.h"
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
@@ -66,5 +69,13 @@ struct Shader
         return (size_t *)(GetShaderEffects() + EffectCount);
     }
 };
+
+Engine::Core::Runtime::CallbackResult ContextualizeShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState,
+    Engine::Core::AssetManagement::AssetLoadingContext *outContext, size_t contextCount);
+
+Engine::Core::Runtime::CallbackResult IndexShader(
+    Engine::Core::Runtime::ServiceTable *services, void *moduleState,
+    Engine::Core::AssetManagement::AssetLoadingContext *inContext);
 
 } // namespace Engine::Extension::OrcaRendererModule::Assets
