@@ -24,8 +24,7 @@ const SDL_GPUVertexBufferDescription vertexBufferDescription{
 const SDL_GPUVertexInputState vertexInputState{&vertexBufferDescription, 1, VertexAttributes, 3};
 
 // Represents the shader file on disk, containing two files and their length prepended; the entry
-// point must be called "main".
-// Layout: header | bindings | vertex stage | fragment stage
+// point must be called "main". Layout: header | bindings | vertex stage | fragment stage
 struct SerializedShaderEffect
 {
     Engine::Core::Pipeline::HashId RenderGraph;

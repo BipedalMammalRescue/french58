@@ -120,23 +120,21 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
                           .Draw = {mesh, resourceCount, objectResources}});
 }
 
-static int SortCommand(const void *a, const void *b)
-{
-    const RenderCommand *lhs = (RenderCommand *)a;
-    const RenderCommand *rhs = (RenderCommand *)b;
-
-    if (lhs->SortKey > rhs->SortKey)
-        return 1;
-    else if (lhs->SortKey < rhs->SortKey)
-        return -1;
-    return 0;
-}
-
 void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::FinalizeCommands()
 {
     // TODO: this would need to be moved to the renderer implementation
     // sort all commands
-    SDL_qsort(m_Commands.data(), m_Commands.size(), sizeof(RenderCommand), SortCommand);
+    SDL_qsort(m_Commands.data(), m_Commands.size(), sizeof(RenderCommand),
+              [](const void *a, const void *b) {
+                  const RenderCommand *lhs = (RenderCommand *)a;
+                  const RenderCommand *rhs = (RenderCommand *)b;
+
+                  if (lhs->SortKey > rhs->SortKey)
+                      return 1;
+                  else if (lhs->SortKey < rhs->SortKey)
+                      return -1;
+                  return 0;
+              });
 }
 
 void RenderContext::Clear()
