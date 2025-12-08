@@ -16,7 +16,6 @@ using namespace Engine::Extension::OrcaRendererModule;
 
 void Renderer::FreeShader(Assets::Shader *shader)
 {
-    // TODO: when the renderer is moved to multi-threaded, make this call a delayed command
     for (uint32_t effectId = 0; effectId < shader->EffectCount; effectId++)
     {
         SDL_ReleaseGPUGraphicsPipeline(m_Services->GraphicsLayer->GetDevice(),
@@ -25,17 +24,19 @@ void Renderer::FreeShader(Assets::Shader *shader)
     m_Services->HeapAllocator->Deallocate(shader);
 }
 
-static bool BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t resourceCount,
-                                          NamedRendererResource *resources,
-                                          Assets::ResourceProviderType type,
-                                          SDL_GPUCommandBuffer *cmdBuffer, SDL_GPURenderPass *pass,
-                                          Engine::Core::Logging::Logger *logger)
+// renderer needs to keep its own list of references
+bool Renderer::BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t resourceCount,
+                                             NamedRendererResource *resources,
+                                             Assets::ResourceProviderType type,
+                                             SDL_GPUCommandBuffer *cmdBuffer,
+                                             SDL_GPURenderPass *pass,
+                                             Engine::Core::Logging::Logger *logger)
 {
     size_t cursor = 0;
     for (size_t i = 0; i < shader->ResourceCount; i++)
     {
         Assets::ShaderResourceBinding *binding = &shader->Resources[i];
-        if (binding->Source.ProviderType != Assets::ResourceProviderType::Material)
+        if (binding->Source.ProviderType != type)
             continue;
 
         while (cursor < resourceCount && resources[cursor].InterfaceName < binding->Source.Name)
@@ -47,21 +48,31 @@ static bool BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t r
         {
             logger->Error("Shader required resource {} not provided.", binding->Source.Name);
             return false;
-            break;
         }
 
-        Runtime::RendererResource *resource = resources[cursor].Resource;
+        const Runtime::RendererResource *resource = GetResource(resources[cursor].ResourceId);
 
         switch (resource->Type)
         {
         case ResourceType::Texture: {
-            // TODO: I don't know how to deal with textures yet
+            switch (binding->Location.Stage)
+            {
+            case Assets::ShaderStage::Vertex:
+                SDL_BindGPUFragmentStorageTextures(pass, binding->Location.Slot, &resource->Texture,
+                                                   1);
+                break;
+            case Assets::ShaderStage::Fragment:
+                SDL_BindGPUFragmentStorageTextures(pass, binding->Location.Slot, &resource->Texture,
+                                                   1);
+                break;
+            }
         }
         break;
         case ResourceType::StorageBuffer: {
             switch (binding->Location.Stage)
             {
-            case Assets::ShaderStage::Vertex:
+            case Assets::ShaderStage::Vertex: {
+            }
                 SDL_BindGPUVertexStorageBuffers(pass, binding->Location.Slot,
                                                 &resource->StorageBuffer, 1);
                 break;
@@ -86,6 +97,9 @@ static bool BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_t r
             }
         }
         break;
+        case ResourceType::Invalid:
+            m_Logger.Error("Resource required by shader is invalid on renderer.");
+            return false;
         }
     }
 

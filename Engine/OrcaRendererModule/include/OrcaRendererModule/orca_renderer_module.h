@@ -31,6 +31,10 @@ struct ModuleState
 
     Runtime::ReferenceList<Assets::Mesh> Meshes;
 
+    // Textures are Managed by the renderer; this is just a dictionary of file path -> renderer
+    // resource id mapping.
+    Core::Containers::Uniform::AnnotationSortedArray<Core::Pipeline::HashId, uint32_t> Textures;
+
     // note: nothing references the static mesh renderer (or any kind of renderer) directly
     Core::Containers::Uniform::AnnotationSortedArray<int, Components::StaticMeshRenderer *>
         StaticMeshRenderers;

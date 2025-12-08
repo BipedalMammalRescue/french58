@@ -57,6 +57,12 @@ public:
         return oldValue;
     }
 
+    void ReserveExtra(size_t extraCount)
+    {
+        m_Storage.reserve(m_Storage.size() + extraCount);
+        m_Index.ReserveExtra(extraCount);
+    }
+
     TElement *Get(size_t index)
     {
         if (index == m_Storage.size())

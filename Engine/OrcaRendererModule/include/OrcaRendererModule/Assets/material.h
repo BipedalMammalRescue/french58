@@ -8,9 +8,6 @@
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
-// Materials is an explicit instantiation of a shader. It provides a page in the resource database.
-// TODO: the implementation of this class is not correct.
-
 struct Material
 {
     // material points to a shader by reference
@@ -22,6 +19,7 @@ struct Material
         return (Runtime::NamedRendererResource *)(this + 1);
     }
 };
+
 Engine::Core::Runtime::CallbackResult ContextualizeMaterial(
     Engine::Core::Runtime::ServiceTable *services, void *moduleState,
     Engine::Core::AssetManagement::AssetLoadingContext *outContext, size_t contextCount);
