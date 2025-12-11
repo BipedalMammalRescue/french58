@@ -95,7 +95,7 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
 
             context->PopulateCommandForObject(
                 graph, effect->RenderPassId, rendererComponent->Value->MaterialRef,
-                material->ShaderRef, mesh, 1, &rendererComponent->Value->Mvp);
+                material->ShaderRef, mesh, 1, &rendererComponent->Value->MvpIndex);
         }
     }
 }
