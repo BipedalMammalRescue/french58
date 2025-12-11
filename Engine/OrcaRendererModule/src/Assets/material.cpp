@@ -20,8 +20,9 @@ struct SerializedMaterialTexture
 
 struct SerializedMaterial
 {
-    uint32_t TextureCount;
+    Engine::Core::Pipeline::HashId ShaderPath;
 
+    uint32_t TextureCount;
     const SerializedMaterialTexture *GetTextures() const
     {
         return (SerializedMaterialTexture *)(this + 1);
@@ -80,6 +81,9 @@ Engine::Core::Runtime::CallbackResult Assets::IndexFragmentMaterial(
 
     // make the new material available
     state->Materials.UpdateReference(inContext->AssetId, newMaterial);
+
+    // find the shader for the new material
+    newMaterial->ShaderRef = state->Shaders.CreateReference(loadedMaterial->ShaderPath);
 
     // build the asset table (for a material currently it's a list of textures, managed by the
     // renderer)

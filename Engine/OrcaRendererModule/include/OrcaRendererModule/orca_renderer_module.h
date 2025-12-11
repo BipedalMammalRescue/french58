@@ -42,6 +42,7 @@ struct ModuleState
     const Assets::Shader *FindShader(Core::Pipeline::HashId name) const;
     const Assets::Material *FindMaterial(Core::Pipeline::HashId name) const;
     const Assets::RenderGraph *FindGraph(Core::Pipeline::HashId name) const;
+    const Assets::Mesh *FindMesh(Core::Pipeline::HashId name) const;
 
     void PopulateRenderCommands(Runtime::RenderContext *context);
 };
