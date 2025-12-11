@@ -100,6 +100,31 @@ bool Renderer::BindShaderResourcesFromSource(Assets::ShaderEffect *shader, size_
         case ResourceType::Invalid:
             m_Logger.Error("Resource required by shader is invalid on renderer.");
             return false;
+        case ResourceType::SampledTexture: {
+            // find the texture first
+            if (resource->SampledTexture.TextureId >= m_Resources.size() ||
+                m_Resources[resource->SampledTexture.TextureId].Type != ResourceType::Texture)
+            {
+                m_Logger.Error("Sampled texture {} refers to nonexistent texture {}.",
+                               resources[cursor].ResourceId, resource->SampledTexture.TextureId);
+            }
+            SDL_GPUTexture *texture = m_Resources[resource->SampledTexture.TextureId].Texture;
+
+            SDL_GPUTextureSamplerBinding samplerBinding{
+                .texture = texture,
+                .sampler = m_GpuSamplers[(uint32_t)resource->SampledTexture.Sampler]};
+
+            switch (binding->Location.Stage)
+            {
+            case Assets::ShaderStage::Vertex:
+                SDL_BindGPUVertexSamplers(pass, binding->Location.Slot, &samplerBinding, 1);
+                break;
+            case Assets::ShaderStage::Fragment:
+                SDL_BindGPUFragmentSamplers(pass, binding->Location.Slot, &samplerBinding, 1);
+                break;
+            }
+        }
+        break;
         }
     }
 

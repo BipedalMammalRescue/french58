@@ -23,6 +23,9 @@ private:
     Core::Logging::Logger m_Logger;
     Core::Runtime::ServiceTable *m_Services;
 
+    // pre-built samplers
+    SDL_GPUSampler *m_GpuSamplers[(uint32_t)SamplerType::__Count];
+
     // resource management
     std::vector<RendererResource> m_Resources;
 

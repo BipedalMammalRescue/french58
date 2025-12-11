@@ -8,12 +8,19 @@ namespace Engine::Extension::OrcaRendererModule::Runtime {
 // Opaque pointer used only to identify a resource owner
 struct ResourceOwner;
 
+enum class SamplerType : uint32_t
+{
+    BasicLinearSampler,
+    __Count
+};
+
 enum class ResourceType
 {
     Invalid,
     Texture,
     StorageBuffer,
-    UniformBuffer
+    UniformBuffer,
+    SampledTexture
 };
 
 struct RendererResource
@@ -27,6 +34,11 @@ struct RendererResource
             void *Data;
             size_t Length;
         } Uniform;
+        struct
+        {
+            uint32_t TextureId;
+            SamplerType Sampler;
+        } SampledTexture;
     };
 };
 
