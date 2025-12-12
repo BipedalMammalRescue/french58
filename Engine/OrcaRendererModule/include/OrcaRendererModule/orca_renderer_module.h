@@ -25,9 +25,9 @@ struct ModuleState
 
     Runtime::Renderer Renderer;
 
-    Runtime::ReferenceList<Assets::RenderGraph> RenderGraphs;
-    Runtime::ReferenceList<Assets::Shader> Shaders;
-    Runtime::ReferenceList<Assets::Material> Materials;
+    Runtime::ReferenceList<Assets::RenderGraph *> RenderGraphs;
+    Runtime::ReferenceList<Assets::Shader *> Shaders;
+    Runtime::ReferenceList<Assets::Material *> Materials;
 
     Runtime::ReferenceList<Assets::Mesh> Meshes;
 

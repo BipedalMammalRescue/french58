@@ -47,7 +47,7 @@ struct RenderCommand
 
         struct
         {
-            Assets::Mesh *Mesh;
+            Assets::Mesh Mesh;
             size_t ResourceCount;
             NamedRendererResource *Resources;
         } Draw;
@@ -81,7 +81,7 @@ public:
                                     size_t shaderIndex);
 
     void PopulateCommandForObject(Assets::RenderGraph *targetGraph, size_t renderPassId,
-                                  size_t materialIndex, size_t shaderIndex, Assets::Mesh *mesh,
+                                  size_t materialIndex, size_t shaderIndex, Assets::Mesh mesh,
                                   size_t objectResCount, NamedRendererResource *objectResources);
 
     void FinalizeCommands();

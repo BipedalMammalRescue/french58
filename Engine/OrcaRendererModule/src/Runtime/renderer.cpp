@@ -241,7 +241,7 @@ Engine::Core::Runtime::CallbackResult Renderer::Render(SDL_GPUCommandBuffer *cmd
             }
 
             // bind geometry
-            Assets::Mesh *mesh = commands[commandIndex].Draw.Mesh;
+            Assets::Mesh *mesh = &commands[commandIndex].Draw.Mesh;
             SDL_GPUBufferBinding vboBinding{mesh->VertexBuffer, 0};
             SDL_BindGPUVertexBuffers(m_CurrentGpuPass, 0, &vboBinding, 1);
             SDL_GPUBufferBinding iboBinding{mesh->IndexBuffer, 0};

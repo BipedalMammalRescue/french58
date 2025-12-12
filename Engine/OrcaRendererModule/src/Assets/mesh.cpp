@@ -73,6 +73,9 @@ Engine::Core::Runtime::CallbackResult Assets::ContextualizeMesh(
     return Core::Runtime::CallbackSuccess();
 }
 
+// TODO: the GPU copy actions should be scheduled on the rendering thread as part of its resource
+// creation stage, so they can all be shoved into one command buffer and maybe during one copy pass
+// too
 Engine::Core::Runtime::CallbackResult Assets::IndexMesh(
     Engine::Core::Runtime::ServiceTable *services, void *moduleState,
     Engine::Core::AssetManagement::AssetLoadingContext *inContext)
@@ -165,8 +168,8 @@ Engine::Core::Runtime::CallbackResult Assets::IndexMesh(
     Assets::Mesh mesh{
         .IndexCount = indexCount, .VertexBuffer = vertexBuffer, .IndexBuffer = indexBuffer};
 
-    auto oldCopy = state->Meshes.UpdateReference(inContext->AssetId, &mesh);
-    if (oldCopy != nullptr)
+    auto oldCopy = state->Meshes.UpdateReference(inContext->AssetId, mesh);
+    if (oldCopy.has_value())
     {
         SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), oldCopy->IndexBuffer);
         SDL_ReleaseGPUBuffer(services->GraphicsLayer->GetDevice(), oldCopy->VertexBuffer);

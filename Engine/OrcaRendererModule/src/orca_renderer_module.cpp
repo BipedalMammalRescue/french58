@@ -64,9 +64,7 @@ void ModuleState::PopulateRenderCommands(Runtime::RenderContext *context)
         Core::Containers::Uniform::AnnotatedNode<int, Components::StaticMeshRenderer *>
             *rendererComponent = StaticMeshRenderers.PtrAt(staticMeshIndex);
 
-        Assets::Mesh *mesh = Meshes.Get(rendererComponent->Value->MeshRef);
-        if (mesh == nullptr)
-            continue;
+        Assets::Mesh mesh = Meshes.Get(rendererComponent->Value->MeshRef);
 
         Assets::Material *material = Materials.Get(rendererComponent->Value->MaterialRef);
         Assets::RenderGraph *graph = RenderGraphs.Get(rendererComponent->Value->RenderGraphRef);

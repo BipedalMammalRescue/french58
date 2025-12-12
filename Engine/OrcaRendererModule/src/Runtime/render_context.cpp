@@ -108,7 +108,7 @@ void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateComm
 
 void Engine::Extension::OrcaRendererModule::Runtime::RenderContext::PopulateCommandForObject(
     Assets::RenderGraph *targetGraph, size_t renderPassId, size_t materialIndex, size_t shaderIndex,
-    Assets::Mesh *mesh, size_t resourceCount, NamedRendererResource *objectResources)
+    Assets::Mesh mesh, size_t resourceCount, NamedRendererResource *objectResources)
 {
     size_t sortKey =
         CreateSortKey(targetGraph->Altitude, m_MaxGraphAltitude, renderPassId, m_MaxPassCount,

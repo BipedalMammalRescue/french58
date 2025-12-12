@@ -243,10 +243,10 @@ Engine::Core::Runtime::CallbackResult Assets::IndexShader(
     }
 
     // add the new shader to collection, free the old one if needed
-    Shader *oldCopy = state->Shaders.UpdateReference(inContext->AssetId, newShader);
+    std::optional<Shader *> oldCopy = state->Shaders.UpdateReference(inContext->AssetId, newShader);
     if (oldCopy != nullptr)
     {
-        state->Renderer.FreeShader(oldCopy);
+        state->Renderer.FreeShader(oldCopy.value());
         state->Logger.Information("Freed previous revision of shader {}.", inContext->AssetId);
     }
     state->Logger.Information("Loaded shader {} with {} effects.", inContext->AssetId,

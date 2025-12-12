@@ -7,6 +7,9 @@
 
 namespace Engine::Extension::OrcaRendererModule::Assets {
 
+// TODO: this "mesh" or maybe "geometry" is a renderer concept (as opposed to graph, pass or
+// material which are all seen as generic resource collections by the renderer), need to update the
+// renderer design to address this problem
 struct Mesh
 {
     size_t IndexCount;
