@@ -8,8 +8,8 @@ namespace Engine::Core::Configuration {
 
 struct ConfigurationProvider
 {
-    int WindowHeight = 720;
-    int WindowWidth = 960;
+    uint32_t WindowHeight = 720;
+    uint32_t WindowWidth = 960;
 
     long long STRING_LOAD_BUFFER_SIZE = 128;
     bool UseDeviceValidation = true;
@@ -21,6 +21,8 @@ struct ConfigurationProvider
     Logging::LogLevel MinimumLogLevel = Logging::LogLevel::Information;
 
     size_t WorkerCount = 2;
+
+    bool EnableVulkanValidationLayers = true;
 };
 
 constexpr size_t EntityLoadBatchSize = 1024;

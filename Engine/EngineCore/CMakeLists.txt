@@ -20,6 +20,10 @@ add_library(EngineCore STATIC
     src/index_queue.cpp
     )
 
+find_package(Vulkan)
+target_link_libraries(EngineCore PRIVATE Vulkan::Vulkan)
+
+target_link_libraries(EngineCore PUBLIC spdlog::spdlog)
+
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(EngineCore PRIVATE cxx_std_17)
-target_link_libraries(EngineCore PUBLIC spdlog::spdlog)
