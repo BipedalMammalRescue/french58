@@ -1,22 +1,23 @@
 #include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
+#include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_vulkan.h"
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_gpu.h>
+#include <cmath>
 #include <cstdint>
+#include <memory>
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core;
 using namespace Engine::Core::Runtime;
+using namespace Engine::Core::Rendering;
 
 static const char *LogChannels[] = {"GraphicsLayer"};
-
-static constexpr uint32_t MaxFlight = 2;
 
 #define CHECK_VULKAN(expression, error)                                                            \
     if (expression != VK_SUCCESS)                                                                  \
@@ -452,6 +453,8 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
                                           &m_Swapchain.Swapchain),
                      "Failed to create Vulkan swapchain.");
 
+        m_Swapchain.Dimensions = extent;
+
         vkGetSwapchainImagesKHR(m_DeviceInfo.Device, m_Swapchain.Swapchain, &imageCount, nullptr);
         m_Swapchain.Images.resize(imageCount);
         vkGetSwapchainImagesKHR(m_DeviceInfo.Device, m_Swapchain.Swapchain, &imageCount,
@@ -516,30 +519,139 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
                      "Failed to create Vulkan command pool prime.");
     }
 
-    // create the global descriptor pool
+    // bindless setup (and pretty much all the metadata needed for pipeline layout)
     {
-        VkDescriptorPoolSize poolSizes[] = {
-            {
-                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = MaxFlight,
+        static constexpr VkDescriptorPoolSize globalPoolSizes[] = {
+            (VkDescriptorPoolSize){
+                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = 65536,
             },
-            {
+            (VkDescriptorPoolSize){
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = MaxFlight,
+                .descriptorCount = 65536,
             },
         };
-        VkDescriptorPoolCreateInfo descPoolInfo{
+        static constexpr VkDescriptorPoolCreateInfo globalPoolInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .maxSets = MaxFlight,
-            .poolSizeCount = SDL_arraysize(poolSizes),
-            .pPoolSizes = poolSizes,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+            .maxSets = 1,
+            .poolSizeCount = SDL_arraysize(globalPoolSizes),
+            .pPoolSizes = globalPoolSizes,
         };
-        CHECK_VULKAN(vkCreateDescriptorPool(m_DeviceInfo.Device, *descPoolInfo, nullptr,
-                                            m_RenderResources.GlobalDescriptorPool),
-                     "Failed to create descriptor pool.");
+        CHECK_VULKAN(vkCreateDescriptorPool(m_DeviceInfo.Device, &globalPoolInfo, nullptr,
+                                            &m_RenderResources.GlobalDescriptorPool),
+                     "Failed to allocate bindless descriptor pool.");
+
+        static constexpr VkDescriptorSetLayoutBinding globalSetBindings[] = {
+            (VkDescriptorSetLayoutBinding){
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = 65536,
+                .stageFlags = VK_SHADER_STAGE_ALL,
+            },
+            (VkDescriptorSetLayoutBinding){
+                .binding = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 65536,
+                .stageFlags = VK_SHADER_STAGE_ALL,
+            },
+            (VkDescriptorSetLayoutBinding){
+                .binding = 2,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                .descriptorCount = 65536,
+                .stageFlags = VK_SHADER_STAGE_ALL,
+            },
+        };
+        VkDescriptorSetLayoutCreateInfo globalSetLayoutCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+            .bindingCount = SDL_arraysize(globalSetBindings),
+            .pBindings = globalSetBindings,
+        };
+        CHECK_VULKAN(vkCreateDescriptorSetLayout(m_DeviceInfo.Device, &globalSetLayoutCreateInfo,
+                                                 nullptr,
+                                                 &m_RenderResources.GlobalDescriptorLayout),
+                     "Failed to create bindless descriptor set layout.");
+
+        VkDescriptorSetAllocateInfo globalsetAllocateInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = m_RenderResources.GlobalDescriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &m_RenderResources.GlobalDescriptorLayout,
+        };
+        CHECK_VULKAN(vkAllocateDescriptorSets(m_DeviceInfo.Device, &globalsetAllocateInfo,
+                                              &m_RenderResources.GlobalDescriptorSet),
+                     "Failed to allocate bindless descriptor set.");
+
+        static constexpr VkDescriptorSetLayoutBinding perFlightSetBindings[] = {
+            (VkDescriptorSetLayoutBinding){
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 65536,
+                .stageFlags = VK_SHADER_STAGE_ALL,
+            },
+        };
+        static constexpr VkDescriptorSetLayoutCreateInfo perFlightSetLayoutCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+            .bindingCount = SDL_arraysize(perFlightSetBindings),
+            .pBindings = perFlightSetBindings,
+        };
+        CHECK_VULKAN(vkCreateDescriptorSetLayout(m_DeviceInfo.Device, &perFlightSetLayoutCreateInfo,
+                                                 nullptr, &m_RenderResources.PerFlightDescLayout),
+                     "Failed to create render-graph related descriptor set layout.");
+
+        static constexpr VkDescriptorSetLayoutBinding uniformBufferBindings[] = {
+            (VkDescriptorSetLayoutBinding){
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_ALL,
+            }};
+        static constexpr VkDescriptorSetLayoutCreateInfo uniformBufferLayoutCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .bindingCount = SDL_arraysize(uniformBufferBindings),
+            .pBindings = uniformBufferBindings,
+        };
+        CHECK_VULKAN(vkCreateDescriptorSetLayout(m_DeviceInfo.Device,
+                                                 &uniformBufferLayoutCreateInfo, nullptr,
+                                                 &m_RenderResources.UboLayout),
+                     "Failed to create ubo descriptor set layout.");
+
+        // now with the layouts created this is enough information to create a pipeline layout
+
+        VkPushConstantRange pushConstant[] = {
+            (VkPushConstantRange){
+                .stageFlags = VK_SHADER_STAGE_ALL,
+                .offset = 0,
+                .size = 128,
+            },
+        };
+        VkDescriptorSetLayout layouts[]{
+            m_RenderResources.GlobalDescriptorLayout,
+            m_RenderResources.PerFlightDescLayout,
+            m_RenderResources.UboLayout,
+        };
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .setLayoutCount = SDL_arraysize(layouts),
+            .pSetLayouts = layouts,
+            .pushConstantRangeCount = SDL_arraysize(layouts),
+            .pPushConstantRanges = pushConstant,
+        };
+        CHECK_VULKAN(vkCreatePipelineLayout(m_DeviceInfo.Device, &pipelineLayoutInfo, nullptr,
+                                            &m_RenderResources.GlobalPipelineLayout),
+                     "Failed to create global graphics pipeline layout.");
     }
 
-    // flights
+    // command buffers
     {
         for (uint32_t i = 0; i < MaxFlight; i++)
         {
@@ -551,16 +663,451 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
                 .commandBufferCount = 1,
             };
 
-            CHECK_VULKAN(vkAllocateCommandBuffers(m_Device.GetDevice(), &allocInfo, &cmdBuffer),
-                         "Failed to create command buffer for ")
+            CHECK_VULKAN(vkAllocateCommandBuffers(m_DeviceInfo.Device, &allocInfo, &cmdBuffer),
+                         "Failed to create Vulkan command buffer");
+
+            // a set of synchronizers
+            VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
+            VkFence inFlightFence = VK_NULL_HANDLE;
+
+            VkSemaphoreCreateInfo semaphoreInfo{
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            };
+
+            VkFenceCreateInfo fenceInfo{
+                .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+            };
+
+            if (vkCreateSemaphore(m_DeviceInfo.Device, &semaphoreInfo, nullptr,
+                                  &imageAvailableSemaphore) != VK_SUCCESS ||
+                vkCreateFence(m_DeviceInfo.Device, &fenceInfo, nullptr, &inFlightFence) !=
+                    VK_SUCCESS)
+                return Crash(__FILE__, __LINE__, "failed to create semaphores!");
+
+            // create the double-buffered render target accessing
+            VkDescriptorPool flightPool = VK_NULL_HANDLE;
+            static constexpr VkDescriptorPoolSize flightPoolSizes[] = {
+                (VkDescriptorPoolSize){
+                    .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 65536,
+                },
+            };
+            static constexpr VkDescriptorPoolCreateInfo flightPoolAllocInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+                .maxSets = 1,
+                .poolSizeCount = SDL_arraysize(flightPoolSizes),
+                .pPoolSizes = flightPoolSizes,
+            };
+            CHECK_VULKAN(vkCreateDescriptorPool(m_DeviceInfo.Device, &flightPoolAllocInfo, nullptr,
+                                                &flightPool),
+                         "Failed to allocate bindless descriptor pool.");
+
+            VkDescriptorSet flightDescSet = VK_NULL_HANDLE;
+            VkDescriptorSetAllocateInfo flightDescSetInfo{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = flightPool,
+                .descriptorSetCount = 1,
+                .pSetLayouts = &m_RenderResources.PerFlightDescLayout,
+            };
+            CHECK_VULKAN(
+                vkAllocateDescriptorSets(m_DeviceInfo.Device, &flightDescSetInfo, &flightDescSet),
+                "Failed to allocate double-buffered resource descriptor sets.");
+
+            m_CommandBuffers[i] = {
+                .CommandBuffer = cmdBuffer,
+                .ImageAvailableSemaphore = imageAvailableSemaphore,
+                .InFlightFence = inFlightFence,
+                .DescriptorPool = flightPool,
+                .DescriptorSet = flightDescSet,
+            };
         }
     }
 
+    // set up the critical path rendering targets (THESE ARE NOT BACKED BY MEMORY JUST YET)
+    {
+        m_OpqaueColorTargetId = 0;
+        m_RenderTargets[0] =
+            CreateRenderTarget(RenderTargetUsage::ColorTarget,
+                               (RenderTargetSetting){
+                                   .Image =
+                                       {
+                                           .ColorTarget =
+                                               {
+                                                   .ScaleToSwapchain = true,
+                                                   .Dimensions = {.Relative = {1.0f, 1.0f}},
+                                                   .ColorFormat = ColorFormat::UseSwapchain,
+                                               },
+                                       },
+                                   .Sampler = Rendering::SamplerType::None,
+                               });
+
+        m_OpaqueDepthBufferId = 1;
+        m_RenderTargets[1] =
+            CreateRenderTarget(Rendering::RenderTargetUsage::DepthBuffer,
+                               (RenderTargetSetting){
+                                   .Image =
+                                       {
+                                           .ColorTarget =
+                                               {
+                                                   .ScaleToSwapchain = true,
+                                                   .Dimensions = {.Relative = {1.0f, 1.0f}},
+                                                   .ColorFormat = ColorFormat::UseSwapchain,
+                                               },
+                                       },
+                                   .Sampler = Rendering::SamplerType::None,
+                               });
+    }
+
     return CallbackSuccess();
+}
+
+Rendering::RenderTarget GraphicsLayer::CreateRenderTarget(Rendering::RenderTargetUsage usage,
+                                                          Rendering::RenderTargetSetting settings)
+{
+    VkFormat format;
+    uint32_t width;
+    uint32_t height;
+
+    // TODO: when do I need to change the tiling setting?
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    VkImageUsageFlags gpuUsage;
+    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    switch (usage)
+    {
+    case RenderTargetUsage::ColorTarget: {
+        switch (settings.Image.ColorTarget.ColorFormat)
+        {
+        case ColorFormat::UseSwapchain:
+            format = m_Swapchain.Format;
+            break;
+        }
+
+        if (settings.Image.ColorTarget.ScaleToSwapchain)
+        {
+            width = static_cast<uint32_t>(
+                round(settings.Image.ColorTarget.Dimensions.Relative.WidthScale *
+                      m_Swapchain.Dimensions.width));
+            height = static_cast<uint32_t>(
+                round(settings.Image.ColorTarget.Dimensions.Relative.HeightScale *
+                      m_Swapchain.Dimensions.height));
+        }
+        else
+        {
+            width = settings.Image.ColorTarget.Dimensions.Absolute.Width;
+            height = settings.Image.ColorTarget.Dimensions.Absolute.Height;
+        }
+
+        gpuUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+    break;
+    case RenderTargetUsage::DepthBuffer: {
+        switch (settings.Image.DepthBuffer.Precision)
+        {
+        case Engine::Core::Rendering::DepthPrecision::D32:
+            format = VK_FORMAT_D32_SFLOAT;
+            break;
+        }
+
+        if (settings.Image.DepthBuffer.ScaleToSwapchain)
+        {
+            width = static_cast<uint32_t>(
+                round(settings.Image.DepthBuffer.Dimensions.Relative.WidthScale *
+                      m_Swapchain.Dimensions.width));
+            height = static_cast<uint32_t>(
+                round(settings.Image.DepthBuffer.Dimensions.Relative.HeightScale *
+                      m_Swapchain.Dimensions.height));
+        }
+        else
+        {
+            width = settings.Image.DepthBuffer.Dimensions.Absolute.Width;
+            height = settings.Image.DepthBuffer.Dimensions.Absolute.Height;
+        }
+    }
+    break;
+    }
+
+    if (settings.Sampler > Rendering::SamplerType::None)
+    {
+        gpuUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+
+    GpuImage image = CreateImage(m_DeviceInfo.Device, m_DeviceInfo.PhysicalDevice, width, height,
+                                 format, tiling, gpuUsage, properties);
+
+    return {
+        .Setting = settings,
+        .Image = image,
+        .View = VK_NULL_HANDLE,
+    };
 }
 
 GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider *configs,
                              Logging::LoggerService *loggerService)
     : m_Configs(configs), m_Logger(loggerService->CreateLogger("GraphicsLayer"))
 {
+}
+
+class TemporaryShaderModule
+{
+private:
+    VkDevice m_Device = VK_NULL_HANDLE;
+    VkShaderModule m_Shader = VK_NULL_HANDLE;
+    VkResult m_InitResult = VK_ERROR_UNKNOWN;
+
+public:
+    TemporaryShaderModule(void *code, size_t length, VkDevice device) : m_Device(device)
+    {
+        VkShaderModuleCreateInfo createInfo{
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = length,
+            .pCode = reinterpret_cast<const uint32_t *>(code),
+        };
+
+        m_InitResult = vkCreateShaderModule(device, &createInfo, nullptr, &m_Shader);
+    }
+
+    inline bool Success() const
+    {
+        return m_InitResult == VK_SUCCESS;
+    }
+
+    inline VkShaderModule Get() const
+    {
+        return m_Shader;
+    }
+
+    ~TemporaryShaderModule()
+    {
+        if (m_Device != VK_NULL_HANDLE && m_Shader != VK_NULL_HANDLE)
+        {
+            vkDestroyShaderModule(m_Device, m_Shader, nullptr);
+        }
+    }
+};
+
+static VkShaderModule CreateShaderModule(void *code, size_t length, VkDevice device)
+{
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = length;
+    createInfo.pCode = reinterpret_cast<const uint32_t *>(code);
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+        throw std::runtime_error("failed to create shader module!");
+
+    return shaderModule;
+}
+
+// TODO: what should happen is to eventually have the default vertex be just one of the streams,
+// then allow geometries to have more streams
+struct DefaultVertex
+{
+    glm::vec3 Pos;
+    glm::vec2 UV;
+};
+
+static constexpr VkVertexInputBindingDescription s_DefaultVertexBinding{
+    .binding = 0,
+    .stride = sizeof(DefaultVertex),
+    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+};
+
+static constexpr VkVertexInputAttributeDescription s_DefaultVertexAttributes[] = {
+    (VkVertexInputAttributeDescription){
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(DefaultVertex, Pos),
+    },
+    (VkVertexInputAttributeDescription){
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(DefaultVertex, UV),
+    },
+};
+
+uint32_t GraphicsLayer::CompileShaderDefault(void *vertexCode, size_t vertShaderLength,
+                                             void *fragmentCode, size_t fragShaderLength,
+                                             ColorFormat *colorAttachments,
+                                             uint32_t colorAttachmentCount,
+                                             DepthPrecision *depthPrecision)
+{
+    // create the shader modules
+    TemporaryShaderModule vertShader(vertexCode, vertShaderLength, m_DeviceInfo.Device);
+    TemporaryShaderModule fragShader(fragmentCode, fragShaderLength, m_DeviceInfo.Device);
+    if (!vertShader.Success() || !fragShader.Success())
+        return UINT32_MAX;
+
+    // create the pipeline
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertShader.Get(),
+        .pName = "main",
+    };
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = fragShader.Get(),
+        .pName = "main",
+    };
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
+
+    VkPipelineDynamicStateCreateInfo dynamicState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+        .pDynamicStates = dynamicStates.data(),
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &s_DefaultVertexBinding,
+        .vertexAttributeDescriptionCount = SDL_arraysize(s_DefaultVertexAttributes),
+        .pVertexAttributeDescriptions = s_DefaultVertexAttributes,
+    };
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineViewportStateCreateInfo viewportState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = nullptr,
+        .scissorCount = 1,
+        .pScissors = nullptr,
+    };
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
+        .lineWidth = 1.0f,
+    };
+
+    VkPipelineMultisampleStateCreateInfo multisampling{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+        .minSampleShading = 1.0f,
+        .pSampleMask = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE,
+    };
+
+    // TODO: there's been no knowledge how to change this yet
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{
+        .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY, // TODO: wtf is this?
+        .attachmentCount = 1,
+        .pAttachments = &colorBlendAttachment,
+        .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f} // optional
+    };
+
+    // infer the color formats
+    std::unique_ptr<VkFormat[]> formats = std::make_unique<VkFormat[]>(colorAttachmentCount);
+    for (size_t i = 0; i < colorAttachmentCount; i++)
+    {
+        formats[i] = m_Swapchain.Format;
+        switch (colorAttachments[i])
+        {
+        case ColorFormat::UseSwapchain:
+            break;
+        }
+    }
+
+    // infer the depth format
+    VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+    if (depthPrecision != nullptr)
+    {
+        switch (*depthPrecision)
+        {
+        case DepthPrecision::D32:
+            depthFormat = VK_FORMAT_D32_SFLOAT;
+            break;
+        }
+    }
+
+    // this one is rather proper
+    VkPipelineRenderingCreateInfo renderingCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .viewMask = 0,
+        .colorAttachmentCount = colorAttachmentCount,
+        .pColorAttachmentFormats = formats.get(),
+        .depthAttachmentFormat = depthFormat,
+        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
+    };
+
+    // TODO: rn we hard-code that depth-test is always enabled with depth-write
+    VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .depthTestEnable = depthPrecision ? VK_TRUE : VK_FALSE,
+        .depthWriteEnable = depthPrecision ? VK_TRUE : VK_FALSE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE,
+    };
+
+    // create the pipeline
+    VkGraphicsPipelineCreateInfo pipelineInfo{
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &renderingCreateInfo,
+        .stageCount = 2,
+        .pStages = shaderStages,
+        .pVertexInputState = &vertexInputInfo,
+        .pInputAssemblyState = &inputAssembly,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pDepthStencilState = &depthStencilCreateInfo,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState,
+        .layout = m_RenderResources.GlobalPipelineLayout,
+        .renderPass = VK_NULL_HANDLE,
+        .subpass = 0,
+        .basePipelineHandle = VK_NULL_HANDLE, // Optional
+        .basePipelineIndex = -1               // Optional
+    };
+
+    VkPipeline newPipe = VK_NULL_HANDLE;
+    if (vkCreateGraphicsPipelines(m_DeviceInfo.Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                  &newPipe) != VK_SUCCESS)
+        return UINT32_MAX;
+
+    m_GraphicsPipelines.push_back(newPipe);
+    return m_GraphicsPipelines.size() - 1;
 }

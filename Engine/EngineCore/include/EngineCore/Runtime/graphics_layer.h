@@ -2,9 +2,9 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
-#include <SDL3/SDL_video.h>
 #include <cstdint>
 #include <glm/fwd.hpp>
 #include <vulkan/vulkan_core.h>
@@ -22,6 +22,8 @@ class GameLoop;
 // Contains states and accesses to graphics related concepts, managed by the game loop.
 class GraphicsLayer
 {
+    static constexpr uint32_t MaxFlight = 2;
+
     // injected
 private:
     const Configuration::ConfigurationProvider *m_Configs = nullptr;
@@ -61,6 +63,7 @@ private:
     struct
     {
         VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
+        VkExtent2D Dimensions;
         VkFormat Format;
         VkColorSpaceKHR ColorSpace;
         std::vector<VkImage> Images;
@@ -72,11 +75,47 @@ private:
         VkDescriptorPool GlobalDescriptorPool = VK_NULL_HANDLE;
         VkDescriptorSetLayout GlobalDescriptorLayout = VK_NULL_HANDLE;
         VkDescriptorSet GlobalDescriptorSet = VK_NULL_HANDLE;
+
+        VkDescriptorSetLayout PerFlightDescLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout UboLayout = VK_NULL_HANDLE;
+
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
 
-    // the initial set of rendering related resources
+    struct
+    {
+        VkCommandBuffer CommandBuffer;
+        VkSemaphore ImageAvailableSemaphore;
+        VkFence InFlightFence;
+
+        VkDescriptorPool DescriptorPool;
+        VkDescriptorSet DescriptorSet;
+    } m_CommandBuffers[MaxFlight];
+
+    // the initial set of render targets
 private:
+    Rendering::RenderTarget m_RenderTargets[2];
+    uint32_t m_OpqaueColorTargetId;
+    uint32_t m_OpaqueDepthBufferId;
+
+    Rendering::RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
+                                               Rendering::RenderTargetSetting settings);
+
+private:
+    std::vector<VkPipeline> m_GraphicsPipelines;
+
+public:
+    // TODO: there's a good point that this part of the graphics layer should be open to client
+    // code. maybe expose the configuration with a filled-in default?
+    // TODO: this is rather moronic, there has to a point to reuse the vertex and fragment shader
+    // modules? Also there's quite a bit of setting items missing from the fixed functions, most
+    // notably the fucking vertex buffer?? The only configurable element in here is the uniform
+    // buffer's size.
+    uint32_t CompileShaderDefault(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
+                                  size_t fragShaderLength, Rendering::ColorFormat *colorAttachments,
+                                  uint32_t colorAttachmentCount,
+                                  Rendering::DepthPrecision *depthPrecision);
+
     // for game loop to directly control graphics behavior
 private:
     friend class GameLoop;

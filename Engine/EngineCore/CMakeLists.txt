@@ -18,6 +18,7 @@ add_library(EngineCore STATIC
     src/network_layer.cpp
     src/transient_allocator.cpp
     src/index_queue.cpp
+    src/Rendering/render_target.cpp
     )
 
 find_package(Vulkan)
