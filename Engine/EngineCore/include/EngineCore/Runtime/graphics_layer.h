@@ -107,12 +107,6 @@ private:
     std::vector<VkPipeline> m_GraphicsPipelines;
 
 public:
-    // TODO: there's a good point that this part of the graphics layer should be open to client
-    // code. maybe expose the configuration with a filled-in default?
-    // TODO: this is rather moronic, there has to a point to reuse the vertex and fragment shader
-    // modules? Also there's quite a bit of setting items missing from the fixed functions, most
-    // notably the fucking vertex buffer?? The only configurable element in here is the uniform
-    // buffer's size.
     uint32_t CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
                            size_t fragShaderLength,
                            const Rendering::VertexDescription *vertexSetting,
