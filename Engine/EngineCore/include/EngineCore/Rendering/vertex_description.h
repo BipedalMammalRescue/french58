@@ -23,4 +23,11 @@ struct VertexDescription
     uint32_t BindingCount;
 };
 
+enum class IndexType
+{
+    Ubyte,
+    Ushort,
+    Uint
+};
+
 } // namespace Engine::Core::Rendering
