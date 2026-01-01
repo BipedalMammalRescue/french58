@@ -2,6 +2,7 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/multi_buffer_resource.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
@@ -568,11 +569,15 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
         static constexpr VkDescriptorPoolSize globalPoolSizes[] = {
             (VkDescriptorPoolSize){
                 .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .descriptorCount = 65536,
+                .descriptorCount = MaxStorageBuffers,
             },
             (VkDescriptorPoolSize){
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 65536,
+                .descriptorCount = MaxImageSamplers,
+            },
+            (VkDescriptorPoolSize){
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = MaxUniformBuffers,
             },
         };
         static constexpr VkDescriptorPoolCreateInfo globalPoolInfo = {
@@ -673,7 +678,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
             (VkPushConstantRange){
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .offset = 0,
-                .size = 128,
+                .size = Rendering::PushConstantSize,
             },
         };
         VkDescriptorSetLayout layouts[]{
@@ -760,7 +765,7 @@ CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
                 vkAllocateDescriptorSets(m_DeviceInfo.Device, &flightDescSetInfo, &flightDescSet),
                 "Failed to allocate double-buffered resource descriptor sets.");
 
-            m_CommandBuffers[i] = {
+            m_CommandsInFlight[i] = {
                 .CommandBuffer = cmdBuffer,
                 .ImageAvailableSemaphore = imageAvailableSemaphore,
                 .InFlightFence = inFlightFence,
@@ -1418,4 +1423,98 @@ uint32_t Engine::Core::Runtime::GraphicsLayer::UploadGeometry(
     // register
     m_Geometries.push_back(geometry);
     return m_Geometries.size() - 1;
+}
+
+uint32_t Engine::Core::Runtime::GraphicsLayer::CreateUniformBuffer(size_t size)
+{
+    using MultiBufferUniform = MultiBufferResource<UniformBuffer, MaxFlight>;
+
+    MultiBufferUniform newUniform{};
+
+    VkBufferCreateInfo uniformBufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .size = size,
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 1,
+        .pQueueFamilyIndices = &m_DeviceInfo.GraphicsQueueIndex,
+    };
+
+    for (uint32_t frame = 0; frame < MaxFlight; frame++)
+    {
+        UniformBuffer newBuffer{};
+
+        // create buffer
+        if (vkCreateBuffer(m_DeviceInfo.Device, &uniformBufferInfo, nullptr, &newBuffer.Buffer) !=
+            VK_SUCCESS)
+        {
+            m_Logger.Error("Failed to create uniform buffer.");
+            return UINT32_MAX;
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(m_DeviceInfo.Device, newBuffer.Buffer, &memRequirements);
+
+        // create memory
+        // TODO: do I need to do this every time?
+        VkMemoryAllocateInfo allocInfo{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = memRequirements.size,
+            .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits,
+                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                              m_DeviceInfo.PhysicalDevice),
+        };
+        if (vkAllocateMemory(m_DeviceInfo.Device, &allocInfo, nullptr, &newBuffer.Memory) !=
+            VK_SUCCESS)
+        {
+            m_Logger.Error("Failed to allocate memory for uniform buffer.");
+            vkDestroyBuffer(m_DeviceInfo.Device, newBuffer.Buffer, nullptr);
+            return UINT32_MAX;
+        }
+
+        // bind
+        vkBindBufferMemory(m_DeviceInfo.Device, newBuffer.Buffer, newBuffer.Memory, 0);
+
+        // map
+        vkMapMemory(m_DeviceInfo.Device, newBuffer.Memory, 0, size, 0, &newBuffer.MappedMemory);
+
+        // create a descriptor set
+        VkDescriptorSetAllocateInfo descSetInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = m_RenderResources.GlobalDescriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &m_RenderResources.UboLayout,
+        };
+        if (vkAllocateDescriptorSets(m_DeviceInfo.Device, &descSetInfo, &newBuffer.DescSet) !=
+            VK_SUCCESS)
+        {
+            m_Logger.Error("Failed to create descriptor set for uniform buffer.");
+            vkDestroyBuffer(m_DeviceInfo.Device, newBuffer.Buffer, nullptr);
+            vkFreeMemory(m_DeviceInfo.Device, newBuffer.Memory, nullptr);
+            return UINT32_MAX;
+        }
+
+        newUniform.Set(newBuffer, frame);
+    }
+
+    m_UniformBuffers.push_back(newUniform);
+    return m_UniformBuffers.size() - 1;
+}
+
+void Engine::Core::Runtime::GraphicsLayer::UpdateUniformBuffer(void *data, size_t size,
+                                                               uint32_t bufferId)
+{
+    if (bufferId > m_UniformBuffers.size())
+    {
+        m_Logger.Error("Not setting data for invalid uniform buffer #{}", bufferId);
+        return;
+    }
+
+    m_UniformBuffers[bufferId].Activate(m_CurrentFlight);
+    Rendering::UniformBuffer targetBuffer = m_UniformBuffers[bufferId].Get();
+    memcpy(targetBuffer.MappedMemory, data, size);
 }

@@ -9,6 +9,12 @@ class GraphicsLayer;
 
 namespace Engine::Core::Rendering {
 
+constexpr size_t MaxStorageBuffers = 65536;
+constexpr size_t MaxImageSamplers = 65536;
+constexpr size_t MaxUniformBuffers = 65536;
+
+constexpr size_t PushConstantSize = 128;
+
 uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties,
                         VkPhysicalDevice physicalDevice);
 
@@ -60,10 +66,19 @@ struct GpuGeometry
     VkBuffer Buffer;
     VkDeviceMemory Memory;
     uint32_t VertexBufferCount;
-    uint32_t VertexBufferOffsets[MaxVertexBufferBindings];
+    size_t VertexBufferOffsets[MaxVertexBufferBindings];
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
     VkIndexType IndexType;
+};
+
+struct UniformBuffer
+{
+    VkBuffer Buffer = VK_NULL_HANDLE;
+    VkDeviceMemory Memory = VK_NULL_HANDLE;
+    VkDeviceSize Size = 0;
+    void *MappedMemory = nullptr;
+    VkDescriptorSet DescSet = VK_NULL_HANDLE;
 };
 
 } // namespace Engine::Core::Rendering

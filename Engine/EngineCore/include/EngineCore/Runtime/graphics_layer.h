@@ -3,6 +3,7 @@
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/multi_buffer_resource.h"
 #include "EngineCore/Rendering/pipeline_setting.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
@@ -113,7 +114,12 @@ private:
 
         VkDescriptorPool DescriptorPool;
         VkDescriptorSet DescriptorSet;
-    } m_CommandBuffers[MaxFlight];
+    } m_CommandsInFlight[MaxFlight];
+
+    // very important: this is what we use to synchronize between the rendering on GPU and the
+    // simualtion code, it's a global pointer to the set of frame-buffered resources that's idle in
+    // this frame
+    uint32_t m_CurrentFlight = 0;
 
     // the initial set of render targets
 private:
@@ -131,6 +137,8 @@ private:
 private:
     std::vector<VkPipeline> m_GraphicsPipelines;
     std::vector<Rendering::GpuGeometry> m_Geometries;
+    std::vector<Rendering::MultiBufferResource<Rendering::UniformBuffer, MaxFlight>>
+        m_UniformBuffers;
 
 public:
     uint32_t CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
@@ -165,6 +173,11 @@ public:
                             size_t *vertexBufferLengths, uint32_t vertexBufferCount,
                             size_t indexBufferOffset, size_t indexBufferLength,
                             Rendering::IndexType indexType, uint32_t indexCount);
+
+    uint32_t CreateUniformBuffer(size_t size);
+
+    // client should know how much memory they need
+    void UpdateUniformBuffer(void *data, size_t size, uint32_t bufferId);
 
     // for game loop to directly control graphics behavior
 private:
