@@ -3,10 +3,13 @@
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_target.h"
+#include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_vulkan.h"
+#include "glm/ext/vector_float2.hpp"
+#include "glm/ext/vector_float3.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -903,41 +906,97 @@ static VkShaderModule CreateShaderModule(void *code, size_t length, VkDevice dev
     return shaderModule;
 }
 
-// TODO: what should happen is to eventually have the default vertex be just one of the streams,
-// then allow geometries to have more streams
-struct DefaultVertex
+static void TranslateVertexAttributes(const VertexDescription *vertexSetting,
+                                      VkVertexInputAttributeDescription *destAttr,
+                                      VkVertexInputBindingDescription *destBinding)
 {
-    glm::vec3 Pos;
-    glm::vec2 UV;
-};
+    size_t attrOffset = 0;
 
-static constexpr VkVertexInputBindingDescription s_DefaultVertexBinding{
-    .binding = 0,
-    .stride = sizeof(DefaultVertex),
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-};
+    for (uint32_t i = 0; i < vertexSetting->BindingCount; i++)
+    {
+        uint32_t stride = 0;
 
-static constexpr VkVertexInputAttributeDescription s_DefaultVertexAttributes[] = {
-    (VkVertexInputAttributeDescription){
-        .location = 0,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(DefaultVertex, Pos),
-    },
-    (VkVertexInputAttributeDescription){
-        .location = 1,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(DefaultVertex, UV),
-    },
-};
+        for (uint32_t attrId = 0; attrId < vertexSetting->Bindings[i].AttributeCount; attrId++)
+        {
+            uint32_t offset = stride;
+            VkFormat format = VK_FORMAT_UNDEFINED;
 
-uint32_t GraphicsLayer::CompileShaderDefault(void *vertexCode, size_t vertShaderLength,
-                                             void *fragmentCode, size_t fragShaderLength,
-                                             ColorFormat *colorAttachments,
-                                             uint32_t colorAttachmentCount,
-                                             DepthPrecision *depthPrecision)
+            switch (vertexSetting->Bindings[i].Attributes[attrId])
+            {
+            case VertexDataTypes::Float:
+                stride += sizeof(float);
+                format = VK_FORMAT_R32_SFLOAT;
+                break;
+            case VertexDataTypes::Vector2:
+                stride += sizeof(glm::vec2);
+                format = VK_FORMAT_R32G32_SFLOAT;
+                break;
+            case VertexDataTypes::Vector3:
+                stride += sizeof(glm::vec3);
+                format = VK_FORMAT_R32G32B32_SFLOAT;
+                break;
+            case VertexDataTypes::Vector4:
+                stride += sizeof(glm::vec4);
+                format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                break;
+            }
+
+            destAttr[attrOffset] = {
+                .location = attrId,
+                .binding = i,
+                .format = format,
+                .offset = offset,
+            };
+
+            attrOffset++;
+        }
+
+        destBinding[i] = {
+            .binding = i,
+            .stride = stride,
+
+            // TODO: the engine doesn't support instanced rendering rn, will need to fix it here
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
+    }
+}
+
+uint32_t GraphicsLayer::CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
+                                      size_t fragShaderLength,
+                                      const Rendering::VertexDescription *vertexSetting,
+                                      const Rendering::PipelineSetting *pipelineSetting,
+                                      const Rendering::ColorFormat *colorAttachments,
+                                      uint32_t colorAttachmentCount,
+                                      const Rendering::DepthPrecision *depthPrecision)
 {
+    // sanity check and build the b
+    static constexpr uint32_t MaxBinding = 8;
+    static constexpr uint32_t MaxAttribute = 16;
+
+    if (vertexSetting->BindingCount > MaxBinding)
+    {
+        m_Logger.Error("Shader contains {} bindings, where only {} is allowed.",
+                       vertexSetting->BindingCount, MaxBinding);
+        return UINT32_MAX;
+    }
+
+    uint32_t totalAttributeCount = 0;
+    for (auto *binding = vertexSetting->Bindings;
+         binding < vertexSetting->Bindings + vertexSetting->BindingCount; binding++)
+    {
+        totalAttributeCount += binding->AttributeCount;
+    }
+
+    if (totalAttributeCount > MaxAttribute)
+    {
+        m_Logger.Error("Shader contains {} total attributes, where only {} is allowed.",
+                       totalAttributeCount, MaxAttribute);
+    }
+
+    VkVertexInputBindingDescription bindings[MaxBinding];
+    VkVertexInputAttributeDescription attributes[MaxAttribute];
+    TranslateVertexAttributes(vertexSetting, attributes, bindings);
+
     // create the shader modules
     TemporaryShaderModule vertShader(vertexCode, vertShaderLength, m_DeviceInfo.Device);
     TemporaryShaderModule fragShader(fragmentCode, fragShaderLength, m_DeviceInfo.Device);
@@ -971,10 +1030,10 @@ uint32_t GraphicsLayer::CompileShaderDefault(void *vertexCode, size_t vertShader
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &s_DefaultVertexBinding,
-        .vertexAttributeDescriptionCount = SDL_arraysize(s_DefaultVertexAttributes),
-        .pVertexAttributeDescriptions = s_DefaultVertexAttributes,
+        .vertexBindingDescriptionCount = vertexSetting->BindingCount,
+        .pVertexBindingDescriptions = bindings,
+        .vertexAttributeDescriptionCount = totalAttributeCount,
+        .pVertexAttributeDescriptions = attributes,
     };
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -1085,16 +1144,37 @@ uint32_t GraphicsLayer::CompileShaderDefault(void *vertexCode, size_t vertShader
     // create the pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+
+        // this should be controlled by the engine (feature enabling)
         .pNext = &renderingCreateInfo,
+
+        // this is managed by the engine too (engine only uses two stages)
         .stageCount = 2,
         .pStages = shaderStages,
+
+        // this should be controlled by the client (data format)
         .pVertexInputState = &vertexInputInfo,
+
+        // this should be managed by the engine (engine only allows triangle lists)
         .pInputAssemblyState = &inputAssembly,
+
+        // controlled by the engine (only use dynamic state for viewport and scissor)
         .pViewportState = &viewportState,
+
+        // should be exposed to the client, this is closely related to the desired behavior
         .pRasterizationState = &rasterizer,
+
+        // probably controlled by the engine? multisampling feels like something that should be
+        // configured together
         .pMultisampleState = &multisampling,
+
+        // managed by the depth stencil parameters
         .pDepthStencilState = &depthStencilCreateInfo,
+
+        // maybe controlled by the client? no need for it yet
         .pColorBlendState = &colorBlending,
+
+        // controlled by the engine all of the below
         .pDynamicState = &dynamicState,
         .layout = m_RenderResources.GlobalPipelineLayout,
         .renderPass = VK_NULL_HANDLE,

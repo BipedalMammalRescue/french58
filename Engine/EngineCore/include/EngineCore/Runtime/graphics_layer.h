@@ -2,7 +2,9 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/pipeline_setting.h"
 #include "EngineCore/Rendering/render_target.h"
+#include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
 #include <cstdint>
@@ -111,10 +113,13 @@ public:
     // modules? Also there's quite a bit of setting items missing from the fixed functions, most
     // notably the fucking vertex buffer?? The only configurable element in here is the uniform
     // buffer's size.
-    uint32_t CompileShaderDefault(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
-                                  size_t fragShaderLength, Rendering::ColorFormat *colorAttachments,
-                                  uint32_t colorAttachmentCount,
-                                  Rendering::DepthPrecision *depthPrecision);
+    uint32_t CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
+                           size_t fragShaderLength,
+                           const Rendering::VertexDescription *vertexSetting,
+                           const Rendering::PipelineSetting *pipelineSetting,
+                           const Rendering::ColorFormat *colorAttachments,
+                           uint32_t colorAttachmentCount,
+                           const Rendering::DepthPrecision *depthPrecision);
 
     // for game loop to directly control graphics behavior
 private:
