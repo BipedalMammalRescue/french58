@@ -8,6 +8,7 @@
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "SDL3/SDL_thread.h"
 
 #include <cstdint>
 #include <glm/fwd.hpp>
@@ -183,16 +184,14 @@ public:
 private:
     CallbackResult InitializeSDL();
 
+    CallbackResult BeginFrame();
+    CallbackResult EndFrame();
+
     GraphicsLayer(const Configuration::ConfigurationProvider *configs,
                   Logging::LoggerService *loggerService);
 
 public:
     ~GraphicsLayer();
-
-    inline SDL_Window *GetWindow() const
-    {
-        return m_Window;
-    }
 };
 
 } // namespace Engine::Core::Runtime

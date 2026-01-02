@@ -8,6 +8,7 @@
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_stdinc.h"
+#include "SDL3/SDL_thread.h"
 #include "SDL3/SDL_vulkan.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
@@ -69,7 +70,7 @@ VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     return VK_FALSE;
 }
 
-CallbackResult Engine::Core::Runtime::GraphicsLayer::InitializeSDL()
+CallbackResult GraphicsLayer::InitializeSDL()
 {
     // Create window
     m_Window = SDL_CreateWindow("Foobar Game", m_Configs->WindowWidth, m_Configs->WindowHeight, 0);
@@ -1280,7 +1281,7 @@ StagingBuffer *GraphicsLayer::CreateStagingBuffer(size_t size)
     return newBuffer;
 }
 
-void Engine::Core::Runtime::GraphicsLayer::DestroyStagingBuffer(Rendering::StagingBuffer *buffer)
+void GraphicsLayer::DestroyStagingBuffer(Rendering::StagingBuffer *buffer)
 {
     vkDestroyBuffer(m_DeviceInfo.Device, buffer->m_Buffer, nullptr);
     vkFreeMemory(m_DeviceInfo.Device, buffer->m_Memory, nullptr);
@@ -1324,10 +1325,11 @@ bool GraphicsLayer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t *s
     return true;
 }
 
-uint32_t Engine::Core::Runtime::GraphicsLayer::UploadGeometry(
-    Rendering::StagingBuffer *stagingBuffer, size_t *vertexBufferOffsets,
-    size_t *vertexBufferLengths, uint32_t vertexBufferCount, size_t indexBufferOffset,
-    size_t indexBufferLength, Rendering::IndexType indexType, uint32_t indexCount)
+uint32_t GraphicsLayer::UploadGeometry(Rendering::StagingBuffer *stagingBuffer,
+                                       size_t *vertexBufferOffsets, size_t *vertexBufferLengths,
+                                       uint32_t vertexBufferCount, size_t indexBufferOffset,
+                                       size_t indexBufferLength, Rendering::IndexType indexType,
+                                       uint32_t indexCount)
 {
     GpuGeometry geometry{
         .VertexBufferCount = vertexBufferCount,
@@ -1425,7 +1427,7 @@ uint32_t Engine::Core::Runtime::GraphicsLayer::UploadGeometry(
     return m_Geometries.size() - 1;
 }
 
-uint32_t Engine::Core::Runtime::GraphicsLayer::CreateUniformBuffer(size_t size)
+uint32_t GraphicsLayer::CreateUniformBuffer(size_t size)
 {
     using MultiBufferUniform = MultiBufferResource<UniformBuffer, MaxFlight>;
 
@@ -1505,8 +1507,7 @@ uint32_t Engine::Core::Runtime::GraphicsLayer::CreateUniformBuffer(size_t size)
     return m_UniformBuffers.size() - 1;
 }
 
-void Engine::Core::Runtime::GraphicsLayer::UpdateUniformBuffer(void *data, size_t size,
-                                                               uint32_t bufferId)
+void GraphicsLayer::UpdateUniformBuffer(void *data, size_t size, uint32_t bufferId)
 {
     if (bufferId > m_UniformBuffers.size())
     {
@@ -1517,4 +1518,36 @@ void Engine::Core::Runtime::GraphicsLayer::UpdateUniformBuffer(void *data, size_
     m_UniformBuffers[bufferId].Activate(m_CurrentFlight);
     Rendering::UniformBuffer targetBuffer = m_UniformBuffers[bufferId].Get();
     memcpy(targetBuffer.MappedMemory, data, size);
+}
+
+CallbackResult GraphicsLayer::BeginFrame()
+{
+    // get the frame-buffered resources and wait for the previous frame to stop
+    auto frameBuffer = m_CommandsInFlight[m_CurrentFlight];
+    vkWaitForFences(m_DeviceInfo.Device, 1, &frameBuffer.InFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(m_DeviceInfo.Device, 1, &frameBuffer.InFlightFence);
+
+    // reset the command buffer
+    VkCommandBufferBeginInfo beginInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .pInheritanceInfo = nullptr,
+    };
+    CHECK_VULKAN(vkBeginCommandBuffer(frameBuffer.CommandBuffer, &beginInfo),
+                 "Failed to begin frame buffer");
+
+    return CallbackSuccess();
+}
+
+CallbackResult GraphicsLayer::EndFrame()
+{
+    // TODO: some of these logic should be sent to the separate thread at some point
+    // TODO: actually run all the rendering logic, graphic building, then populate all the commands
+    // using a rendering context
+    // TODO: need to synchronize with the swapchain
+
+    // submit the frame buffer
+    auto frameBuffer = m_CommandsInFlight[m_CurrentFlight];
+    CHECK_VULKAN(vkEndCommandBuffer(frameBuffer.CommandBuffer), "Failed to submit frame buffer.");
 }
