@@ -22,7 +22,7 @@ class LoggerService;
 
 namespace Engine::Core::Rendering {
 class RenderContext;
-}
+} // namespace Engine::Core::Rendering
 
 namespace Engine::Core::Runtime {
 
