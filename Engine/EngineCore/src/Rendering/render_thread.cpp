@@ -2,6 +2,7 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/multi_buffer_resource.h"
+#include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/graphics_layer.h"
@@ -300,11 +301,17 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
         IRenderStateUpdateReader *reader = &m_EventStreams[rtFrameParity];
         for (RenderPluginInstance instance : m_Plugins)
         {
-            CHECK_CALLBACK_RT(instance.ReadRenderStateUpdates(m_Services->GraphicsLayer,
-                                                              instance.PluginState, reader));
+            CHECK_CALLBACK_RT(instance.Definition.RtReadRenderStateUpdates(
+                &controller, instance.PluginState, reader));
         }
 
-        // TODO: render setup
+        // render setup
+        RenderSetupContext setupContext;
+        for (RenderPluginInstance instance : m_Plugins)
+        {
+            CHECK_CALLBACK_RT(instance.Definition.RtRenderSetup(&controller, instance.PluginState,
+                                                                &setupContext));
+        }
 
         // synchronization with the GPU
         CommandInFlight currentCommand = m_CommandsInFlight[rtFrameParity];
@@ -349,7 +356,13 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0,
                              nullptr, 1, &colorImageBarrier);
 
-        // TODO: render execution
+        // render execution
+        RenderExecutionContext executionContext;
+        for (RenderPluginInstance instance : m_Plugins)
+        {
+            CHECK_CALLBACK_RT(instance.Definition.RtRenderExecute(&controller, instance.PluginState,
+                                                                  &executionContext));
+        }
 
         // finish up the frame, submit, and present
         vkCmdEndRendering(currentCommand.CommandBuffer);
@@ -405,10 +418,11 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                                           &presentInfo),
                         "Failed to queue swapchain presentation.");
 
-        SDL_SignalSemaphore(m_DoneSemaphore);
-
         // flip the buffer index and frame in flight
         rtFrameParity = (rtFrameParity + 1) % 2;
+
+        // signal main thread
+        SDL_SignalSemaphore(m_DoneSemaphore);
     }
 }
 
@@ -429,10 +443,7 @@ size_t RenderThread::EventStream::Read(void *buffer, size_t desiredLength)
 
 Runtime::CallbackResult RenderThread::MtUpdate()
 {
-    // wait for previous render thread work to be done
-    SDL_WaitSemaphore(m_DoneSemaphore);
-
-    // write updates
+    // write updates to back buffer
     IRenderStateUpdateWriter *writer = &m_EventStreams[m_MtFrameParity];
     for (RenderPluginInstance plugin : m_Plugins)
     {
@@ -440,7 +451,8 @@ Runtime::CallbackResult RenderThread::MtUpdate()
         size_t currentOffset = m_EventStreams[m_MtFrameParity].EventStream.size();
         m_EventStreams[m_MtFrameParity].EventStream.resize(currentOffset + sizeof(size_t));
 
-        auto result = plugin.WriteRenderStateUpdates(m_Services, plugin.ModuleState, writer);
+        auto result =
+            plugin.Definition.MtWriteRenderStateUpdates(m_Services, plugin.ModuleState, writer);
         if (result.has_value())
             return result;
 
@@ -449,6 +461,9 @@ Runtime::CallbackResult RenderThread::MtUpdate()
         memcpy(m_EventStreams[m_MtFrameParity].EventStream.data() + currentOffset, &newLength,
                sizeof(size_t));
     }
+
+    // wait for previous render thread work to be done
+    SDL_WaitSemaphore(m_DoneSemaphore);
 
     // signal the render thread
     SDL_SignalSemaphore(m_ReadySemaphore);

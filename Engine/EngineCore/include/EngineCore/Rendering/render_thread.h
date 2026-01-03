@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Pipeline/renderer_plugin_definition.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -14,18 +15,6 @@ class GraphicsLayer;
 }
 
 namespace Engine::Core::Rendering {
-
-class IRenderStateUpdateWriter
-{
-public:
-    virtual void Write(void *data, size_t length) = 0;
-};
-
-class IRenderStateUpdateReader
-{
-public:
-    virtual size_t Read(void *buffer, size_t desiredLength) = 0;
-};
 
 // Holds the synchronization mechanism for the render thread, its state and resources are
 // created elsewhere, for the most part. The render thread is meant to take exclusive control of
@@ -74,13 +63,7 @@ private:
         void *ModuleState;
         void *PluginState;
 
-        Runtime::CallbackResult (*WriteRenderStateUpdates)(
-            Runtime::ServiceTable *services, void *moduleState,
-            Rendering::IRenderStateUpdateWriter *writer);
-
-        Runtime::CallbackResult (*ReadRenderStateUpdates)(
-            const Runtime::GraphicsLayer *graphicsLayer, void *pluginState,
-            Rendering::IRenderStateUpdateReader *reader);
+        Pipeline::RendererPluginDefinition Definition;
     };
     std::vector<RenderPluginInstance> m_Plugins;
 

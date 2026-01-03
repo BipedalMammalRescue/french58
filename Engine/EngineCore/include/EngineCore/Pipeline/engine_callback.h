@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineCore/Rendering/render_context.h"
+#include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/event_stream.h"
 
@@ -40,4 +42,18 @@ struct EventCallback
     EventCallbackDelegate Callback;
 };
 
+using MtRenderUpdateCallback =
+    Runtime::CallbackResult (*)(Runtime::ServiceTable *services, void *moduleState,
+                                Rendering::IRenderStateUpdateWriter *writer);
+
+using RtRenderUpdateCallback =
+    Runtime::CallbackResult (*)(Rendering::IRenderThreadController *renderer, void *pluginState,
+                                Rendering::IRenderStateUpdateReader *reader);
+
+using RtRenderSetupCallback =
+    Runtime::CallbackResult (*)(const Rendering::IRenderThreadController *renderer,
+                                void *pluginState, Rendering::RenderSetupContext *context);
+using RtRenderExecuteCallback =
+    Runtime::CallbackResult (*)(const Rendering::IRenderThreadController *renderer,
+                                void *pluginState, Rendering::RenderExecutionContext *context);
 } // namespace Engine::Core::Pipeline

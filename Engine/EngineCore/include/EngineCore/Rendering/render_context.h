@@ -15,7 +15,12 @@ class Logger;
 
 namespace Engine::Core::Rendering {
 
-class RenderContext
+// TODO: implement setup and execution here
+class RenderSetupContext
+{
+};
+
+class RenderExecutionContext
 {
 private:
     friend class Engine::Core::Runtime::GraphicsLayer;

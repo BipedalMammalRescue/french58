@@ -20,7 +20,6 @@ class LoggerService;
 }
 
 namespace Engine::Core::Rendering {
-class RenderContext;
 class RenderThread;
 } // namespace Engine::Core::Rendering
 
@@ -35,7 +34,6 @@ class GraphicsLayer
 
 private:
     friend class GameLoop;
-    friend class Engine::Core::Rendering::RenderContext;
     friend class Engine::Core::Rendering::RenderThread;
 
     // injected
