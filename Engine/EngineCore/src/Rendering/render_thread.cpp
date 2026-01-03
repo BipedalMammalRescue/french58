@@ -1,16 +1,178 @@
 #include "EngineCore/Rendering/render_thread.h"
+#include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/multi_buffer_resource.h"
+#include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/graphics_layer.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
+#include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core::Rendering;
 using namespace Engine::Core;
 
 #define CHECK_CALLBACK_RT(expr)                                                                    \
-    state->m_ExecutionResult = expr;                                                               \
-    if (state->m_ExecutionResult.has_value())                                                      \
+    m_ExecutionResult = expr;                                                                      \
+    if (m_ExecutionResult.has_value())                                                             \
     return 0
+
+#define CHECK_VULKAN_MT(expression, error)                                                         \
+    if (expression != VK_SUCCESS)                                                                  \
+    return Runtime::Crash(__FILE__, __LINE__, error)
+
+#define CHECK_VULKAN_RT(expression, error)                                                         \
+    if (expression != VK_SUCCESS)                                                                  \
+    {                                                                                              \
+        m_ExecutionResult = Runtime::Crash(__FILE__, __LINE__, error);                             \
+        return 0;                                                                                  \
+    }
+
+static int ThreadRoutine(void *state)
+{
+    return static_cast<RenderThread *>(state)->RtThreadRoutine();
+}
+
+class RenderThreadController : public IRenderThreadController
+{
+private:
+    RenderThread *Owner;
+    VkDevice Device;
+    VkPhysicalDevice PhysicalDevice;
+    uint32_t GraphicsQueueIndex;
+    Logging::Logger *Logger;
+
+    const int *FrameParity;
+
+    VkDescriptorSetLayout UboLayout;
+    VkDescriptorPool UniformDescriptorPool;
+    std::vector<MultiBufferResource<UniformBuffer, 2>> UniformBuffers;
+
+public:
+    RenderThreadController(RenderThread *owner, VkDevice device, VkPhysicalDevice physicalDevice,
+                           uint32_t graphicsQueueIndex, Logging::Logger *logger, int *frameParity,
+                           VkDescriptorSetLayout uboLayout)
+        : Owner(owner), Device(device), PhysicalDevice(physicalDevice), Logger(logger),
+          FrameParity(frameParity), UboLayout(uboLayout)
+    {
+    }
+
+    Runtime::CallbackResult Initialize()
+    {
+        // create the descriptor pool
+        static constexpr VkDescriptorPoolSize poolSizes[] = {
+            (VkDescriptorPoolSize){
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = MaxUniformBuffers,
+            },
+        };
+        static constexpr VkDescriptorPoolCreateInfo globalPoolInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+            .maxSets = 1,
+            .poolSizeCount = SDL_arraysize(poolSizes),
+            .pPoolSizes = poolSizes,
+        };
+
+        // this isn't on the main thread but it's handy
+        CHECK_VULKAN_MT(
+            vkCreateDescriptorPool(Device, &globalPoolInfo, nullptr, &UniformDescriptorPool),
+            "Failed to allocate bindless descriptor pool.");
+
+        return Runtime::CallbackSuccess();
+    }
+
+    uint32_t CreateUnifomrBuffer(size_t size) override
+    {
+        using MultiBufferUniform = MultiBufferResource<UniformBuffer, 2>;
+
+        MultiBufferUniform newUniform{};
+
+        VkBufferCreateInfo uniformBufferInfo{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .size = size,
+            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &GraphicsQueueIndex,
+        };
+
+        for (uint32_t frame = 0; frame < 2; frame++)
+        {
+            UniformBuffer newBuffer{};
+
+            // create buffer
+            if (vkCreateBuffer(Device, &uniformBufferInfo, nullptr, &newBuffer.Buffer) !=
+                VK_SUCCESS)
+            {
+                Logger->Error("Failed to create uniform buffer.");
+                return UINT32_MAX;
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(Device, newBuffer.Buffer, &memRequirements);
+
+            // create memory
+            VkMemoryAllocateInfo allocInfo{
+                .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                .allocationSize = memRequirements.size,
+                .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits,
+                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                  PhysicalDevice),
+            };
+            if (vkAllocateMemory(Device, &allocInfo, nullptr, &newBuffer.Memory) != VK_SUCCESS)
+            {
+                Logger->Error("Failed to allocate memory for uniform buffer.");
+                vkDestroyBuffer(Device, newBuffer.Buffer, nullptr);
+                return UINT32_MAX;
+            }
+
+            // bind
+            vkBindBufferMemory(Device, newBuffer.Buffer, newBuffer.Memory, 0);
+
+            // map
+            vkMapMemory(Device, newBuffer.Memory, 0, size, 0, &newBuffer.MappedMemory);
+
+            // create a descriptor set
+            VkDescriptorSetAllocateInfo descSetInfo{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = UniformDescriptorPool,
+                .descriptorSetCount = 1,
+                .pSetLayouts = &UboLayout,
+            };
+            if (vkAllocateDescriptorSets(Device, &descSetInfo, &newBuffer.DescSet) != VK_SUCCESS)
+            {
+                Logger->Error("Failed to create descriptor set for uniform buffer.");
+                vkDestroyBuffer(Device, newBuffer.Buffer, nullptr);
+                vkFreeMemory(Device, newBuffer.Memory, nullptr);
+                return UINT32_MAX;
+            }
+
+            newUniform.Set(newBuffer, frame);
+        }
+
+        UniformBuffers.push_back(newUniform);
+        return UniformBuffers.size() - 1;
+    }
+
+    void SetUniformData(uint32_t id, void *data, size_t size) override
+    {
+        if (id > UniformBuffers.size())
+        {
+            Logger->Error("Not setting data for invalid uniform buffer #{}", id);
+            return;
+        }
+
+        UniformBuffers[id].Activate(*FrameParity);
+        Rendering::UniformBuffer targetBuffer = UniformBuffers[id].Get();
+        memcpy(targetBuffer.MappedMemory, data, size);
+    }
+};
 
 RenderThread::RenderThread()
 {
@@ -22,6 +184,90 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
 {
     // TODO: load up the plugins
 
+    // create command pool
+    VkCommandPoolCreateInfo cmdPoolInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = services->GraphicsLayer->m_DeviceInfo.GraphicsQueueIndex,
+    };
+    CHECK_VULKAN_MT(vkCreateCommandPool(services->GraphicsLayer->m_DeviceInfo.Device, &cmdPoolInfo,
+                                        nullptr, &m_CommandPool),
+                    "Failed to create Vulkan command pool.");
+
+    // create the command buffers used in the flight
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
+        VkCommandBufferAllocateInfo allocInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = m_CommandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
+
+        CHECK_VULKAN_MT(vkAllocateCommandBuffers(services->GraphicsLayer->m_DeviceInfo.Device,
+                                                 &allocInfo, &cmdBuffer),
+                        "Failed to create Vulkan command buffer");
+
+        // a set of synchronizers
+        VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
+        VkFence inFlightFence = VK_NULL_HANDLE;
+
+        VkSemaphoreCreateInfo semaphoreInfo{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+
+        VkFenceCreateInfo fenceInfo{
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+        };
+
+        if (vkCreateSemaphore(services->GraphicsLayer->m_DeviceInfo.Device, &semaphoreInfo, nullptr,
+                              &imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateFence(services->GraphicsLayer->m_DeviceInfo.Device, &fenceInfo, nullptr,
+                          &inFlightFence) != VK_SUCCESS)
+            return Runtime::Crash(__FILE__, __LINE__, "failed to create semaphores!");
+
+        // create the double-buffered render target accessing
+        VkDescriptorPool flightPool = VK_NULL_HANDLE;
+        static constexpr VkDescriptorPoolSize flightPoolSizes[] = {
+            (VkDescriptorPoolSize){
+                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 65536,
+            },
+        };
+        static constexpr VkDescriptorPoolCreateInfo flightPoolAllocInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+            .maxSets = 1,
+            .poolSizeCount = SDL_arraysize(flightPoolSizes),
+            .pPoolSizes = flightPoolSizes,
+        };
+        CHECK_VULKAN_MT(vkCreateDescriptorPool(services->GraphicsLayer->m_DeviceInfo.Device,
+                                               &flightPoolAllocInfo, nullptr, &flightPool),
+                        "Failed to allocate bindless descriptor pool.");
+
+        VkDescriptorSet flightDescSet = VK_NULL_HANDLE;
+        VkDescriptorSetAllocateInfo flightDescSetInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = flightPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &services->GraphicsLayer->m_RenderResources.PerFlightDescLayout,
+        };
+        CHECK_VULKAN_MT(vkAllocateDescriptorSets(services->GraphicsLayer->m_DeviceInfo.Device,
+                                                 &flightDescSetInfo, &flightDescSet),
+                        "Failed to allocate double-buffered resource descriptor sets.");
+
+        m_CommandsInFlight[i] = {
+            .CommandBuffer = cmdBuffer,
+            .ImageAvailableSemaphore = imageAvailableSemaphore,
+            .InFlightFence = inFlightFence,
+            .DescriptorPool = flightPool,
+            .DescriptorSet = flightDescSet,
+        };
+    }
+
     m_Thread = SDL_CreateThread(ThreadRoutine, "RenderThread", this);
     if (m_Thread == nullptr)
         return Runtime::Crash(__FILE__, __LINE__,
@@ -31,34 +277,137 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
     return Runtime::CallbackSuccess();
 }
 
-int Engine::Core::Rendering::RenderThread::ThreadRoutine(void *userData)
+int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
 {
-    RenderThread *state = (RenderThread *)userData;
+    // note that the mt frame parity would be different from the rt one most of the time
     int rtFrameParity = 0;
+
+    // create the controller
+    RenderThreadController controller(
+        this, this->m_Services->GraphicsLayer->m_DeviceInfo.Device,
+        this->m_Services->GraphicsLayer->m_DeviceInfo.PhysicalDevice,
+        this->m_Services->GraphicsLayer->m_DeviceInfo.GraphicsQueueIndex, this->m_Logger,
+        &rtFrameParity, m_Services->GraphicsLayer->m_RenderResources.UboLayout);
+
+    // initialize controller resources
+    CHECK_CALLBACK_RT(controller.Initialize());
 
     while (true)
     {
-        SDL_WaitSemaphore(state->m_ReadySemaphore);
+        SDL_WaitSemaphore(m_ReadySemaphore);
 
         // update all renderer plugin states
-        IRenderStateUpdateReader *reader = &state->m_EventStreams[rtFrameParity];
-        for (RenderPluginInstance instance : state->m_Plugins)
+        IRenderStateUpdateReader *reader = &m_EventStreams[rtFrameParity];
+        for (RenderPluginInstance instance : m_Plugins)
         {
-            CHECK_CALLBACK_RT(instance.ReadRenderStateUpdates(state->m_Services->GraphicsLayer,
+            CHECK_CALLBACK_RT(instance.ReadRenderStateUpdates(m_Services->GraphicsLayer,
                                                               instance.PluginState, reader));
         }
 
         // TODO: render setup
 
-        // TODO: synchronization with the GPU
+        // synchronization with the GPU
+        CommandInFlight currentCommand = m_CommandsInFlight[rtFrameParity];
+        CHECK_VULKAN_RT(vkWaitForFences(m_Services->GraphicsLayer->m_DeviceInfo.Device, 1,
+                                        &currentCommand.InFlightFence, VK_TRUE, UINT32_MAX),
+                        "Failed to wait for in-flight fence.");
+
+        uint32_t imageIndex;
+        CHECK_VULKAN_RT(vkAcquireNextImageKHR(m_Services->GraphicsLayer->m_DeviceInfo.Device,
+                                              m_Services->GraphicsLayer->m_Swapchain.Swapchain,
+                                              UINT64_MAX, currentCommand.ImageAvailableSemaphore,
+                                              VK_NULL_HANDLE, &imageIndex),
+                        "Failed to wait for a swapchain image.");
+        SwapchainViewResources nextSwapchainView =
+            m_Services->GraphicsLayer->m_SwapchainViews[imageIndex];
+
+        CHECK_VULKAN_RT(vkResetCommandBuffer(currentCommand.CommandBuffer, 0),
+                        "Failed to reset command buffer.");
+        VkCommandBufferBeginInfo beginInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .pInheritanceInfo = nullptr,
+        };
+        CHECK_VULKAN_RT(vkBeginCommandBuffer(currentCommand.CommandBuffer, &beginInfo),
+                        "Failed to begin command buffer.");
+
+        const VkImageMemoryBarrier colorImageBarrier{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .image = nextSwapchainView.Image,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            }};
+        vkCmdPipelineBarrier(currentCommand.CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0,
+                             nullptr, 1, &colorImageBarrier);
 
         // TODO: render execution
 
-        // TODO: submit and present
+        // finish up the frame, submit, and present
+        vkCmdEndRendering(currentCommand.CommandBuffer);
+        const VkImageMemoryBarrier presentMemoryBarrier{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .image = nextSwapchainView.Image,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            }};
+        vkCmdPipelineBarrier(currentCommand.CommandBuffer,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                             &presentMemoryBarrier);
+        CHECK_VULKAN_RT(vkEndCommandBuffer(currentCommand.CommandBuffer),
+                        "Failed to end command buffer.");
 
-        SDL_SignalSemaphore(state->m_DoneSemaphore);
+        VkSemaphore waitSemaphores[] = {currentCommand.ImageAvailableSemaphore};
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-        // flip the buffer index
+        VkSubmitInfo submitInfo{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = waitSemaphores,
+            .pWaitDstStageMask = waitStages,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &currentCommand.CommandBuffer,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &nextSwapchainView.RenderFinishSemaphore,
+        };
+        CHECK_VULKAN_RT(vkQueueSubmit(m_Services->GraphicsLayer->m_DeviceInfo.GraphicsQueue, 1,
+                                      &submitInfo, currentCommand.InFlightFence),
+                        "Failed to submit draw command buffer.");
+
+        VkSwapchainKHR swapChains[] = {m_Services->GraphicsLayer->m_Swapchain.Swapchain};
+        VkPresentInfoKHR presentInfo{
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &nextSwapchainView.RenderFinishSemaphore,
+            .swapchainCount = 1,
+            .pSwapchains = swapChains,
+            .pImageIndices = &imageIndex,
+            .pResults = nullptr,
+        };
+
+        CHECK_VULKAN_RT(vkQueuePresentKHR(m_Services->GraphicsLayer->m_DeviceInfo.PresentationQueue,
+                                          &presentInfo),
+                        "Failed to queue swapchain presentation.");
+
+        SDL_SignalSemaphore(m_DoneSemaphore);
+
+        // flip the buffer index and frame in flight
         rtFrameParity = (rtFrameParity + 1) % 2;
     }
 }

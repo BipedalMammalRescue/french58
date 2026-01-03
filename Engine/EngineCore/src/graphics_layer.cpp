@@ -520,18 +520,6 @@ CallbackResult GraphicsLayer::InitializeSDL()
         }
     }
 
-    // create the prime command pool
-    {
-        VkCommandPoolCreateInfo cmdPoolInfo{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = m_DeviceInfo.GraphicsQueueIndex,
-        };
-        CHECK_VULKAN(vkCreateCommandPool(m_DeviceInfo.Device, &cmdPoolInfo, nullptr,
-                                         &m_RenderResources.CommandPoolPrime),
-                     "Failed to create Vulkan command pool prime.");
-    }
-
     // create transfer utils
     {
         VkCommandPoolCreateInfo cmdPoolInfo{
@@ -575,10 +563,6 @@ CallbackResult GraphicsLayer::InitializeSDL()
             (VkDescriptorPoolSize){
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = MaxImageSamplers,
-            },
-            (VkDescriptorPoolSize){
-                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = MaxUniformBuffers,
             },
         };
         static constexpr VkDescriptorPoolCreateInfo globalPoolInfo = {
@@ -699,81 +683,6 @@ CallbackResult GraphicsLayer::InitializeSDL()
         CHECK_VULKAN(vkCreatePipelineLayout(m_DeviceInfo.Device, &pipelineLayoutInfo, nullptr,
                                             &m_RenderResources.GlobalPipelineLayout),
                      "Failed to create global graphics pipeline layout.");
-    }
-
-    // command buffers
-    {
-        for (uint32_t i = 0; i < MaxFlight; i++)
-        {
-            VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
-            VkCommandBufferAllocateInfo allocInfo{
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                .commandPool = m_RenderResources.CommandPoolPrime,
-                .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                .commandBufferCount = 1,
-            };
-
-            CHECK_VULKAN(vkAllocateCommandBuffers(m_DeviceInfo.Device, &allocInfo, &cmdBuffer),
-                         "Failed to create Vulkan command buffer");
-
-            // a set of synchronizers
-            VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
-            VkFence inFlightFence = VK_NULL_HANDLE;
-
-            VkSemaphoreCreateInfo semaphoreInfo{
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            };
-
-            VkFenceCreateInfo fenceInfo{
-                .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-            };
-
-            if (vkCreateSemaphore(m_DeviceInfo.Device, &semaphoreInfo, nullptr,
-                                  &imageAvailableSemaphore) != VK_SUCCESS ||
-                vkCreateFence(m_DeviceInfo.Device, &fenceInfo, nullptr, &inFlightFence) !=
-                    VK_SUCCESS)
-                return Crash(__FILE__, __LINE__, "failed to create semaphores!");
-
-            // create the double-buffered render target accessing
-            VkDescriptorPool flightPool = VK_NULL_HANDLE;
-            static constexpr VkDescriptorPoolSize flightPoolSizes[] = {
-                (VkDescriptorPoolSize){
-                    .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = 65536,
-                },
-            };
-            static constexpr VkDescriptorPoolCreateInfo flightPoolAllocInfo = {
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-                .maxSets = 1,
-                .poolSizeCount = SDL_arraysize(flightPoolSizes),
-                .pPoolSizes = flightPoolSizes,
-            };
-            CHECK_VULKAN(vkCreateDescriptorPool(m_DeviceInfo.Device, &flightPoolAllocInfo, nullptr,
-                                                &flightPool),
-                         "Failed to allocate bindless descriptor pool.");
-
-            VkDescriptorSet flightDescSet = VK_NULL_HANDLE;
-            VkDescriptorSetAllocateInfo flightDescSetInfo{
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .pNext = nullptr,
-                .descriptorPool = flightPool,
-                .descriptorSetCount = 1,
-                .pSetLayouts = &m_RenderResources.PerFlightDescLayout,
-            };
-            CHECK_VULKAN(
-                vkAllocateDescriptorSets(m_DeviceInfo.Device, &flightDescSetInfo, &flightDescSet),
-                "Failed to allocate double-buffered resource descriptor sets.");
-
-            m_CommandsInFlight[i] = {
-                .CommandBuffer = cmdBuffer,
-                .ImageAvailableSemaphore = imageAvailableSemaphore,
-                .InFlightFence = inFlightFence,
-                .DescriptorPool = flightPool,
-                .DescriptorSet = flightDescSet,
-            };
-        }
     }
 
     // set up the critical path rendering targets (THESE ARE NOT BACKED BY MEMORY JUST YET)
@@ -1425,129 +1334,4 @@ uint32_t GraphicsLayer::UploadGeometry(Rendering::StagingBuffer *stagingBuffer,
     // register
     m_Geometries.push_back(geometry);
     return m_Geometries.size() - 1;
-}
-
-uint32_t GraphicsLayer::CreateUniformBuffer(size_t size)
-{
-    using MultiBufferUniform = MultiBufferResource<UniformBuffer, MaxFlight>;
-
-    MultiBufferUniform newUniform{};
-
-    VkBufferCreateInfo uniformBufferInfo{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .size = size,
-        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &m_DeviceInfo.GraphicsQueueIndex,
-    };
-
-    for (uint32_t frame = 0; frame < MaxFlight; frame++)
-    {
-        UniformBuffer newBuffer{};
-
-        // create buffer
-        if (vkCreateBuffer(m_DeviceInfo.Device, &uniformBufferInfo, nullptr, &newBuffer.Buffer) !=
-            VK_SUCCESS)
-        {
-            m_Logger.Error("Failed to create uniform buffer.");
-            return UINT32_MAX;
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_DeviceInfo.Device, newBuffer.Buffer, &memRequirements);
-
-        // create memory
-        // TODO: do I need to do this every time?
-        VkMemoryAllocateInfo allocInfo{
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memRequirements.size,
-            .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits,
-                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                              m_DeviceInfo.PhysicalDevice),
-        };
-        if (vkAllocateMemory(m_DeviceInfo.Device, &allocInfo, nullptr, &newBuffer.Memory) !=
-            VK_SUCCESS)
-        {
-            m_Logger.Error("Failed to allocate memory for uniform buffer.");
-            vkDestroyBuffer(m_DeviceInfo.Device, newBuffer.Buffer, nullptr);
-            return UINT32_MAX;
-        }
-
-        // bind
-        vkBindBufferMemory(m_DeviceInfo.Device, newBuffer.Buffer, newBuffer.Memory, 0);
-
-        // map
-        vkMapMemory(m_DeviceInfo.Device, newBuffer.Memory, 0, size, 0, &newBuffer.MappedMemory);
-
-        // create a descriptor set
-        VkDescriptorSetAllocateInfo descSetInfo{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext = nullptr,
-            .descriptorPool = m_RenderResources.GlobalDescriptorPool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &m_RenderResources.UboLayout,
-        };
-        if (vkAllocateDescriptorSets(m_DeviceInfo.Device, &descSetInfo, &newBuffer.DescSet) !=
-            VK_SUCCESS)
-        {
-            m_Logger.Error("Failed to create descriptor set for uniform buffer.");
-            vkDestroyBuffer(m_DeviceInfo.Device, newBuffer.Buffer, nullptr);
-            vkFreeMemory(m_DeviceInfo.Device, newBuffer.Memory, nullptr);
-            return UINT32_MAX;
-        }
-
-        newUniform.Set(newBuffer, frame);
-    }
-
-    m_UniformBuffers.push_back(newUniform);
-    return m_UniformBuffers.size() - 1;
-}
-
-void GraphicsLayer::UpdateUniformBuffer(void *data, size_t size, uint32_t bufferId)
-{
-    if (bufferId > m_UniformBuffers.size())
-    {
-        m_Logger.Error("Not setting data for invalid uniform buffer #{}", bufferId);
-        return;
-    }
-
-    m_UniformBuffers[bufferId].Activate(m_CurrentFlight);
-    Rendering::UniformBuffer targetBuffer = m_UniformBuffers[bufferId].Get();
-    memcpy(targetBuffer.MappedMemory, data, size);
-}
-
-CallbackResult GraphicsLayer::BeginFrame()
-{
-    // get the frame-buffered resources and wait for the previous frame to stop
-    auto frameBuffer = m_CommandsInFlight[m_CurrentFlight];
-    vkWaitForFences(m_DeviceInfo.Device, 1, &frameBuffer.InFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_DeviceInfo.Device, 1, &frameBuffer.InFlightFence);
-
-    // reset the command buffer
-    VkCommandBufferBeginInfo beginInfo{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .pInheritanceInfo = nullptr,
-    };
-    CHECK_VULKAN(vkBeginCommandBuffer(frameBuffer.CommandBuffer, &beginInfo),
-                 "Failed to begin frame buffer");
-
-    return CallbackSuccess();
-}
-
-CallbackResult GraphicsLayer::EndFrame()
-{
-    // TODO: some of these logic should be sent to the separate thread at some point
-    // TODO: actually run all the rendering logic, graphic building, then populate all the commands
-    // using a rendering context
-    // TODO: need to synchronize with the swapchain
-
-    // submit the frame buffer
-    auto frameBuffer = m_CommandsInFlight[m_CurrentFlight];
-    CHECK_VULKAN(vkEndCommandBuffer(frameBuffer.CommandBuffer), "Failed to submit frame buffer.");
 }

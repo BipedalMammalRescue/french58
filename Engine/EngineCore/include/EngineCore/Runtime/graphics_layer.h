@@ -8,7 +8,6 @@
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
-#include "SDL3/SDL_thread.h"
 
 #include <cstdint>
 #include <glm/fwd.hpp>
@@ -22,6 +21,7 @@ class LoggerService;
 
 namespace Engine::Core::Rendering {
 class RenderContext;
+class RenderThread;
 } // namespace Engine::Core::Rendering
 
 namespace Engine::Core::Runtime {
@@ -36,6 +36,7 @@ class GraphicsLayer
 private:
     friend class GameLoop;
     friend class Engine::Core::Rendering::RenderContext;
+    friend class Engine::Core::Rendering::RenderThread;
 
     // injected
 private:
@@ -77,14 +78,6 @@ private:
         VkFence TransferFence = VK_NULL_HANDLE;
     } m_TransferUtils;
 
-    struct SwapchainViewResources
-    {
-        VkImage Image;
-        VkImageView View;
-        VkSemaphore RenderFinishSemaphore;
-    };
-    std::vector<SwapchainViewResources> m_SwapchainViews;
-
     struct
     {
         VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
@@ -94,9 +87,10 @@ private:
         std::vector<VkImage> Images;
     } m_Swapchain = {};
 
+    std::vector<Rendering::SwapchainViewResources> m_SwapchainViews;
+
     struct
     {
-        VkCommandPool CommandPoolPrime = VK_NULL_HANDLE;
         VkDescriptorPool GlobalDescriptorPool = VK_NULL_HANDLE;
         VkDescriptorSetLayout GlobalDescriptorLayout = VK_NULL_HANDLE;
         VkDescriptorSet GlobalDescriptorSet = VK_NULL_HANDLE;
@@ -106,21 +100,6 @@ private:
 
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
-
-    struct
-    {
-        VkCommandBuffer CommandBuffer;
-        VkSemaphore ImageAvailableSemaphore;
-        VkFence InFlightFence;
-
-        VkDescriptorPool DescriptorPool;
-        VkDescriptorSet DescriptorSet;
-    } m_CommandsInFlight[MaxFlight];
-
-    // very important: this is what we use to synchronize between the rendering on GPU and the
-    // simualtion code, it's a global pointer to the set of frame-buffered resources that's idle in
-    // this frame
-    uint32_t m_CurrentFlight = 0;
 
     // the initial set of render targets
 private:
@@ -138,8 +117,11 @@ private:
 private:
     std::vector<VkPipeline> m_GraphicsPipelines;
     std::vector<Rendering::GpuGeometry> m_Geometries;
-    std::vector<Rendering::MultiBufferResource<Rendering::UniformBuffer, MaxFlight>>
-        m_UniformBuffers;
+
+    // reserved for the render thread to use
+private:
+    Rendering::SwapchainViewResources RtWaitSwapchain(VkSemaphore availableSignal,
+                                                      uint32_t &imageIndex);
 
 public:
     uint32_t CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
@@ -174,11 +156,6 @@ public:
                             size_t *vertexBufferLengths, uint32_t vertexBufferCount,
                             size_t indexBufferOffset, size_t indexBufferLength,
                             Rendering::IndexType indexType, uint32_t indexCount);
-
-    uint32_t CreateUniformBuffer(size_t size);
-
-    // client should know how much memory they need
-    void UpdateUniformBuffer(void *data, size_t size, uint32_t bufferId);
 
     // for game loop to directly control graphics behavior
 private:

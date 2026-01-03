@@ -81,4 +81,21 @@ struct UniformBuffer
     VkDescriptorSet DescSet = VK_NULL_HANDLE;
 };
 
+struct SwapchainViewResources
+{
+    VkImage Image;
+    VkImageView View;
+    VkSemaphore RenderFinishSemaphore;
+};
+
+struct CommandInFlight
+{
+    VkCommandBuffer CommandBuffer;
+    VkSemaphore ImageAvailableSemaphore;
+    VkFence InFlightFence;
+
+    VkDescriptorPool DescriptorPool;
+    VkDescriptorSet DescriptorSet;
+};
+
 } // namespace Engine::Core::Rendering
