@@ -6,6 +6,7 @@
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/graphics_layer.h"
+#include "EngineCore/Runtime/module_manager.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
@@ -183,8 +184,6 @@ RenderThread::RenderThread()
 
 Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
 {
-    // TODO: load up the plugins
-
     // create command pool
     VkCommandPoolCreateInfo cmdPoolInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -299,7 +298,7 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
 
         // update all renderer plugin states
         IRenderStateUpdateReader *reader = &m_EventStreams[rtFrameParity];
-        for (RenderPluginInstance instance : m_Plugins)
+        for (Runtime::InstancedRendererPlugin instance : m_Plugins)
         {
             CHECK_CALLBACK_RT(instance.Definition.RtReadRenderStateUpdates(
                 &controller, instance.PluginState, reader));
@@ -307,7 +306,7 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
 
         // render setup
         RenderSetupContext setupContext;
-        for (RenderPluginInstance instance : m_Plugins)
+        for (Runtime::InstancedRendererPlugin instance : m_Plugins)
         {
             CHECK_CALLBACK_RT(instance.Definition.RtRenderSetup(&controller, instance.PluginState,
                                                                 &setupContext));
@@ -357,8 +356,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                              nullptr, 1, &colorImageBarrier);
 
         // render execution
+        // TODO: this part is not right, order of operation in each render pass needs to be executed
+        // based on their dependency order
         RenderExecutionContext executionContext;
-        for (RenderPluginInstance instance : m_Plugins)
+        for (Runtime::InstancedRendererPlugin instance : m_Plugins)
         {
             CHECK_CALLBACK_RT(instance.Definition.RtRenderExecute(&controller, instance.PluginState,
                                                                   &executionContext));
@@ -443,9 +444,23 @@ size_t RenderThread::EventStream::Read(void *buffer, size_t desiredLength)
 
 Runtime::CallbackResult RenderThread::MtUpdate()
 {
+    // wait for previous render thread work to be done
+    SDL_WaitSemaphore(m_DoneSemaphore);
+
+    // rebuild plugin table (this is in here because I plan to implement module state reloading at
+    // some point)
+    m_Plugins.clear();
+    const std::vector<Runtime::InstancedRendererPlugin> *loadedPlugins =
+        m_Services->ModuleManager->ListLoadedRendererPlugins();
+    m_Plugins.reserve(loadedPlugins->size());
+    for (Runtime::InstancedRendererPlugin plugin : *loadedPlugins)
+    {
+        m_Plugins.push_back(plugin);
+    }
+
     // write updates to back buffer
     IRenderStateUpdateWriter *writer = &m_EventStreams[m_MtFrameParity];
-    for (RenderPluginInstance plugin : m_Plugins)
+    for (Runtime::InstancedRendererPlugin plugin : m_Plugins)
     {
         // prepend the length of this section to the
         size_t currentOffset = m_EventStreams[m_MtFrameParity].EventStream.size();
@@ -461,9 +476,6 @@ Runtime::CallbackResult RenderThread::MtUpdate()
         memcpy(m_EventStreams[m_MtFrameParity].EventStream.data() + currentOffset, &newLength,
                sizeof(size_t));
     }
-
-    // wait for previous render thread work to be done
-    SDL_WaitSemaphore(m_DoneSemaphore);
 
     // signal the render thread
     SDL_SignalSemaphore(m_ReadySemaphore);

@@ -4,6 +4,7 @@
 #include "EngineCore/Pipeline/renderer_plugin_definition.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
@@ -58,14 +59,7 @@ private:
     };
     EventStream m_EventStreams[2];
 
-    struct RenderPluginInstance
-    {
-        void *ModuleState;
-        void *PluginState;
-
-        Pipeline::RendererPluginDefinition Definition;
-    };
-    std::vector<RenderPluginInstance> m_Plugins;
+    std::vector<Runtime::InstancedRendererPlugin> m_Plugins;
 
 public:
     RenderThread();
