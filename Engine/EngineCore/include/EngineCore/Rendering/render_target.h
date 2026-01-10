@@ -1,7 +1,13 @@
 #pragma once
 
 #include "EngineCore/Rendering/gpu_resource.h"
+#include <cstdint>
 #include <vulkan/vulkan_core.h>
+
+namespace Engine::Core::Runtime {
+class GraphicsLayer;
+}
+
 namespace Engine::Core::Rendering {
 
 enum class ColorFormat
@@ -77,11 +83,40 @@ enum class RenderTargetUsage
     DepthBuffer,
 };
 
-struct RenderTarget
+class ColorAttachmentTarget
 {
-    RenderTargetSetting Setting;
-    GpuImage Image;
-    VkImageView View;
+private:
+    friend class Runtime::GraphicsLayer;
+    friend class RenderPassConfigurator;
+
+    uint32_t m_Id = UINT32_MAX;
+};
+
+class DepthAttachmentTarget
+{
+private:
+    friend class Runtime::GraphicsLayer;
+    friend class RenderPassConfigurator;
+
+    uint32_t m_Id = UINT32_MAX;
+};
+
+class OutputColorTarget
+{
+private:
+    friend class RenderPassConfigurator;
+    friend class RenderStageExecutionContext;
+
+    uint32_t m_Identifier;
+};
+
+class OutputDepthTarget
+{
+private:
+    friend class RenderPassConfigurator;
+    friend class RenderStageExecutionContext;
+
+    uint32_t m_Identifier;
 };
 
 } // namespace Engine::Core::Rendering

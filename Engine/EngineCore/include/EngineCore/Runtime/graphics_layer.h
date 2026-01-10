@@ -3,7 +3,6 @@
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/gpu_resource.h"
-#include "EngineCore/Rendering/multi_buffer_resource.h"
 #include "EngineCore/Rendering/pipeline_setting.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
@@ -21,6 +20,7 @@ class LoggerService;
 
 namespace Engine::Core::Rendering {
 class RenderThread;
+class RenderPassExecutionContext;
 } // namespace Engine::Core::Rendering
 
 namespace Engine::Core::Runtime {
@@ -35,18 +35,16 @@ class GraphicsLayer
 private:
     friend class GameLoop;
     friend class Engine::Core::Rendering::RenderThread;
+    friend class Rendering::RenderPassExecutionContext;
 
     // injected
-private:
     const Configuration::ConfigurationProvider *m_Configs = nullptr;
 
     // initialized
-private:
     SDL_Window *m_Window = nullptr;
     Logging::Logger m_Logger;
 
     // need to be initialized with vulkan
-private:
     struct
     {
         VkSurfaceKHR Surface = VK_NULL_HANDLE;
@@ -99,17 +97,24 @@ private:
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
 
-    // the initial set of render targets
-private:
-    Rendering::RenderTarget m_RenderTargets[2];
-    uint32_t m_OpqaueColorTargetId;
-    uint32_t m_OpaqueDepthBufferId;
+    // internal representation
+    struct RenderTarget
+    {
+        Rendering::RenderTargetSetting Setting;
+        Rendering::GpuImage Image;
+        VkImageView View;
+    };
 
-    Rendering::RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
-                                               Rendering::RenderTargetSetting settings);
+    RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
+                                    Rendering::RenderTargetSetting settings);
 
     bool CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t *srcOffsets, size_t *dstOffsets,
                     size_t *lengths, size_t segmentCount);
+
+    // built-in long-lasting resourcee
+    RenderTarget m_RenderTargets[2];
+    Rendering::ColorAttachmentTarget m_OpaqueColor;
+    Rendering::DepthAttachmentTarget m_OpaqueDepth;
 
     // managed resources
 private:
@@ -121,7 +126,27 @@ private:
     Rendering::SwapchainViewResources RtWaitSwapchain(VkSemaphore availableSignal,
                                                       uint32_t &imageIndex);
 
+    // for game loop to directly control graphics behavior
+private:
+    CallbackResult InitializeSDL();
+
+    CallbackResult BeginFrame();
+    CallbackResult EndFrame();
+
+    GraphicsLayer(const Configuration::ConfigurationProvider *configs,
+                  Logging::LoggerService *loggerService);
+
 public:
+    inline Rendering::ColorAttachmentTarget GetOpqueColorBuffer() const
+    {
+        return m_OpaqueColor;
+    }
+
+    inline Rendering::DepthAttachmentTarget GetDepthAttachmentTarget() const
+    {
+        return m_OpaqueDepth;
+    }
+
     uint32_t CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
                            size_t fragShaderLength,
                            const Rendering::VertexDescription *vertexSetting,
@@ -130,7 +155,6 @@ public:
                            uint32_t colorAttachmentCount,
                            const Rendering::DepthPrecision *depthPrecision);
 
-    // create a staging buffer that CPU code can directly write into
     Rendering::StagingBuffer *CreateStagingBuffer(size_t size);
 
     inline void *MapStagingBuffer(Rendering::StagingBuffer *buffer)
@@ -154,16 +178,6 @@ public:
                             size_t *vertexBufferLengths, uint32_t vertexBufferCount,
                             size_t indexBufferOffset, size_t indexBufferLength,
                             Rendering::IndexType indexType, uint32_t indexCount);
-
-    // for game loop to directly control graphics behavior
-private:
-    CallbackResult InitializeSDL();
-
-    CallbackResult BeginFrame();
-    CallbackResult EndFrame();
-
-    GraphicsLayer(const Configuration::ConfigurationProvider *configs,
-                  Logging::LoggerService *loggerService);
 
 public:
     ~GraphicsLayer();

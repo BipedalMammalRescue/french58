@@ -53,7 +53,4 @@ using RtRenderUpdateCallback =
 using RtRenderSetupCallback =
     Runtime::CallbackResult (*)(const Rendering::IRenderThreadController *renderer,
                                 void *pluginState, Rendering::RenderSetupContext *context);
-using RtRenderExecuteCallback =
-    Runtime::CallbackResult (*)(const Rendering::IRenderThreadController *renderer,
-                                void *pluginState, Rendering::RenderExecutionContext *context);
 } // namespace Engine::Core::Pipeline

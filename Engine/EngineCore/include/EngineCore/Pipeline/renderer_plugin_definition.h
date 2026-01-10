@@ -16,7 +16,6 @@ struct RendererPluginDefinition
 
     RtRenderUpdateCallback RtReadRenderStateUpdates;
     RtRenderSetupCallback RtRenderSetup;
-    RtRenderExecuteCallback RtRenderExecute;
 };
 
 } // namespace Engine::Core::Pipeline

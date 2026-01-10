@@ -1,8 +1,8 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
-#include "EngineCore/Pipeline/renderer_plugin_definition.h"
 #include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
@@ -19,7 +19,7 @@ namespace Engine::Core::Rendering {
 
 // Holds the synchronization mechanism for the render thread, its state and resources are
 // created elsewhere, for the most part. The render thread is meant to take exclusive control of
-// parts of the state of the game that's dedicated to that thread.
+// parts of the state of the game that's dedicated to rendering.
 class RenderThread
 {
 private:
@@ -68,11 +68,6 @@ public:
 
     // Initiate a new frame on the render thread.
     Runtime::CallbackResult MtUpdate();
-
-    inline int MtGetFrameParity() const
-    {
-        return m_MtFrameParity;
-    }
 
     // Callable from the main thread, check if the thread is finished.
     bool MtTryJoin() const

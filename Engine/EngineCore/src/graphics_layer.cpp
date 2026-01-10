@@ -2,13 +2,11 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Rendering/gpu_resource.h"
-#include "EngineCore/Rendering/multi_buffer_resource.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_stdinc.h"
-#include "SDL3/SDL_thread.h"
 #include "SDL3/SDL_vulkan.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
@@ -687,7 +685,7 @@ CallbackResult GraphicsLayer::InitializeSDL()
 
     // set up the critical path rendering targets (THESE ARE NOT BACKED BY MEMORY JUST YET)
     {
-        m_OpqaueColorTargetId = 0;
+        m_OpaqueColor.m_Id = 0;
         m_RenderTargets[0] =
             CreateRenderTarget(RenderTargetUsage::ColorTarget,
                                (RenderTargetSetting){
@@ -703,7 +701,7 @@ CallbackResult GraphicsLayer::InitializeSDL()
                                    .Sampler = Rendering::SamplerType::None,
                                });
 
-        m_OpaqueDepthBufferId = 1;
+        m_OpaqueDepth.m_Id = 1;
         m_RenderTargets[1] =
             CreateRenderTarget(Rendering::RenderTargetUsage::DepthBuffer,
                                (RenderTargetSetting){
@@ -723,8 +721,8 @@ CallbackResult GraphicsLayer::InitializeSDL()
     return CallbackSuccess();
 }
 
-Rendering::RenderTarget GraphicsLayer::CreateRenderTarget(Rendering::RenderTargetUsage usage,
-                                                          Rendering::RenderTargetSetting settings)
+GraphicsLayer::RenderTarget GraphicsLayer::CreateRenderTarget(
+    Rendering::RenderTargetUsage usage, Rendering::RenderTargetSetting settings)
 {
     VkFormat format;
     uint32_t width;

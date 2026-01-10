@@ -1,13 +1,14 @@
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core;
 using namespace Engine::Core::Rendering;
 
-// void Rendering::RenderContext::SetPipeline(uint32_t pipelineId)
+// void Rendering::RenderPassExecutionContext::SetPipeline(uint32_t pipelineId)
 // {
 //     // find the pipeline
 //     if (pipelineId >= m_GraphicsLayer->m_GraphicsPipelines.size())
@@ -21,8 +22,8 @@ using namespace Engine::Core::Rendering;
 //     vkCmdBindPipeline(*m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 // }
 
-// void Rendering::RenderContext::Draw(uint32_t geometryId, void *pushConstantData,
-//                                     size_t pushConstantSize, uint32_t uniformId)
+// void Rendering::RenderPassExecutionContext::Draw(uint32_t geometryId, void *pushConstantData,
+//                                                  size_t pushConstantSize, uint32_t uniformId)
 // {
 //     // locate geometry
 //     if (geometryId >= m_GraphicsLayer->m_Geometries.size())
@@ -75,3 +76,17 @@ using namespace Engine::Core::Rendering;
 //     // draw!
 //     vkCmdDrawIndexed(*m_CommandBuffer, geometry.IndexCount, 1, 0, 0, 0);
 // }
+
+OutputColorTarget RenderPassConfigurator::WriteTo(ColorAttachmentTarget target)
+{
+    OutputColorTarget result;
+    result.m_Identifier = target.m_Id;
+    return result;
+}
+
+OutputDepthTarget RenderPassConfigurator::WriteTo(DepthAttachmentTarget target)
+{
+    OutputDepthTarget result;
+    result.m_Identifier = target.m_Id;
+    return result;
+}

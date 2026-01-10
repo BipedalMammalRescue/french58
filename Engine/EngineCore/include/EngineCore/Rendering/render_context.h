@@ -1,8 +1,11 @@
 #pragma once
 
 #include "EngineCore/Pipeline/hash_id.h"
+#include "EngineCore/Rendering/render_target.h"
+#include "EngineCore/Runtime/graphics_layer.h"
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -16,20 +19,15 @@ class Logger;
 
 namespace Engine::Core::Rendering {
 
-class RenderThread;
-
-class RenderExecutionContext
+class RenderPassExecutionContext
 {
 private:
-    friend class Engine::Core::Runtime::GraphicsLayer;
+    friend class RenderStageExecutionContext;
+    Logging::Logger *m_Logger;
+    Rendering::RenderThread *m_RenderThread;
+    VkCommandBuffer *m_CommandBuffer;
 
     Pipeline::HashId m_CurrentModule;
-
-    VkCommandBuffer *m_CommandBuffer;
-    Runtime::GraphicsLayer *m_GraphicsLayer;
-    Logging::Logger *m_Logger;
-
-    uint32_t m_CurrentUniform = UINT32_MAX;
 
 public:
     void SetPipeline(uint32_t pipelineId);
@@ -37,11 +35,29 @@ public:
               uint32_t uniformId);
 };
 
-class RenderPassConfigurator
+class RenderStageExecutionContext
 {
 public:
-    uint32_t AddInputTarget();
-    uint32_t AddOutputTarget();
+    RenderPassExecutionContext BeginRenderPass(OutputColorTarget *colorTargets,
+                                               size_t colorTargetCount,
+                                               std::optional<OutputDepthTarget> depthTarget)
+    {
+        RenderPassExecutionContext result;
+
+        // TODO: dynamic rendering begin
+
+        return result;
+    }
+};
+
+class RenderPassConfigurator
+{
+private:
+    friend class RenderSetupContext;
+
+public:
+    OutputColorTarget WriteTo(ColorAttachmentTarget target);
+    OutputDepthTarget WriteTo(DepthAttachmentTarget target);
 };
 
 // TODO: implement setup and execution here
@@ -69,7 +85,7 @@ private:
 
 public:
     template <typename TData, typename TSetupFunc, typename TExeFunc>
-    void AddRenderPass(TSetupFunc setupLambda, TExeFunc executeLambda)
+    void AddRenderStage(TSetupFunc setupLambda, TExeFunc executeLambda)
     {
         struct Carrier
         {
