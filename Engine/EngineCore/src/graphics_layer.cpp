@@ -1138,8 +1138,11 @@ uint32_t GraphicsLayer::CompileShader(void *vertexCode, size_t vertShaderLength,
                                   &newPipe) != VK_SUCCESS)
         return UINT32_MAX;
 
+    uint32_t newId = m_GraphicsPipelines.size();
     m_GraphicsPipelines.push_back(newPipe);
-    return m_GraphicsPipelines.size() - 1;
+    m_GraphicsPipelineUpdates.push_back(newId);
+
+    return newId;
 }
 
 StagingBuffer *GraphicsLayer::CreateStagingBuffer(size_t size)

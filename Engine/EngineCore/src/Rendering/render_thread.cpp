@@ -184,6 +184,8 @@ RenderThread::RenderThread()
 
 Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
 {
+    m_Device = services->GraphicsLayer->m_DeviceInfo.Device;
+
     // create command pool
     VkCommandPoolCreateInfo cmdPoolInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -327,6 +329,25 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
         SwapchainViewResources nextSwapchainView =
             m_Services->GraphicsLayer->m_SwapchainViews[imageIndex];
 
+        // NOTE: the following ensures that resource request on Frame A only gets freed the *next*
+        // time Frame A is active
+        // free resources
+        while (!m_PipelineDisposeFreeQueue.empty() &&
+               m_PipelineDisposeFreeQueue.front().RequestFrameParity == rtFrameParity)
+        {
+            vkDestroyPipeline(m_Device, m_PipelineDisposeFreeQueue.front().Pipeline, nullptr);
+            m_PipelineDisposeFreeQueue.pop();
+        }
+
+        // move resources from prep queue to free queue
+        while (!m_PipelineDisposePrepQueue.empty() &&
+               m_PipelineDisposePrepQueue.front().RequestFrameParity == rtFrameParity)
+        {
+            m_PipelineDisposeFreeQueue.push(m_PipelineDisposePrepQueue.front());
+            m_PipelineDisposePrepQueue.pop();
+        }
+
+        // prepare command buffer for new frame
         CHECK_VULKAN_RT(vkResetCommandBuffer(currentCommand.CommandBuffer, 0),
                         "Failed to reset command buffer.");
         VkCommandBufferBeginInfo beginInfo{
@@ -355,15 +376,8 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0,
                              nullptr, 1, &colorImageBarrier);
 
-        // render execution
-        // TODO: this part is not right, order of operation in each render pass needs to be executed
-        // based on their dependency order
-        RenderExecutionContext executionContext;
-        for (Runtime::InstancedRendererPlugin instance : m_Plugins)
-        {
-            CHECK_CALLBACK_RT(instance.Definition.RtRenderExecute(&controller, instance.PluginState,
-                                                                  &executionContext));
-        }
+        // TODO: frame graph set up
+        // TODO: frame graph execution
 
         // finish up the frame, submit, and present
         vkCmdEndRendering(currentCommand.CommandBuffer);
@@ -457,6 +471,23 @@ Runtime::CallbackResult RenderThread::MtUpdate()
     {
         m_Plugins.push_back(plugin);
     }
+
+    // synchronize resources
+    for (uint32_t updatedId : m_Services->GraphicsLayer->m_GraphicsPipelineUpdates)
+    {
+        if (updatedId < m_GraphicsPipelines.size() &&
+            m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId] !=
+                m_GraphicsPipelines[updatedId])
+        {
+            // queue this resource for disposal
+            m_PipelineDisposePrepQueue.push({m_MtFrameParity, m_GraphicsPipelines[updatedId]});
+        }
+
+        m_GraphicsPipelines.reserve(updatedId);
+        m_GraphicsPipelines[updatedId] = m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId];
+    }
+
+    // TODO: synchronize other resources
 
     // write updates to back buffer
     IRenderStateUpdateWriter *writer = &m_EventStreams[m_MtFrameParity];

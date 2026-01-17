@@ -1,6 +1,4 @@
 #include "EngineCore/Rendering/render_context.h"
-#include "EngineCore/Logging/logger.h"
-#include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Runtime/graphics_layer.h"
 #include <vulkan/vulkan_core.h>
@@ -88,5 +86,16 @@ OutputDepthTarget RenderPassConfigurator::WriteTo(DepthAttachmentTarget target)
 {
     OutputDepthTarget result;
     result.m_Identifier = target.m_Id;
+    return result;
+}
+Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
+    RenderStageExecutionContext::BeginRenderPass(OutputColorTarget *colorTargets,
+                                                 size_t colorTargetCount,
+                                                 std::optional<OutputDepthTarget> depthTarget)
+{
+    RenderPassExecutionContext result;
+
+    // TODO: dynamic rendering begin
+
     return result;
 }

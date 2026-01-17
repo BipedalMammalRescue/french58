@@ -118,7 +118,9 @@ private:
 
     // managed resources
 private:
+    std::vector<uint32_t> m_GraphicsPipelineUpdates;
     std::vector<VkPipeline> m_GraphicsPipelines;
+
     std::vector<Rendering::GpuGeometry> m_Geometries;
 
     // reserved for the render thread to use

@@ -8,6 +8,7 @@
 #include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
+#include <queue>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -27,6 +28,7 @@ private:
     Logging::Logger *m_Logger;
 
 private:
+    VkDevice m_Device = VK_NULL_HANDLE;
     VkCommandPool m_CommandPool = VK_NULL_HANDLE;
     CommandInFlight m_CommandsInFlight[2];
 
@@ -41,6 +43,17 @@ private:
 
     // used by main thread
     int m_MtFrameParity = 0;
+
+    // double buffered resources
+    std::vector<VkPipeline> m_GraphicsPipelines;
+
+    struct PipelineDisposal
+    {
+        int RequestFrameParity;
+        VkPipeline Pipeline;
+    };
+    std::queue<PipelineDisposal> m_PipelineDisposePrepQueue;
+    std::queue<PipelineDisposal> m_PipelineDisposeFreeQueue;
 
 private:
     struct EventStream : public IRenderStateUpdateWriter, public IRenderStateUpdateReader

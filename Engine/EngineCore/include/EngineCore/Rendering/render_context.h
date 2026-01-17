@@ -40,14 +40,7 @@ class RenderStageExecutionContext
 public:
     RenderPassExecutionContext BeginRenderPass(OutputColorTarget *colorTargets,
                                                size_t colorTargetCount,
-                                               std::optional<OutputDepthTarget> depthTarget)
-    {
-        RenderPassExecutionContext result;
-
-        // TODO: dynamic rendering begin
-
-        return result;
-    }
+                                               std::optional<OutputDepthTarget> depthTarget);
 };
 
 class RenderPassConfigurator
@@ -77,7 +70,7 @@ private:
     std::vector<uint8_t> m_Storage;
     std::vector<BuiltLambda> m_Lambdas;
 
-    void Reset()
+    inline void Reset()
     {
         m_Storage.clear();
         m_Lambdas.clear();
