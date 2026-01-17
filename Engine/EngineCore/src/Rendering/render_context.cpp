@@ -105,9 +105,9 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
             .pNext = nullptr,
 
-            // TODO: this setting should be configured based on whether this resource had been
-            // used to write
-            .srcAccessMask = 0,
+            // NOTE: not sure if this is correct, but the scheduling should ensure that we only need
+            // to wait on a write op here
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 
             .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -144,9 +144,9 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
         depthImageBarrier = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 
-            // TODO: this setting should be configured based on whether this resource had been
-            // used to write
-            .srcAccessMask = 0,
+            // NOTE: not sure if this is correct, but the assumption is the depth target only needs
+            // to worry about previous writes visible
+            .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 
             .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
                              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
