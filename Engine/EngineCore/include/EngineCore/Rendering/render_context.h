@@ -2,7 +2,6 @@
 
 #include "EngineCore/Pipeline/hash_id.h"
 #include "EngineCore/Rendering/render_target.h"
-#include "EngineCore/Runtime/graphics_layer.h"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -19,6 +18,8 @@ class Logger;
 
 namespace Engine::Core::Rendering {
 
+class RenderThread;
+
 class RenderPassExecutionContext
 {
 private:
@@ -31,8 +32,7 @@ private:
 
 public:
     void SetPipeline(uint32_t pipelineId);
-    void Draw(uint32_t geometryId, void *pushConstantData, size_t pushConstantSize,
-              uint32_t uniformId);
+    void Draw(uint32_t geometryId, void *pushConstantData, size_t pushConstantSize);
 };
 
 class RenderStageExecutionContext

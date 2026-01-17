@@ -329,23 +329,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
         SwapchainViewResources nextSwapchainView =
             m_Services->GraphicsLayer->m_SwapchainViews[imageIndex];
 
-        // NOTE: the following ensures that resource request on Frame A only gets freed the *next*
-        // time Frame A is active
         // free resources
-        while (!m_PipelineDisposeFreeQueue.empty() &&
-               m_PipelineDisposeFreeQueue.front().RequestFrameParity == rtFrameParity)
-        {
-            vkDestroyPipeline(m_Device, m_PipelineDisposeFreeQueue.front().Pipeline, nullptr);
-            m_PipelineDisposeFreeQueue.pop();
-        }
-
-        // move resources from prep queue to free queue
-        while (!m_PipelineDisposePrepQueue.empty() &&
-               m_PipelineDisposePrepQueue.front().RequestFrameParity == rtFrameParity)
-        {
-            m_PipelineDisposeFreeQueue.push(m_PipelineDisposePrepQueue.front());
-            m_PipelineDisposePrepQueue.pop();
-        }
+        m_GraphicsPipelines.PollFree(rtFrameParity, [&](VkPipeline pipeline) {
+            vkDestroyPipeline(m_Device, pipeline, nullptr);
+        });
 
         // prepare command buffer for new frame
         CHECK_VULKAN_RT(vkResetCommandBuffer(currentCommand.CommandBuffer, 0),
@@ -473,18 +460,19 @@ Runtime::CallbackResult RenderThread::MtUpdate()
     }
 
     // synchronize resources
+    // shaders
     for (uint32_t updatedId : m_Services->GraphicsLayer->m_GraphicsPipelineUpdates)
     {
-        if (updatedId < m_GraphicsPipelines.size() &&
-            m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId] !=
-                m_GraphicsPipelines[updatedId])
-        {
-            // queue this resource for disposal
-            m_PipelineDisposePrepQueue.push({m_MtFrameParity, m_GraphicsPipelines[updatedId]});
-        }
-
-        m_GraphicsPipelines.reserve(updatedId);
-        m_GraphicsPipelines[updatedId] = m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId];
+        m_GraphicsPipelines.Assign(
+            updatedId, m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId], m_MtFrameParity,
+            [](VkPipeline a, VkPipeline b) { return a == b; });
+    }
+    // geometries
+    for (uint32_t updatedId : m_Services->GraphicsLayer->m_GeometryUpdates)
+    {
+        m_Geometries.Assign(updatedId, m_Services->GraphicsLayer->m_Geometries[updatedId],
+                            m_MtFrameParity,
+                            [](GpuGeometry a, GpuGeometry b) { return a.Buffer == b.Buffer; });
     }
 
     // TODO: synchronize other resources

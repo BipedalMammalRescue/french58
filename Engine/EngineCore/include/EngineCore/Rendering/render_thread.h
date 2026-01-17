@@ -2,13 +2,14 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/gpu_resource.h"
+#include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
+#include "EngineCore/Rendering/rt_resource_manager.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
-#include <queue>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -23,12 +24,16 @@ namespace Engine::Core::Rendering {
 // parts of the state of the game that's dedicated to rendering.
 class RenderThread
 {
+    friend class RenderPassExecutionContext;
+    friend class RenderStageExecutionContext;
+
 private:
     Runtime::ServiceTable *m_Services;
     Logging::Logger *m_Logger;
 
 private:
     VkDevice m_Device = VK_NULL_HANDLE;
+    VkPipelineLayout m_PipelineLayoutShared = VK_NULL_HANDLE;
     VkCommandPool m_CommandPool = VK_NULL_HANDLE;
     CommandInFlight m_CommandsInFlight[2];
 
@@ -45,15 +50,8 @@ private:
     int m_MtFrameParity = 0;
 
     // double buffered resources
-    std::vector<VkPipeline> m_GraphicsPipelines;
-
-    struct PipelineDisposal
-    {
-        int RequestFrameParity;
-        VkPipeline Pipeline;
-    };
-    std::queue<PipelineDisposal> m_PipelineDisposePrepQueue;
-    std::queue<PipelineDisposal> m_PipelineDisposeFreeQueue;
+    RtResourceManager<VkPipeline> m_GraphicsPipelines;
+    RtResourceManager<GpuGeometry> m_Geometries;
 
 private:
     struct EventStream : public IRenderStateUpdateWriter, public IRenderStateUpdateReader

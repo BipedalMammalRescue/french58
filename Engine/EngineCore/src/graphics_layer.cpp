@@ -1333,6 +1333,8 @@ uint32_t GraphicsLayer::UploadGeometry(Rendering::StagingBuffer *stagingBuffer,
                vertexBufferCount + 1);
 
     // register
+    uint32_t newId = m_Geometries.size();
     m_Geometries.push_back(geometry);
-    return m_Geometries.size() - 1;
+    m_GeometryUpdates.push_back(newId);
+    return newId;
 }
