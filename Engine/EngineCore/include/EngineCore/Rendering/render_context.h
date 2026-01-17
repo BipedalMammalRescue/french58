@@ -37,10 +37,19 @@ public:
 
 class RenderStageExecutionContext
 {
+private:
+    std::vector<VkRenderingAttachmentInfo> m_AttachmentInfoBuffer;
+    std::vector<VkImageMemoryBarrier> m_ImageMemBarrierBuffer;
+    std::vector<RenderTarget> m_RenderTargets;
+
+    VkExtent2D m_SwapchainExtent;
+    VkCommandBuffer m_CommandBuffer;
+
 public:
     RenderPassExecutionContext BeginRenderPass(OutputColorTarget *colorTargets,
                                                size_t colorTargetCount,
                                                std::optional<OutputDepthTarget> depthTarget);
+    void EndRenderPass();
 };
 
 class RenderPassConfigurator

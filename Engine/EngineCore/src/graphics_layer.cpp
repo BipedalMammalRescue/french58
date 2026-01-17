@@ -721,8 +721,8 @@ CallbackResult GraphicsLayer::InitializeSDL()
     return CallbackSuccess();
 }
 
-GraphicsLayer::RenderTarget GraphicsLayer::CreateRenderTarget(
-    Rendering::RenderTargetUsage usage, Rendering::RenderTargetSetting settings)
+RenderTarget GraphicsLayer::CreateRenderTarget(Rendering::RenderTargetUsage usage,
+                                               Rendering::RenderTargetSetting settings)
 {
     VkFormat format;
     uint32_t width;

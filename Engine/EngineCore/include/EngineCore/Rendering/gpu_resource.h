@@ -72,15 +72,6 @@ struct GpuGeometry
     VkIndexType IndexType;
 };
 
-struct UniformBuffer
-{
-    VkBuffer Buffer = VK_NULL_HANDLE;
-    VkDeviceMemory Memory = VK_NULL_HANDLE;
-    VkDeviceSize Size = 0;
-    void *MappedMemory = nullptr;
-    VkDescriptorSet DescSet = VK_NULL_HANDLE;
-};
-
 struct SwapchainViewResources
 {
     VkImage Image;

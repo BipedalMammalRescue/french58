@@ -97,22 +97,14 @@ private:
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
 
-    // internal representation
-    struct RenderTarget
-    {
-        Rendering::RenderTargetSetting Setting;
-        Rendering::GpuImage Image;
-        VkImageView View;
-    };
-
-    RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
-                                    Rendering::RenderTargetSetting settings);
+    Rendering::RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
+                                               Rendering::RenderTargetSetting settings);
 
     bool CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t *srcOffsets, size_t *dstOffsets,
                     size_t *lengths, size_t segmentCount);
 
     // built-in long-lasting resourcee
-    RenderTarget m_RenderTargets[2];
+    Rendering::RenderTarget m_RenderTargets[2];
     Rendering::ColorAttachmentTarget m_OpaqueColor;
     Rendering::DepthAttachmentTarget m_OpaqueDepth;
 

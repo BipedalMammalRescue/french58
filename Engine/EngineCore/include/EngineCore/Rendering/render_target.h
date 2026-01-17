@@ -119,4 +119,11 @@ private:
     uint32_t m_Identifier;
 };
 
+struct RenderTarget
+{
+    Rendering::RenderTargetSetting Setting;
+    Rendering::GpuImage Image;
+    VkImageView View;
+};
+
 } // namespace Engine::Core::Rendering

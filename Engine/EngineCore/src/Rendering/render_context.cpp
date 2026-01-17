@@ -70,6 +70,7 @@ OutputDepthTarget RenderPassConfigurator::WriteTo(DepthAttachmentTarget target)
     result.m_Identifier = target.m_Id;
     return result;
 }
+
 Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
     RenderStageExecutionContext::BeginRenderPass(OutputColorTarget *colorTargets,
                                                  size_t colorTargetCount,
@@ -77,7 +78,129 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
 {
     RenderPassExecutionContext result;
 
-    // TODO: dynamic rendering begin
+    // TODO: memory barrier for color image
+
+    // TODO: memory barrier for depth image
+
+    // dynamic rendering begin
+    m_AttachmentInfoBuffer.resize(colorTargetCount);
+    m_ImageMemBarrierBuffer.resize(colorTargetCount);
+
+    for (size_t i = 0; i < colorTargetCount; i++)
+    {
+        m_AttachmentInfoBuffer[i] = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .pNext = nullptr,
+            .imageView = m_RenderTargets[colorTargets[i].m_Identifier].View,
+            .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue =
+                {
+                    .color = {0.0f, 0.0f, 0.0f, 0.0f},
+                },
+        };
+
+        m_ImageMemBarrierBuffer[i] = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .pNext = nullptr,
+
+            // TODO: this setting should be configured based on whether this resource had been
+            // used to write
+            .srcAccessMask = 0,
+
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .image = m_RenderTargets[colorTargets[i].m_Identifier].Image.Image,
+            .subresourceRange =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+        };
+    }
+
+    VkRenderingAttachmentInfo depthAttachmentInfo;
+    VkImageMemoryBarrier depthImageBarrier;
+    if (depthTarget.has_value())
+    {
+        depthAttachmentInfo = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .pNext = nullptr,
+            .imageView = m_RenderTargets[depthTarget->m_Identifier].View,
+            .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue =
+                {
+                    .depthStencil = {.depth = 1.0f, .stencil = 0},
+                },
+        };
+
+        depthImageBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+
+            // TODO: this setting should be configured based on whether this resource had been
+            // used to write
+            .srcAccessMask = 0,
+
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = m_RenderTargets[depthTarget->m_Identifier].Image.Image,
+            .subresourceRange =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+        };
+    }
+
+    VkRenderingInfo renderingInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .renderArea =
+            {
+                .offset = {0, 0},
+                .extent = m_SwapchainExtent,
+            },
+        .layerCount = 1,
+        .viewMask = 0,
+        .colorAttachmentCount = static_cast<uint32_t>(m_AttachmentInfoBuffer.size()),
+        .pColorAttachments = m_AttachmentInfoBuffer.data(),
+        // not using these for now
+        .pDepthAttachment = depthTarget.has_value() ? &depthAttachmentInfo : nullptr,
+        .pStencilAttachment = nullptr,
+    };
+
+    vkCmdPipelineBarrier(m_CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr,
+                         m_ImageMemBarrierBuffer.size(), m_ImageMemBarrierBuffer.data());
+
+    if (depthTarget.has_value())
+    {
+        vkCmdPipelineBarrier(m_CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr,
+                             1, &depthImageBarrier);
+    }
+
+    vkCmdBeginRendering(m_CommandBuffer, &renderingInfo);
 
     return result;
+}
+
+void Engine::Core::Rendering::RenderStageExecutionContext::EndRenderPass()
+{
+    vkCmdEndRendering(m_CommandBuffer);
 }
