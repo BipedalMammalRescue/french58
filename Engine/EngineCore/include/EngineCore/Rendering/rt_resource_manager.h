@@ -34,16 +34,14 @@ public:
 
     template <typename TDispose> void PollFree(int frame, TDispose dispose)
     {
-        while (!m_DisposeFreeQueue.empty() &&
-               m_DisposeFreeQueue.front().RequestFrameParity == frame)
+        while (!m_DisposeFreeQueue.empty() && m_DisposeFreeQueue.front().Frame == frame)
         {
             dispose(m_DisposeFreeQueue.front().Resource);
             m_DisposeFreeQueue.pop();
         }
 
         // move resources from prep queue to free queue
-        while (!m_DisposePrepQueue.empty() &&
-               m_DisposePrepQueue.front().RequestFrameParity == frame)
+        while (!m_DisposePrepQueue.empty() && m_DisposePrepQueue.front().Frame == frame)
         {
             m_DisposeFreeQueue.push(m_DisposePrepQueue.front());
             m_DisposePrepQueue.pop();

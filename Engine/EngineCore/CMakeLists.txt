@@ -19,6 +19,11 @@ add_library(EngineCore STATIC
     src/transient_allocator.cpp
     src/index_queue.cpp
     src/Rendering/render_target.cpp
+    src/Rendering/gpu_resource.cpp
+    src/Rendering/render_context.cpp
+    src/Rendering/render_thread.cpp
+    src/Rendering/Resources/shader.cpp
+    src/Rendering/Resources/swapchain.cpp
     )
 
 find_package(Vulkan)

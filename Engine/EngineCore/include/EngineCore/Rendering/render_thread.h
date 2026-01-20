@@ -1,6 +1,8 @@
 #pragma once
 
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/Resources/device.h"
+#include "EngineCore/Rendering/Resources/swapchain.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
@@ -32,8 +34,12 @@ private:
     Logging::Logger *m_Logger;
 
 private:
-    VkDevice m_Device = VK_NULL_HANDLE;
+    Resources::Device *m_Device = nullptr;
+
+    Resources::Swapchain *m_Swapchain;
+
     VkPipelineLayout m_PipelineLayoutShared = VK_NULL_HANDLE;
+
     VkCommandPool m_CommandPool = VK_NULL_HANDLE;
     CommandInFlight m_CommandsInFlight[2];
 
@@ -73,7 +79,7 @@ private:
     std::vector<Runtime::InstancedRendererPlugin> m_Plugins;
 
 public:
-    RenderThread();
+    RenderThread(Resources::Device *device);
 
     Runtime::CallbackResult MtStart(Runtime::ServiceTable *services);
 

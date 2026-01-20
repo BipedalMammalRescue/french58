@@ -72,13 +72,6 @@ struct GpuGeometry
     VkIndexType IndexType;
 };
 
-struct SwapchainViewResources
-{
-    VkImage Image;
-    VkImageView View;
-    VkSemaphore RenderFinishSemaphore;
-};
-
 struct CommandInFlight
 {
     VkCommandBuffer CommandBuffer;

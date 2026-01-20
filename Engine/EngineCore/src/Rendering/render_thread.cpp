@@ -1,7 +1,7 @@
 #include "EngineCore/Rendering/render_thread.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/Resources/device.h"
 #include "EngineCore/Rendering/gpu_resource.h"
-#include "EngineCore/Rendering/multi_buffer_resource.h"
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
@@ -10,6 +10,7 @@
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
+#include <cstdint>
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core::Rendering;
@@ -49,7 +50,6 @@ private:
 
     VkDescriptorSetLayout UboLayout;
     VkDescriptorPool UniformDescriptorPool;
-    std::vector<MultiBufferResource<UniformBuffer, 2>> UniformBuffers;
 
 public:
     RenderThreadController(RenderThread *owner, VkDevice device, VkPhysicalDevice physicalDevice,
@@ -84,116 +84,29 @@ public:
 
         return Runtime::CallbackSuccess();
     }
-
-    uint32_t CreateUnifomrBuffer(size_t size) override
-    {
-        using MultiBufferUniform = MultiBufferResource<UniformBuffer, 2>;
-
-        MultiBufferUniform newUniform{};
-
-        VkBufferCreateInfo uniformBufferInfo{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0,
-            .size = size,
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &GraphicsQueueIndex,
-        };
-
-        for (uint32_t frame = 0; frame < 2; frame++)
-        {
-            UniformBuffer newBuffer{};
-
-            // create buffer
-            if (vkCreateBuffer(Device, &uniformBufferInfo, nullptr, &newBuffer.Buffer) !=
-                VK_SUCCESS)
-            {
-                Logger->Error("Failed to create uniform buffer.");
-                return UINT32_MAX;
-            }
-
-            VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(Device, newBuffer.Buffer, &memRequirements);
-
-            // create memory
-            VkMemoryAllocateInfo allocInfo{
-                .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                .allocationSize = memRequirements.size,
-                .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits,
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                  PhysicalDevice),
-            };
-            if (vkAllocateMemory(Device, &allocInfo, nullptr, &newBuffer.Memory) != VK_SUCCESS)
-            {
-                Logger->Error("Failed to allocate memory for uniform buffer.");
-                vkDestroyBuffer(Device, newBuffer.Buffer, nullptr);
-                return UINT32_MAX;
-            }
-
-            // bind
-            vkBindBufferMemory(Device, newBuffer.Buffer, newBuffer.Memory, 0);
-
-            // map
-            vkMapMemory(Device, newBuffer.Memory, 0, size, 0, &newBuffer.MappedMemory);
-
-            // create a descriptor set
-            VkDescriptorSetAllocateInfo descSetInfo{
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .pNext = nullptr,
-                .descriptorPool = UniformDescriptorPool,
-                .descriptorSetCount = 1,
-                .pSetLayouts = &UboLayout,
-            };
-            if (vkAllocateDescriptorSets(Device, &descSetInfo, &newBuffer.DescSet) != VK_SUCCESS)
-            {
-                Logger->Error("Failed to create descriptor set for uniform buffer.");
-                vkDestroyBuffer(Device, newBuffer.Buffer, nullptr);
-                vkFreeMemory(Device, newBuffer.Memory, nullptr);
-                return UINT32_MAX;
-            }
-
-            newUniform.Set(newBuffer, frame);
-        }
-
-        UniformBuffers.push_back(newUniform);
-        return UniformBuffers.size() - 1;
-    }
-
-    void SetUniformData(uint32_t id, void *data, size_t size) override
-    {
-        if (id > UniformBuffers.size())
-        {
-            Logger->Error("Not setting data for invalid uniform buffer #{}", id);
-            return;
-        }
-
-        UniformBuffers[id].Activate(*FrameParity);
-        Rendering::UniformBuffer targetBuffer = UniformBuffers[id].Get();
-        memcpy(targetBuffer.MappedMemory, data, size);
-    }
 };
 
-RenderThread::RenderThread()
+RenderThread::RenderThread(Resources::Device *device) : m_Device(device)
 {
-    m_DoneSemaphore = SDL_CreateSemaphore(1);
-    m_ReadySemaphore = SDL_CreateSemaphore(0);
 }
 
 Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
 {
-    m_Device = services->GraphicsLayer->m_DeviceInfo.Device;
+    m_DoneSemaphore = SDL_CreateSemaphore(1);
+    m_ReadySemaphore = SDL_CreateSemaphore(0);
+
+    if (m_DoneSemaphore == nullptr || m_ReadySemaphore == nullptr)
+        return Runtime::Crash(__FILE__, __LINE__,
+                              "Failed to create semaphores for rendering thread.");
 
     // create command pool
     VkCommandPoolCreateInfo cmdPoolInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = services->GraphicsLayer->m_DeviceInfo.GraphicsQueueIndex,
+        .queueFamilyIndex = services->GraphicsLayer->m_Device.m_GraphicsQueueIndex,
     };
-    CHECK_VULKAN_MT(vkCreateCommandPool(services->GraphicsLayer->m_DeviceInfo.Device, &cmdPoolInfo,
-                                        nullptr, &m_CommandPool),
+    CHECK_VULKAN_MT(vkCreateCommandPool(services->GraphicsLayer->m_Device.m_LogicalDevice,
+                                        &cmdPoolInfo, nullptr, &m_CommandPool),
                     "Failed to create Vulkan command pool.");
 
     // create the command buffers used in the flight
@@ -207,7 +120,7 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .commandBufferCount = 1,
         };
 
-        CHECK_VULKAN_MT(vkAllocateCommandBuffers(services->GraphicsLayer->m_DeviceInfo.Device,
+        CHECK_VULKAN_MT(vkAllocateCommandBuffers(services->GraphicsLayer->m_Device.m_LogicalDevice,
                                                  &allocInfo, &cmdBuffer),
                         "Failed to create Vulkan command buffer");
 
@@ -224,9 +137,9 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
         };
 
-        if (vkCreateSemaphore(services->GraphicsLayer->m_DeviceInfo.Device, &semaphoreInfo, nullptr,
-                              &imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateFence(services->GraphicsLayer->m_DeviceInfo.Device, &fenceInfo, nullptr,
+        if (vkCreateSemaphore(services->GraphicsLayer->m_Device.m_LogicalDevice, &semaphoreInfo,
+                              nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateFence(services->GraphicsLayer->m_Device.m_LogicalDevice, &fenceInfo, nullptr,
                           &inFlightFence) != VK_SUCCESS)
             return Runtime::Crash(__FILE__, __LINE__, "failed to create semaphores!");
 
@@ -245,7 +158,7 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .poolSizeCount = SDL_arraysize(flightPoolSizes),
             .pPoolSizes = flightPoolSizes,
         };
-        CHECK_VULKAN_MT(vkCreateDescriptorPool(services->GraphicsLayer->m_DeviceInfo.Device,
+        CHECK_VULKAN_MT(vkCreateDescriptorPool(services->GraphicsLayer->m_Device.m_LogicalDevice,
                                                &flightPoolAllocInfo, nullptr, &flightPool),
                         "Failed to allocate bindless descriptor pool.");
 
@@ -257,7 +170,7 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .descriptorSetCount = 1,
             .pSetLayouts = &services->GraphicsLayer->m_RenderResources.PerFlightDescLayout,
         };
-        CHECK_VULKAN_MT(vkAllocateDescriptorSets(services->GraphicsLayer->m_DeviceInfo.Device,
+        CHECK_VULKAN_MT(vkAllocateDescriptorSets(services->GraphicsLayer->m_Device.m_LogicalDevice,
                                                  &flightDescSetInfo, &flightDescSet),
                         "Failed to allocate double-buffered resource descriptor sets.");
 
@@ -285,11 +198,11 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     int rtFrameParity = 0;
 
     // create the controller
-    RenderThreadController controller(
-        this, this->m_Services->GraphicsLayer->m_DeviceInfo.Device,
-        this->m_Services->GraphicsLayer->m_DeviceInfo.PhysicalDevice,
-        this->m_Services->GraphicsLayer->m_DeviceInfo.GraphicsQueueIndex, this->m_Logger,
-        &rtFrameParity, m_Services->GraphicsLayer->m_RenderResources.UboLayout);
+    RenderThreadController controller(this, m_Services->GraphicsLayer->m_Device.m_LogicalDevice,
+                                      m_Services->GraphicsLayer->m_Device.m_PhysicalDevice,
+                                      m_Services->GraphicsLayer->m_Device.m_GraphicsQueueIndex,
+                                      m_Logger, &rtFrameParity,
+                                      m_Services->GraphicsLayer->m_RenderResources.UboLayout);
 
     // initialize controller resources
     CHECK_CALLBACK_RT(controller.Initialize());
@@ -316,22 +229,22 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
 
         // synchronization with the GPU
         CommandInFlight currentCommand = m_CommandsInFlight[rtFrameParity];
-        CHECK_VULKAN_RT(vkWaitForFences(m_Services->GraphicsLayer->m_DeviceInfo.Device, 1,
+        CHECK_VULKAN_RT(vkWaitForFences(m_Services->GraphicsLayer->m_Device.m_LogicalDevice, 1,
                                         &currentCommand.InFlightFence, VK_TRUE, UINT32_MAX),
                         "Failed to wait for in-flight fence.");
 
         uint32_t imageIndex;
-        CHECK_VULKAN_RT(vkAcquireNextImageKHR(m_Services->GraphicsLayer->m_DeviceInfo.Device,
-                                              m_Services->GraphicsLayer->m_Swapchain.Swapchain,
+        CHECK_VULKAN_RT(vkAcquireNextImageKHR(m_Services->GraphicsLayer->m_Device.m_LogicalDevice,
+                                              m_Services->GraphicsLayer->m_Swapchain.m_Swapchain,
                                               UINT64_MAX, currentCommand.ImageAvailableSemaphore,
                                               VK_NULL_HANDLE, &imageIndex),
                         "Failed to wait for a swapchain image.");
-        SwapchainViewResources nextSwapchainView =
-            m_Services->GraphicsLayer->m_SwapchainViews[imageIndex];
+        Resources::SwapchainViewResources nextSwapchainView =
+            m_Services->GraphicsLayer->m_Swapchain.m_ImageViewResources[imageIndex];
 
         // free resources
         m_GraphicsPipelines.PollFree(rtFrameParity, [&](VkPipeline pipeline) {
-            vkDestroyPipeline(m_Device, pipeline, nullptr);
+            vkDestroyPipeline(m_Device->m_LogicalDevice, pipeline, nullptr);
         });
 
         // prepare command buffer for new frame
@@ -401,11 +314,11 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &nextSwapchainView.RenderFinishSemaphore,
         };
-        CHECK_VULKAN_RT(vkQueueSubmit(m_Services->GraphicsLayer->m_DeviceInfo.GraphicsQueue, 1,
+        CHECK_VULKAN_RT(vkQueueSubmit(m_Services->GraphicsLayer->m_Device.m_GraphicsQueue, 1,
                                       &submitInfo, currentCommand.InFlightFence),
                         "Failed to submit draw command buffer.");
 
-        VkSwapchainKHR swapChains[] = {m_Services->GraphicsLayer->m_Swapchain.Swapchain};
+        VkSwapchainKHR swapChains[] = {m_Swapchain->m_Swapchain};
         VkPresentInfoKHR presentInfo{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
@@ -416,9 +329,9 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
             .pResults = nullptr,
         };
 
-        CHECK_VULKAN_RT(vkQueuePresentKHR(m_Services->GraphicsLayer->m_DeviceInfo.PresentationQueue,
-                                          &presentInfo),
-                        "Failed to queue swapchain presentation.");
+        CHECK_VULKAN_RT(
+            vkQueuePresentKHR(m_Services->GraphicsLayer->m_Device.m_PresentQueue, &presentInfo),
+            "Failed to queue swapchain presentation.");
 
         // flip the buffer index and frame in flight
         rtFrameParity = (rtFrameParity + 1) % 2;
@@ -464,7 +377,7 @@ Runtime::CallbackResult RenderThread::MtUpdate()
     for (uint32_t updatedId : m_Services->GraphicsLayer->m_GraphicsPipelineUpdates)
     {
         m_GraphicsPipelines.Assign(
-            updatedId, m_Services->GraphicsLayer->m_GraphicsPipelines[updatedId], m_MtFrameParity,
+            updatedId, m_Services->GraphicsLayer->m_Shaders[updatedId].m_Pipeline, m_MtFrameParity,
             [](VkPipeline a, VkPipeline b) { return a == b; });
     }
     // geometries

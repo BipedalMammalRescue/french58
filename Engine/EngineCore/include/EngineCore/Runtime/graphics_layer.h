@@ -2,6 +2,9 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/Resources/device.h"
+#include "EngineCore/Rendering/Resources/shader.h"
+#include "EngineCore/Rendering/Resources/swapchain.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/pipeline_setting.h"
 #include "EngineCore/Rendering/render_target.h"
@@ -44,26 +47,8 @@ private:
     SDL_Window *m_Window = nullptr;
     Logging::Logger m_Logger;
 
-    // need to be initialized with vulkan
-    struct
-    {
-        VkSurfaceKHR Surface = VK_NULL_HANDLE;
-
-        VkInstance VkInstance = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT DebugMessenger = VK_NULL_HANDLE;
-
-        VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
-        VkDevice Device = VK_NULL_HANDLE;
-
-        uint32_t GraphicsQueueIndex = UINT32_MAX;
-        VkQueue GraphicsQueue = VK_NULL_HANDLE;
-
-        uint32_t PresentationQueueIndex = UINT32_MAX;
-        VkQueue PresentationQueue = VK_NULL_HANDLE;
-
-        uint32_t TransferQueueIndex = UINT32_MAX;
-        VkQueue TransferQueue = VK_NULL_HANDLE;
-    } m_DeviceInfo;
+    Rendering::Resources::Device m_Device;
+    Rendering::Resources::Swapchain m_Swapchain;
 
     struct
     {
@@ -73,17 +58,6 @@ private:
         // TODO: this shared fence is only useful on single-threaded, synchronous operations
         VkFence TransferFence = VK_NULL_HANDLE;
     } m_TransferUtils;
-
-    struct
-    {
-        VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
-        VkExtent2D Dimensions;
-        VkFormat Format;
-        VkColorSpaceKHR ColorSpace;
-        std::vector<VkImage> Images;
-    } m_Swapchain = {};
-
-    std::vector<Rendering::SwapchainViewResources> m_SwapchainViews;
 
     struct
     {
@@ -111,15 +85,10 @@ private:
     // managed resources
 private:
     std::vector<uint32_t> m_GraphicsPipelineUpdates;
-    std::vector<VkPipeline> m_GraphicsPipelines;
+    std::vector<Rendering::Resources::Shader> m_Shaders;
 
     std::vector<uint32_t> m_GeometryUpdates;
     std::vector<Rendering::GpuGeometry> m_Geometries;
-
-    // reserved for the render thread to use
-private:
-    Rendering::SwapchainViewResources RtWaitSwapchain(VkSemaphore availableSignal,
-                                                      uint32_t &imageIndex);
 
     // for game loop to directly control graphics behavior
 private:
@@ -155,13 +124,13 @@ public:
     inline void *MapStagingBuffer(Rendering::StagingBuffer *buffer)
     {
         void *dest = nullptr;
-        vkMapMemory(m_DeviceInfo.Device, buffer->m_Memory, 0, buffer->m_Size, 0, &dest);
+        vkMapMemory(m_Device.m_LogicalDevice, buffer->m_Memory, 0, buffer->m_Size, 0, &dest);
         return dest;
     }
 
     inline void UnmapStagingBuffer(Rendering::StagingBuffer *buffer)
     {
-        vkUnmapMemory(m_DeviceInfo.Device, buffer->m_Memory);
+        vkUnmapMemory(m_Device.m_LogicalDevice, buffer->m_Memory);
     }
 
     // destroy a staging buffer, after which the data from said buffer will be unusable
