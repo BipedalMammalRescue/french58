@@ -3,7 +3,6 @@ project(Engine)
 
 # shared dependencies for engine and extension modules
 add_subdirectory(lib/SDL)
-add_subdirectory(lib/json)
 add_subdirectory(lib/glm)
 add_subdirectory(lib/tinyobjloader)
 add_subdirectory(lib/constexpr-md5-cpp)
@@ -11,7 +10,6 @@ add_subdirectory(lib/concurrentqueue)
 add_subdirectory(lib/lua-5.3.6)
 add_subdirectory(lib/SDL_net)
 add_subdirectory(lib/spdlog)
-# add_subdirectory(lib/VulkanMemoryAllocator)
 
 add_subdirectory(EngineUtils)
 
@@ -21,14 +19,10 @@ target_compile_definitions(EngineCore PUBLIC GLEW_STATIC)
 
 target_link_libraries(EngineCore PUBLIC EngineUtils)
 target_link_libraries(EngineCore PUBLIC SDL3::SDL3)
-target_link_libraries(EngineCore PUBLIC nlohmann_json)
 target_link_libraries(EngineCore PUBLIC glm)
 target_link_libraries(EngineCore PUBLIC constexpr_md5)
 target_link_libraries(EngineCore PUBLIC concurrentqueue)
 target_link_libraries(EngineCore PUBLIC SDL3_net-shared)
-# target_link_libraries(EngineCore PRIVATE GPUOpen::VulkanMemoryAllocator)
-
-target_include_directories(EngineCore PUBLIC lib/komihash)
 
 # declare engine project early
 add_library(Engine STATIC module_assembly.cpp)

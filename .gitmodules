@@ -1,15 +1,9 @@
 [submodule "Engine/lib/SDL"]
 	path = Engine/lib/SDL
 	url = https://github.com/libsdl-org/SDL
-[submodule "Engine/lib/json"]
-	path = Engine/lib/json
-	url = https://github.com/nlohmann/json
 [submodule "Engine/lib/glm"]
 	path = Engine/lib/glm
 	url = https://github.com/g-truc/glm
-[submodule "Engine/lib/komihash"]
-	path = Engine/lib/komihash
-	url = https://github.com/avaneev/komihash.git
 [submodule "Engine/lib/tinyobjloader"]
 	path = Engine/lib/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
