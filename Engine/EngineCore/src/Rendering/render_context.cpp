@@ -1,7 +1,6 @@
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/render_thread.h"
-#include "EngineCore/Runtime/graphics_layer.h"
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core;

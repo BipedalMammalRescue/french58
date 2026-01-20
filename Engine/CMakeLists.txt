@@ -11,6 +11,7 @@ add_subdirectory(lib/concurrentqueue)
 add_subdirectory(lib/lua-5.3.6)
 add_subdirectory(lib/SDL_net)
 add_subdirectory(lib/spdlog)
+# add_subdirectory(lib/VulkanMemoryAllocator)
 
 add_subdirectory(EngineUtils)
 
@@ -25,6 +26,7 @@ target_link_libraries(EngineCore PUBLIC glm)
 target_link_libraries(EngineCore PUBLIC constexpr_md5)
 target_link_libraries(EngineCore PUBLIC concurrentqueue)
 target_link_libraries(EngineCore PUBLIC SDL3_net-shared)
+# target_link_libraries(EngineCore PRIVATE GPUOpen::VulkanMemoryAllocator)
 
 target_include_directories(EngineCore PUBLIC lib/komihash)
 

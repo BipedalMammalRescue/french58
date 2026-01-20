@@ -3,8 +3,8 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
+#include "../Lib/vk_queue_selector.h"
 #include "SDL3/SDL_vulkan.h"
-#include "vk_queue_selector.h"
 
 #include <cstdint>
 #include <memory>
@@ -75,12 +75,11 @@ Engine::Core::Runtime::CallbackResult Device::Initialize(Engine::Core::Logging::
         }
     }
 
-    uint32_t vulkanVersion = 0;
-    vkEnumerateInstanceVersion(&vulkanVersion);
-    uint32_t majorVersion = VK_VERSION_MAJOR(vulkanVersion);
-    uint32_t minorVersion = VK_VERSION_MINOR(vulkanVersion);
+    vkEnumerateInstanceVersion(&m_Version);
+    uint32_t majorVersion = VK_VERSION_MAJOR(m_Version);
+    uint32_t minorVersion = VK_VERSION_MINOR(m_Version);
 
-    if (vulkanVersion < VK_VERSION_1_3)
+    if (m_Version < VK_VERSION_1_3)
         return Runtime::Crash(__FILE__, __LINE__,
                               "french58 currently doesn't support vulkan version < 1.3");
 

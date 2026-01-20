@@ -43,6 +43,20 @@ CallbackResult GraphicsLayer::InitializeSDL()
                                 m_Device.m_GraphicsQueueIndex, m_Device.m_PresentQueueIndex))
         return Runtime::Crash(__FILE__, __LINE__, "Failed to initialize swapchain.");
 
+    // create main thread GPU memory management (asset pipeline currently runs on the gameplay
+    // thread, and it doesn't make much sense to share it with the rendering thread sicne memory
+    // there are made to be constantly churned)
+    VmaAllocatorCreateInfo allocatorCreateInfo = {
+        .flags = 0,
+        .physicalDevice = m_Device.m_PhysicalDevice,
+        .device = m_Device.m_LogicalDevice,
+        .vulkanApiVersion = m_Device.m_Version,
+    };
+    CHECK_VULKAN(vmaCreateAllocator(&allocatorCreateInfo, &m_VmaAllocator),
+                 "Failed to create VMA allocator.");
+    m_TransferManager.Initialize(m_VmaAllocator, m_Device.m_LogicalDevice,
+                                 m_Device.m_TransferQueueIndex);
+
     // create transfer utils
     {
         VkCommandPoolCreateInfo cmdPoolInfo{

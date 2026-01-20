@@ -2,12 +2,14 @@
 
 #include "EngineCore/Configuration/configuration_provider.h"
 #include "EngineCore/Logging/logger.h"
+#include "EngineCore/Rendering/Lib/vk_mem_alloc.h"
 #include "EngineCore/Rendering/Resources/device.h"
 #include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/Resources/swapchain.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/pipeline_setting.h"
 #include "EngineCore/Rendering/render_target.h"
+#include "EngineCore/Rendering/transfer_manager.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
@@ -50,6 +52,9 @@ private:
     Rendering::Resources::Device m_Device;
     Rendering::Resources::Swapchain m_Swapchain;
 
+    VmaAllocator m_VmaAllocator;
+    Rendering::TransferManager m_TransferManager;
+
     struct
     {
         VkCommandPool TransferCmdPool = VK_NULL_HANDLE;
@@ -71,6 +76,7 @@ private:
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
 
+    // TODO: render targets should be exclusively created on the render thread
     Rendering::RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
                                                Rendering::RenderTargetSetting settings);
 

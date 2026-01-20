@@ -24,12 +24,13 @@ add_library(EngineCore STATIC
     src/Rendering/render_thread.cpp
     src/Rendering/Resources/shader.cpp
     src/Rendering/Resources/swapchain.cpp
-    src/Rendering/Resources/vk_queue_selector.cpp
-    )
+    src/Rendering/Lib/vk_queue_selector.cpp
+    src/Rendering/Lib/vk_mem_alloc.cpp
+    src/Rendering/transfer_manager.cpp
+)
 
 find_package(Vulkan)
 target_link_libraries(EngineCore PRIVATE Vulkan::Vulkan)
-
 target_link_libraries(EngineCore PUBLIC spdlog::spdlog)
 
 target_include_directories(EngineCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -23,6 +23,7 @@ private:
     friend class Engine::Core::Rendering::RenderThread;
     friend class Engine::Core::Runtime::GraphicsLayer;
 
+    uint32_t m_Version = VK_VERSION_1_0;
     VkInstance m_Instance = VK_NULL_HANDLE;
     VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
