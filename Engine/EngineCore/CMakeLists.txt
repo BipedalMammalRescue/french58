@@ -24,6 +24,7 @@ add_library(EngineCore STATIC
     src/Rendering/render_thread.cpp
     src/Rendering/Resources/shader.cpp
     src/Rendering/Resources/swapchain.cpp
+    src/Rendering/Resources/vk_queue_selector.cpp
     )
 
 find_package(Vulkan)
