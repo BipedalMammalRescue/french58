@@ -3,7 +3,9 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "SDL3/SDL_video.h"
+#include "SDL3/SDL_vulkan.h"
 #include <vulkan/vulkan_core.h>
+
 namespace Engine::Core {
 namespace Rendering {
 class RenderThread;
@@ -39,7 +41,14 @@ private:
 
     Runtime::CallbackResult Initialize(Engine::Core::Logging::Logger *logger,
                                        bool enableValidationLayers, SDL_Window *window);
-    void Dispose();
+
+    inline void Dispose()
+    {
+        vkDestroyDevice(m_LogicalDevice, nullptr);
+        vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+        SDL_Vulkan_DestroySurface(m_Instance, m_Surface, nullptr);
+        vkDestroyInstance(m_Instance, nullptr);
+    }
 };
 
 } // namespace Engine::Core::Rendering::Resources

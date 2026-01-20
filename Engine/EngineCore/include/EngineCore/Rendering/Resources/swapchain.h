@@ -31,6 +31,7 @@ private:
     friend class Engine::Core::Runtime::GraphicsLayer;
 
     VkSwapchainKHR m_Swapchain;
+
     VkExtent2D m_Dimensions;
     VkFormat m_Format;
     VkColorSpaceKHR m_ColorSpace;
@@ -43,7 +44,17 @@ private:
                                        VkDevice device, VkPhysicalDevice physicalDevice,
                                        VkSurfaceKHR surface, uint32_t graphicsQueueIndex,
                                        uint32_t presentQueueIndex);
-    void Dispose();
+
+    void Dispose(VkDevice device)
+    {
+        for (SwapchainViewResources res : m_ImageViewResources)
+        {
+            vkDestroyImageView(device, res.View, nullptr);
+            vkDestroySemaphore(device, res.RenderFinishSemaphore, nullptr);
+        }
+
+        vkDestroySwapchainKHR(device, m_Swapchain, nullptr);
+    }
 };
 
 } // namespace Engine::Core::Rendering::Resources

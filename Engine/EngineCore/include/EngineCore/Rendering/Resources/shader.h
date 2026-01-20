@@ -40,7 +40,11 @@ private:
 
     bool Initialize(VkDevice device, VkFormat swapchainFormat, Logging::Logger *loggerj,
                     ShaderCreationInfo createInfo);
-    void Dispose();
+
+    inline void Dispose(VkDevice device)
+    {
+        vkDestroyPipeline(device, m_Pipeline, nullptr);
+    }
 };
 
 } // namespace Engine::Core::Rendering::Resources
