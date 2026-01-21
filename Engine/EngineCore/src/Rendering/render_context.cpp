@@ -75,11 +75,8 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
                                                  size_t colorTargetCount,
                                                  std::optional<OutputDepthTarget> depthTarget)
 {
+    // TODO: this whole thing needs to be redesigned
     RenderPassExecutionContext result;
-
-    // TODO: memory barrier for color image
-
-    // TODO: memory barrier for depth image
 
     // dynamic rendering begin
     m_AttachmentInfoBuffer.resize(colorTargetCount);
