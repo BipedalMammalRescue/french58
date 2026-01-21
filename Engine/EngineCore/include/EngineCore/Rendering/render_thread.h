@@ -35,8 +35,7 @@ private:
 
 private:
     Resources::Device *m_Device = nullptr;
-
-    Resources::Swapchain *m_Swapchain;
+    Resources::Swapchain *m_Swapchain = nullptr;
 
     VkPipelineLayout m_PipelineLayoutShared = VK_NULL_HANDLE;
 

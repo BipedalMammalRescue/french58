@@ -1,8 +1,7 @@
 #pragma once
 
-#include "EngineCore/Logging/log_data.h"
-
 #include <cstddef>
+#include <cstdint>
 
 namespace Engine::Core::Configuration {
 
@@ -18,7 +17,6 @@ struct ConfigurationProvider
     int EntityVersion = 1;
 
     size_t LoggerBufferSize = 1024 * 32;
-    Logging::LogLevel MinimumLogLevel = Logging::LogLevel::Information;
 
     size_t WorkerCount = 2;
 

@@ -3,7 +3,6 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
 
-#include "../Lib/vk_queue_selector.h"
 #include "SDL3/SDL_vulkan.h"
 
 #include <cstdint>
@@ -325,9 +324,8 @@ Engine::Core::Runtime::CallbackResult Device::Initialize(Engine::Core::Logging::
     CHECK_VULKAN(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_LogicalDevice),
                  "Failed to create vulkan logical device.");
 
-    m_GraphicsQueueIndex = selections[0].queueIndex;
-    m_PresentQueueIndex = selections[0].queueIndex;
-    m_TransferQueueIndex = selections[1].queueIndex;
+    m_GraphicsQueueSelection = selections[0];
+    m_TransferQueueSelection = selections[1];
 
     vkGetDeviceQueue(m_LogicalDevice, selections[0].queueFamilyIndex, selections[0].queueIndex,
                      &m_GraphicsQueue);

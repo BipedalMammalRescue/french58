@@ -2,6 +2,9 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Runtime/crash_dump.h"
+
+#include "EngineCore/Rendering/Lib/vk_queue_selector.h"
+
 #include "SDL3/SDL_video.h"
 #include "SDL3/SDL_vulkan.h"
 #include <vulkan/vulkan_core.h>
@@ -32,13 +35,12 @@ private:
     VkDevice m_LogicalDevice = VK_NULL_HANDLE;
     VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 
-    uint32_t m_GraphicsQueueIndex;
-    uint32_t m_PresentQueueIndex;
-    uint32_t m_TransferQueueIndex;
+    VqsQueueSelection m_GraphicsQueueSelection = {};
+    VqsQueueSelection m_TransferQueueSelection = {};
 
-    VkQueue m_GraphicsQueue;
-    VkQueue m_PresentQueue;
-    VkQueue m_TransferQueue;
+    VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+    VkQueue m_PresentQueue = VK_NULL_HANDLE;
+    VkQueue m_TransferQueue = VK_NULL_HANDLE;
 
     Runtime::CallbackResult Initialize(Engine::Core::Logging::Logger *logger,
                                        bool enableValidationLayers, SDL_Window *window);

@@ -48,41 +48,14 @@ private:
 
     const int *FrameParity;
 
-    VkDescriptorSetLayout UboLayout;
     VkDescriptorPool UniformDescriptorPool;
 
 public:
     RenderThreadController(RenderThread *owner, VkDevice device, VkPhysicalDevice physicalDevice,
-                           uint32_t graphicsQueueIndex, Logging::Logger *logger, int *frameParity,
-                           VkDescriptorSetLayout uboLayout)
+                           uint32_t graphicsQueueIndex, Logging::Logger *logger, int *frameParity)
         : Owner(owner), Device(device), PhysicalDevice(physicalDevice), Logger(logger),
-          FrameParity(frameParity), UboLayout(uboLayout)
+          FrameParity(frameParity)
     {
-    }
-
-    Runtime::CallbackResult Initialize()
-    {
-        // create the descriptor pool
-        static constexpr VkDescriptorPoolSize poolSizes[] = {
-            (VkDescriptorPoolSize){
-                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = MaxUniformBuffers,
-            },
-        };
-        static constexpr VkDescriptorPoolCreateInfo globalPoolInfo = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-            .maxSets = 1,
-            .poolSizeCount = SDL_arraysize(poolSizes),
-            .pPoolSizes = poolSizes,
-        };
-
-        // this isn't on the main thread but it's handy
-        CHECK_VULKAN_MT(
-            vkCreateDescriptorPool(Device, &globalPoolInfo, nullptr, &UniformDescriptorPool),
-            "Failed to allocate bindless descriptor pool.");
-
-        return Runtime::CallbackSuccess();
     }
 };
 
@@ -103,7 +76,7 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
     VkCommandPoolCreateInfo cmdPoolInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = services->GraphicsLayer->m_Device.m_GraphicsQueueIndex,
+        .queueFamilyIndex = m_Device->m_GraphicsQueueSelection.queueFamilyIndex,
     };
     CHECK_VULKAN_MT(vkCreateCommandPool(services->GraphicsLayer->m_Device.m_LogicalDevice,
                                         &cmdPoolInfo, nullptr, &m_CommandPool),
@@ -198,14 +171,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     int rtFrameParity = 0;
 
     // create the controller
-    RenderThreadController controller(this, m_Services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                      m_Services->GraphicsLayer->m_Device.m_PhysicalDevice,
-                                      m_Services->GraphicsLayer->m_Device.m_GraphicsQueueIndex,
-                                      m_Logger, &rtFrameParity,
-                                      m_Services->GraphicsLayer->m_RenderResources.UboLayout);
-
-    // initialize controller resources
-    CHECK_CALLBACK_RT(controller.Initialize());
+    // TODO: this interface needs some redo
+    RenderThreadController controller(this, m_Device->m_LogicalDevice, m_Device->m_PhysicalDevice,
+                                      m_Device->m_GraphicsQueueSelection.queueIndex, m_Logger,
+                                      &rtFrameParity);
 
     while (true)
     {
@@ -416,3 +385,120 @@ Runtime::CallbackResult RenderThread::MtUpdate()
     m_MtFrameParity = (m_MtFrameParity + 1) % 2;
     return Runtime::CallbackSuccess();
 }
+
+// RenderTarget GraphicsLayer::CreateRenderTarget(Rendering::RenderTargetUsage usage,
+//                                                Rendering::RenderTargetSetting settings)
+// {
+//     VkFormat format;
+//     uint32_t width;
+//     uint32_t height;
+
+//     // TODO: when do I need to change the tiling setting?
+//     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+//     VkImageUsageFlags gpuUsage;
+//     VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+//     switch (usage)
+//     {
+//     case RenderTargetUsage::ColorTarget: {
+//         switch (settings.Image.ColorTarget.ColorFormat)
+//         {
+//         case ColorFormat::UseSwapchain:
+//             format = m_Swapchain.m_Format;
+//             break;
+//         }
+
+//         if (settings.Image.ColorTarget.ScaleToSwapchain)
+//         {
+//             width = static_cast<uint32_t>(
+//                 round(settings.Image.ColorTarget.Dimensions.Relative.WidthScale *
+//                       m_Swapchain.m_Dimensions.width));
+//             height = static_cast<uint32_t>(
+//                 round(settings.Image.ColorTarget.Dimensions.Relative.HeightScale *
+//                       m_Swapchain.m_Dimensions.height));
+//         }
+//         else
+//         {
+//             width = settings.Image.ColorTarget.Dimensions.Absolute.Width;
+//             height = settings.Image.ColorTarget.Dimensions.Absolute.Height;
+//         }
+
+//         gpuUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+//     }
+//     break;
+//     case RenderTargetUsage::DepthBuffer: {
+//         switch (settings.Image.DepthBuffer.Precision)
+//         {
+//         case Engine::Core::Rendering::DepthPrecision::D32:
+//             format = VK_FORMAT_D32_SFLOAT;
+//             break;
+//         }
+
+//         if (settings.Image.DepthBuffer.ScaleToSwapchain)
+//         {
+//             width = static_cast<uint32_t>(
+//                 round(settings.Image.DepthBuffer.Dimensions.Relative.WidthScale *
+//                       m_Swapchain.m_Dimensions.width));
+//             height = static_cast<uint32_t>(
+//                 round(settings.Image.DepthBuffer.Dimensions.Relative.HeightScale *
+//                       m_Swapchain.m_Dimensions.height));
+//         }
+//         else
+//         {
+//             width = settings.Image.DepthBuffer.Dimensions.Absolute.Width;
+//             height = settings.Image.DepthBuffer.Dimensions.Absolute.Height;
+//         }
+//     }
+//     break;
+//     }
+
+//     if (settings.Sampler > Rendering::SamplerType::None)
+//     {
+//         gpuUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+//     }
+
+//     GpuImage image = CreateImage(m_Device.m_LogicalDevice, m_Device.m_PhysicalDevice, width,
+//     height,
+//                                  format, tiling, gpuUsage, properties);
+
+//     return {
+//         .Setting = settings,
+//         .Image = image,
+//         .View = VK_NULL_HANDLE,
+//     };
+// }
+
+// // set up the critical path rendering targets (THESE ARE NOT BACKED BY MEMORY JUST YET)
+// {
+//     m_OpaqueColor.m_Id = 0;
+//     m_RenderTargets[0] =
+//         CreateRenderTarget(RenderTargetUsage::ColorTarget,
+//                            (RenderTargetSetting){
+//                                .Image =
+//                                    {
+//                                        .ColorTarget =
+//                                            {
+//                                                .ScaleToSwapchain = true,
+//                                                .Dimensions = {.Relative = {1.0f, 1.0f}},
+//                                                .ColorFormat = ColorFormat::UseSwapchain,
+//                                            },
+//                                    },
+//                                .Sampler = Rendering::SamplerType::None,
+//                            });
+
+//     m_OpaqueDepth.m_Id = 1;
+//     m_RenderTargets[1] =
+//         CreateRenderTarget(Rendering::RenderTargetUsage::DepthBuffer,
+//                            (RenderTargetSetting){
+//                                .Image =
+//                                    {
+//                                        .ColorTarget =
+//                                            {
+//                                                .ScaleToSwapchain = true,
+//                                                .Dimensions = {.Relative = {1.0f, 1.0f}},
+//                                                .ColorFormat = ColorFormat::UseSwapchain,
+//                                            },
+//                                    },
+//                                .Sampler = Rendering::SamplerType::None,
+//                            });
+// }

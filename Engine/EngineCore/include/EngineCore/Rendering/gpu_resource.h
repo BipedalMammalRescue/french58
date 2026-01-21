@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EngineCore/Rendering/Lib/vk_mem_alloc.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -17,29 +18,6 @@ constexpr size_t PushConstantSize = 128;
 
 uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties,
                         VkPhysicalDevice physicalDevice);
-
-class StagingBuffer
-{
-private:
-    friend class Engine::Core::Runtime::GraphicsLayer;
-    VkDevice m_Device = VK_NULL_HANDLE;
-    VkBuffer m_Buffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_Memory = VK_NULL_HANDLE;
-    size_t m_Size = 0;
-
-public:
-    ~StagingBuffer()
-    {
-        if (m_Device == VK_NULL_HANDLE)
-            return;
-
-        if (m_Buffer != VK_NULL_HANDLE)
-            vkDestroyBuffer(m_Device, m_Buffer, nullptr);
-
-        if (m_Memory != VK_NULL_HANDLE)
-            vkFreeMemory(m_Device, m_Memory, nullptr);
-    }
-};
 
 struct GpuImage
 {
@@ -64,9 +42,11 @@ static constexpr uint32_t MaxVertexBufferAttributes = 16;
 struct GpuGeometry
 {
     VkBuffer Buffer;
-    VkDeviceMemory Memory;
+    VmaAllocation Allocation;
+
     uint32_t VertexBufferCount;
     size_t VertexBufferOffsets[MaxVertexBufferBindings];
+
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
     VkIndexType IndexType;

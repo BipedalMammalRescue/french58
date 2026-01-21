@@ -25,27 +25,23 @@ class LoggerService;
 
 namespace Engine::Core::Rendering {
 class RenderThread;
-class RenderPassExecutionContext;
 } // namespace Engine::Core::Rendering
 
 namespace Engine::Core::Runtime {
 
 class GameLoop;
 
-// Contains states and accesses to graphics related concepts, managed by the game loop.
+// Provides services used to draw stuff to screen.
+// Current design this class IS the gameplay-thread representation of ALL graphics related
+// resources.
 class GraphicsLayer
 {
-    static constexpr uint32_t MaxFlight = 2;
-
 private:
     friend class GameLoop;
     friend class Engine::Core::Rendering::RenderThread;
-    friend class Rendering::RenderPassExecutionContext;
 
-    // injected
     const Configuration::ConfigurationProvider *m_Configs = nullptr;
 
-    // initialized
     SDL_Window *m_Window = nullptr;
     Logging::Logger m_Logger;
 
@@ -54,15 +50,6 @@ private:
 
     VmaAllocator m_VmaAllocator;
     Rendering::TransferManager m_TransferManager;
-
-    struct
-    {
-        VkCommandPool TransferCmdPool = VK_NULL_HANDLE;
-        VkCommandBuffer TransferCmdBuffer = VK_NULL_HANDLE;
-
-        // TODO: this shared fence is only useful on single-threaded, synchronous operations
-        VkFence TransferFence = VK_NULL_HANDLE;
-    } m_TransferUtils;
 
     struct
     {
@@ -75,13 +62,6 @@ private:
 
         VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
     } m_RenderResources;
-
-    // TODO: render targets should be exclusively created on the render thread
-    Rendering::RenderTarget CreateRenderTarget(Rendering::RenderTargetUsage usage,
-                                               Rendering::RenderTargetSetting settings);
-
-    bool CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t *srcOffsets, size_t *dstOffsets,
-                    size_t *lengths, size_t segmentCount);
 
     // built-in long-lasting resourcee
     Rendering::RenderTarget m_RenderTargets[2];
@@ -125,29 +105,20 @@ public:
                            uint32_t colorAttachmentCount,
                            const Rendering::DepthPrecision *depthPrecision);
 
-    Rendering::StagingBuffer *CreateStagingBuffer(size_t size);
-
-    inline void *MapStagingBuffer(Rendering::StagingBuffer *buffer)
+    inline std::optional<Rendering::Resources::StagingBuffer> CreateStagingBuffer(size_t size)
     {
-        void *dest = nullptr;
-        vkMapMemory(m_Device.m_LogicalDevice, buffer->m_Memory, 0, buffer->m_Size, 0, &dest);
-        return dest;
+        return m_TransferManager.CreateStagingBuffer(size);
     }
 
-    inline void UnmapStagingBuffer(Rendering::StagingBuffer *buffer)
+    inline void DestroyStagingBuffer(Rendering::Resources::StagingBuffer buffer)
     {
-        vkUnmapMemory(m_Device.m_LogicalDevice, buffer->m_Memory);
+        m_TransferManager.DestroyStagingBuffer(buffer);
     }
 
-    // destroy a staging buffer, after which the data from said buffer will be unusable
-    void DestroyStagingBuffer(Rendering::StagingBuffer *buffer);
-
-    // geometry upload needs to support contextualize-index pattern, since those are data that would
-    // be loaded in based on level
-    uint32_t UploadGeometry(Rendering::StagingBuffer *stagingBuffer, size_t *vertexBufferOffsets,
-                            size_t *vertexBufferLengths, uint32_t vertexBufferCount,
-                            size_t indexBufferOffset, size_t indexBufferLength,
-                            Rendering::IndexType indexType, uint32_t indexCount);
+    // TODO: eventually allow multi-buffer geometry
+    uint32_t CreateGeometry(Rendering::Resources::StagingBuffer stagingBuffer,
+                            Rendering::Transfer vertexBuffer, Rendering::Transfer indexBuffer,
+                            uint32_t indexCount, Rendering::IndexType indexType);
 
 public:
     ~GraphicsLayer();
