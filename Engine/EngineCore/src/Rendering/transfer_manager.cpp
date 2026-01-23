@@ -146,3 +146,43 @@ bool Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuffer s
 
     return true;
 }
+
+std::optional<AllocatedBuffer> Engine::Core::Rendering::TransferManager::Create(
+    Resources::StagingBuffer src, Transfer *transfers, size_t transferCount,
+    VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags memoryProps)
+{
+    size_t bufferSize = 0;
+    for (Transfer *curTransfer = transfers; curTransfer < transfers + transferCount; curTransfer++)
+    {
+        bufferSize += curTransfer->Length;
+    }
+
+    // create a on-board buffer to hold all the data
+    VkBufferCreateInfo bufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = bufferSize,
+        .usage = bufferUsage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    VmaAllocationCreateInfo allocationInfo{.usage = VMA_MEMORY_USAGE_AUTO,
+                                           .requiredFlags = memoryProps};
+
+    AllocatedBuffer result{VK_NULL_HANDLE, VK_NULL_HANDLE};
+
+    VkResult allocationResult = vmaCreateBuffer(m_Allocator, &bufferInfo, &allocationInfo,
+                                                &result.Buffer, &result.Allocation, nullptr);
+    if (allocationResult != VK_SUCCESS)
+    {
+        m_Logger->Error("Failed to create and allocate buffer, error: {}", Log(allocationResult));
+        return {};
+    }
+
+    if (!Upload(src, result.Buffer, transfers, transferCount))
+    {
+        vkDestroyBuffer(m_Device, result.Buffer, nullptr);
+        vmaFreeMemory(m_Allocator, result.Allocation);
+        return {};
+    }
+
+    return result;
+}

@@ -1,11 +1,13 @@
 #include "EngineCore/Rendering/render_thread.h"
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/Resources/device.h"
+#include "EngineCore/Rendering/Resources/geometry.h"
+#include "EngineCore/Rendering/Resources/shader.h"
+#include "EngineCore/Rendering/Resources/swapchain.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
-#include "EngineCore/Runtime/graphics_layer.h"
 #include "EngineCore/Runtime/module_manager.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_mutex.h"
@@ -59,12 +61,17 @@ public:
     }
 };
 
-RenderThread::RenderThread(Resources::Device *device) : m_Device(device)
+RenderThread::RenderThread(Resources::Device *device, Resources::Swapchain *swapchain)
+    : m_Device(device), m_Swapchain(swapchain)
 {
 }
 
-Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
+Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services,
+                                              VkPipelineLayout sharedPipeline,
+                                              VkDescriptorSetLayout perflightDescLayout)
 {
+    m_PipelineLayoutShared = sharedPipeline;
+
     m_DoneSemaphore = SDL_CreateSemaphore(1);
     m_ReadySemaphore = SDL_CreateSemaphore(0);
 
@@ -78,9 +85,9 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = m_Device->m_GraphicsQueueSelection.queueFamilyIndex,
     };
-    CHECK_VULKAN_MT(vkCreateCommandPool(services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                        &cmdPoolInfo, nullptr, &m_CommandPool),
-                    "Failed to create Vulkan command pool.");
+    CHECK_VULKAN_MT(
+        vkCreateCommandPool(m_Device->m_LogicalDevice, &cmdPoolInfo, nullptr, &m_CommandPool),
+        "Failed to create Vulkan command pool.");
 
     // create the command buffers used in the flight
     for (uint32_t i = 0; i < 2; i++)
@@ -93,8 +100,7 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .commandBufferCount = 1,
         };
 
-        CHECK_VULKAN_MT(vkAllocateCommandBuffers(services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                                 &allocInfo, &cmdBuffer),
+        CHECK_VULKAN_MT(vkAllocateCommandBuffers(m_Device->m_LogicalDevice, &allocInfo, &cmdBuffer),
                         "Failed to create Vulkan command buffer");
 
         // a set of synchronizers
@@ -110,10 +116,10 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
         };
 
-        if (vkCreateSemaphore(services->GraphicsLayer->m_Device.m_LogicalDevice, &semaphoreInfo,
-                              nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateFence(services->GraphicsLayer->m_Device.m_LogicalDevice, &fenceInfo, nullptr,
-                          &inFlightFence) != VK_SUCCESS)
+        if (vkCreateSemaphore(m_Device->m_LogicalDevice, &semaphoreInfo, nullptr,
+                              &imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateFence(m_Device->m_LogicalDevice, &fenceInfo, nullptr, &inFlightFence) !=
+                VK_SUCCESS)
             return Runtime::Crash(__FILE__, __LINE__, "failed to create semaphores!");
 
         // create the double-buffered render target accessing
@@ -131,8 +137,8 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .poolSizeCount = SDL_arraysize(flightPoolSizes),
             .pPoolSizes = flightPoolSizes,
         };
-        CHECK_VULKAN_MT(vkCreateDescriptorPool(services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                               &flightPoolAllocInfo, nullptr, &flightPool),
+        CHECK_VULKAN_MT(vkCreateDescriptorPool(m_Device->m_LogicalDevice, &flightPoolAllocInfo,
+                                               nullptr, &flightPool),
                         "Failed to allocate bindless descriptor pool.");
 
         VkDescriptorSet flightDescSet = VK_NULL_HANDLE;
@@ -141,11 +147,11 @@ Runtime::CallbackResult RenderThread::MtStart(Runtime::ServiceTable *services)
             .pNext = nullptr,
             .descriptorPool = flightPool,
             .descriptorSetCount = 1,
-            .pSetLayouts = &services->GraphicsLayer->m_RenderResources.PerFlightDescLayout,
+            .pSetLayouts = &perflightDescLayout,
         };
-        CHECK_VULKAN_MT(vkAllocateDescriptorSets(services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                                 &flightDescSetInfo, &flightDescSet),
-                        "Failed to allocate double-buffered resource descriptor sets.");
+        CHECK_VULKAN_MT(
+            vkAllocateDescriptorSets(m_Device->m_LogicalDevice, &flightDescSetInfo, &flightDescSet),
+            "Failed to allocate double-buffered resource descriptor sets.");
 
         m_CommandsInFlight[i] = {
             .CommandBuffer = cmdBuffer,
@@ -198,22 +204,21 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
 
         // synchronization with the GPU
         CommandInFlight currentCommand = m_CommandsInFlight[rtFrameParity];
-        CHECK_VULKAN_RT(vkWaitForFences(m_Services->GraphicsLayer->m_Device.m_LogicalDevice, 1,
-                                        &currentCommand.InFlightFence, VK_TRUE, UINT32_MAX),
+        CHECK_VULKAN_RT(vkWaitForFences(m_Device->m_LogicalDevice, 1, &currentCommand.InFlightFence,
+                                        VK_TRUE, UINT32_MAX),
                         "Failed to wait for in-flight fence.");
 
         uint32_t imageIndex;
-        CHECK_VULKAN_RT(vkAcquireNextImageKHR(m_Services->GraphicsLayer->m_Device.m_LogicalDevice,
-                                              m_Services->GraphicsLayer->m_Swapchain.m_Swapchain,
+        CHECK_VULKAN_RT(vkAcquireNextImageKHR(m_Device->m_LogicalDevice, m_Swapchain->m_Swapchain,
                                               UINT64_MAX, currentCommand.ImageAvailableSemaphore,
                                               VK_NULL_HANDLE, &imageIndex),
                         "Failed to wait for a swapchain image.");
         Resources::SwapchainViewResources nextSwapchainView =
-            m_Services->GraphicsLayer->m_Swapchain.m_ImageViewResources[imageIndex];
+            m_Swapchain->m_ImageViewResources[imageIndex];
 
         // free resources
-        m_GraphicsPipelines.PollFree(rtFrameParity, [&](VkPipeline pipeline) {
-            vkDestroyPipeline(m_Device->m_LogicalDevice, pipeline, nullptr);
+        m_GraphicsPipelines.PollFree(rtFrameParity, [&](Resources::Shader pipeline) {
+            vkDestroyPipeline(m_Device->m_LogicalDevice, pipeline.m_Pipeline, nullptr);
         });
 
         // prepare command buffer for new frame
@@ -283,9 +288,9 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &nextSwapchainView.RenderFinishSemaphore,
         };
-        CHECK_VULKAN_RT(vkQueueSubmit(m_Services->GraphicsLayer->m_Device.m_GraphicsQueue, 1,
-                                      &submitInfo, currentCommand.InFlightFence),
-                        "Failed to submit draw command buffer.");
+        CHECK_VULKAN_RT(
+            vkQueueSubmit(m_Device->m_GraphicsQueue, 1, &submitInfo, currentCommand.InFlightFence),
+            "Failed to submit draw command buffer.");
 
         VkSwapchainKHR swapChains[] = {m_Swapchain->m_Swapchain};
         VkPresentInfoKHR presentInfo{
@@ -298,9 +303,8 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
             .pResults = nullptr,
         };
 
-        CHECK_VULKAN_RT(
-            vkQueuePresentKHR(m_Services->GraphicsLayer->m_Device.m_PresentQueue, &presentInfo),
-            "Failed to queue swapchain presentation.");
+        CHECK_VULKAN_RT(vkQueuePresentKHR(m_Device->m_PresentQueue, &presentInfo),
+                        "Failed to queue swapchain presentation.");
 
         // flip the buffer index and frame in flight
         rtFrameParity = (rtFrameParity + 1) % 2;
@@ -325,7 +329,9 @@ size_t RenderThread::EventStream::Read(void *buffer, size_t desiredLength)
     return actualRead;
 }
 
-Runtime::CallbackResult RenderThread::MtUpdate()
+Runtime::CallbackResult RenderThread::MtUpdate(
+    UpdatedResources<Resources::Shader> shaderUpdates,
+    UpdatedResources<Resources::Geometry> geometryUpdates)
 {
     // wait for previous render thread work to be done
     SDL_WaitSemaphore(m_DoneSemaphore);
@@ -343,18 +349,20 @@ Runtime::CallbackResult RenderThread::MtUpdate()
 
     // synchronize resources
     // shaders
-    for (uint32_t updatedId : m_Services->GraphicsLayer->m_GraphicsPipelineUpdates)
+    for (uint32_t *updatedId = shaderUpdates.Updates;
+         updatedId < shaderUpdates.Updates + shaderUpdates.UpdateCount; updatedId++)
     {
         m_GraphicsPipelines.Assign(
-            updatedId, m_Services->GraphicsLayer->m_Shaders[updatedId].m_Pipeline, m_MtFrameParity,
-            [](VkPipeline a, VkPipeline b) { return a == b; });
+            *updatedId, shaderUpdates.Source[*updatedId], m_MtFrameParity,
+            [](Resources::Shader a, Resources::Shader b) { return a.m_Pipeline == b.m_Pipeline; });
     }
     // geometries
-    for (uint32_t updatedId : m_Services->GraphicsLayer->m_GeometryUpdates)
+    for (uint32_t *updatedId = geometryUpdates.Updates;
+         updatedId < geometryUpdates.Updates + geometryUpdates.UpdateCount; updatedId++)
     {
-        m_Geometries.Assign(updatedId, m_Services->GraphicsLayer->m_Geometries[updatedId],
-                            m_MtFrameParity,
-                            [](GpuGeometry a, GpuGeometry b) { return a.Buffer == b.Buffer; });
+        m_Geometries.Assign(
+            *updatedId, geometryUpdates.Source[*updatedId], m_MtFrameParity,
+            [](Resources::Geometry a, Resources::Geometry b) { return a.m_Buffer == b.m_Buffer; });
     }
 
     // TODO: synchronize other resources

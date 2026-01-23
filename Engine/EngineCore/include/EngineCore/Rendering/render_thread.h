@@ -2,8 +2,9 @@
 
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/Resources/device.h"
+#include "EngineCore/Rendering/Resources/geometry.h"
+#include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/Resources/swapchain.h"
-#include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Rendering/rt_resource_manager.h"
@@ -21,6 +22,24 @@ class GraphicsLayer;
 
 namespace Engine::Core::Rendering {
 
+template <typename T> struct UpdatedResources
+{
+    const T *Source;
+    size_t SourceCount;
+    uint32_t *Updates;
+    size_t UpdateCount;
+};
+
+struct CommandInFlight
+{
+    VkCommandBuffer CommandBuffer;
+    VkSemaphore ImageAvailableSemaphore;
+    VkFence InFlightFence;
+
+    VkDescriptorPool DescriptorPool;
+    VkDescriptorSet DescriptorSet;
+};
+
 // Holds the synchronization mechanism for the render thread, its state and resources are
 // created elsewhere, for the most part. The render thread is meant to take exclusive control of
 // parts of the state of the game that's dedicated to rendering.
@@ -34,18 +53,23 @@ private:
     Logging::Logger *m_Logger;
 
 private:
+    // injected
     Resources::Device *m_Device = nullptr;
+    // injected
     Resources::Swapchain *m_Swapchain = nullptr;
 
+    // initialized
     VkPipelineLayout m_PipelineLayoutShared = VK_NULL_HANDLE;
 
+    // created
     VkCommandPool m_CommandPool = VK_NULL_HANDLE;
+    // created
     CommandInFlight m_CommandsInFlight[2];
-
-    VkDescriptorPool m_DescriptorPool;
-
+    // created
     SDL_Semaphore *m_ReadySemaphore = nullptr;
+    // created
     SDL_Semaphore *m_DoneSemaphore = nullptr;
+    // created
     SDL_Thread *m_Thread = nullptr;
 
     // result report
@@ -55,8 +79,8 @@ private:
     int m_MtFrameParity = 0;
 
     // double buffered resources
-    RtResourceManager<VkPipeline> m_GraphicsPipelines;
-    RtResourceManager<GpuGeometry> m_Geometries;
+    RtResourceManager<Resources::Shader> m_GraphicsPipelines;
+    RtResourceManager<Resources::Geometry> m_Geometries;
 
 private:
     struct EventStream : public IRenderStateUpdateWriter, public IRenderStateUpdateReader
@@ -78,12 +102,15 @@ private:
     std::vector<Runtime::InstancedRendererPlugin> m_Plugins;
 
 public:
-    RenderThread(Resources::Device *device);
+    RenderThread(Resources::Device *device, Resources::Swapchain *swapchain);
 
-    Runtime::CallbackResult MtStart(Runtime::ServiceTable *services);
+    Runtime::CallbackResult MtStart(Runtime::ServiceTable *services,
+                                    VkPipelineLayout sharedPipeline,
+                                    VkDescriptorSetLayout perflightDescLayout);
 
     // Initiate a new frame on the render thread.
-    Runtime::CallbackResult MtUpdate();
+    Runtime::CallbackResult MtUpdate(UpdatedResources<Resources::Shader> shaderUpdates,
+                                     UpdatedResources<Resources::Geometry> geometryUpdates);
 
     // Callable from the main thread, check if the thread is finished.
     bool MtTryJoin() const

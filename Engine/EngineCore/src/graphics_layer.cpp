@@ -2,12 +2,14 @@
 #include "EngineCore/Logging/logger.h"
 #include "EngineCore/Logging/logger_service.h"
 #include "EngineCore/Rendering/Resources/device.h"
+#include "EngineCore/Rendering/Resources/geometry.h"
 #include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/transfer_manager.h"
 #include "EngineCore/Rendering/vertex_description.h"
 #include "EngineCore/Runtime/crash_dump.h"
+#include "EngineCore/Runtime/service_table.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_stdinc.h"
 
@@ -22,7 +24,14 @@ using namespace Engine::Core::Rendering;
 
 static const char *LogChannels[] = {"GraphicsLayer"};
 
-CallbackResult GraphicsLayer::InitializeSDL()
+GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider *configs,
+                             Logging::LoggerService *loggerService)
+    : m_Configs(configs), m_Logger(loggerService->CreateLogger("GraphicsLayer")),
+      m_RenderThread(&m_Device, &m_Swapchain)
+{
+}
+
+CallbackResult GraphicsLayer::Initialize(ServiceTable *services)
 {
     // Create window
     m_Window = SDL_CreateWindow("Foobar Game", m_Configs->WindowWidth, m_Configs->WindowHeight, 0);
@@ -192,13 +201,13 @@ CallbackResult GraphicsLayer::InitializeSDL()
                      "Failed to create global graphics pipeline layout.");
     }
 
-    return CallbackSuccess();
-}
+    // initialize render thread
+    CallbackResult renderThreadInitResult = m_RenderThread.MtStart(
+        services, m_RenderResources.GlobalPipelineLayout, m_RenderResources.PerFlightDescLayout);
+    if (renderThreadInitResult.has_value())
+        return renderThreadInitResult;
 
-GraphicsLayer::GraphicsLayer(const Configuration::ConfigurationProvider *configs,
-                             Logging::LoggerService *loggerService)
-    : m_Configs(configs), m_Logger(loggerService->CreateLogger("GraphicsLayer"))
-{
+    return CallbackSuccess();
 }
 
 uint32_t GraphicsLayer::CompileShader(void *vertexCode, size_t vertShaderLength, void *fragmentCode,
@@ -236,58 +245,55 @@ uint32_t GraphicsLayer::CreateGeometry(Rendering::Resources::StagingBuffer stagi
                                        Rendering::Transfer indexBuffer, uint32_t indexCount,
                                        Rendering::IndexType indexType)
 {
-    GpuGeometry geometry{
-        .VertexBufferCount = 1,
-        .IndexCount = indexCount,
-        .IndexType = VK_INDEX_TYPE_NONE_KHR,
-    };
+    Rendering::Resources::Geometry newGeometry;
+
+    VkIndexType vkIndexType = VK_INDEX_TYPE_UINT32;
 
     switch (indexType)
     {
     case IndexType::Ubyte:
-        geometry.IndexType = VK_INDEX_TYPE_UINT8;
+        vkIndexType = VK_INDEX_TYPE_UINT8;
         break;
     case IndexType::Ushort:
-        geometry.IndexType = VK_INDEX_TYPE_UINT16;
+        vkIndexType = VK_INDEX_TYPE_UINT16;
         break;
     case IndexType::Uint:
-        geometry.IndexType = VK_INDEX_TYPE_UINT32;
+        vkIndexType = VK_INDEX_TYPE_UINT32;
         break;
-    }
-
-    // calculate needed buffer size in total
-    size_t bufferSize = vertexBuffer.Length + indexBuffer.Length;
-
-    // create a on-board buffer to hold all the data
-    VkBufferCreateInfo bufferInfo{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = bufferSize,
-        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VmaAllocationCreateInfo allocationInfo{.usage = VMA_MEMORY_USAGE_AUTO,
-                                           .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
-
-    VkResult allocationResult = vmaCreateBuffer(m_VmaAllocator, &bufferInfo, &allocationInfo,
-                                                &geometry.Buffer, &geometry.Allocation, nullptr);
-
-    if (allocationResult != VK_SUCCESS)
-    {
-        m_Logger.Error("Failed to create buffer for geometry, error: {}.", Log(allocationResult));
+    default:
+        m_Logger.Error("Failed to create geometry, invalid index type: {}",
+                       static_cast<uint32_t>(indexType));
         return UINT32_MAX;
     }
 
-    // prepare for the copy
-    geometry.IndexBufferOffset = vertexBuffer.Length;
-    Transfer transfers[] = {vertexBuffer, indexBuffer};
-
-    // copy all segments of the staging buffer into the geometry buffer
-    m_TransferManager.Upload(stagingBuffer, geometry.Buffer, transfers, SDL_arraysize(transfers));
+    newGeometry.Initialize(&m_TransferManager, {.StagingBuffer = stagingBuffer,
+                                                .VertexBuffer = vertexBuffer,
+                                                .IndexBuffer = indexBuffer,
+                                                .IndexCount = indexCount,
+                                                .IndexType = vkIndexType});
 
     // register
     uint32_t newId = m_Geometries.size();
-    m_Geometries.push_back(geometry);
+    m_Geometries.push_back(newGeometry);
     m_GeometryUpdates.push_back(newId);
     return newId;
+}
+
+Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GraphicsLayer::BeginFrame()
+{
+    // wait for all transfer operations to finish
+    m_TransferManager.Join();
+    return m_RenderThread.MtUpdate(
+        {
+            m_Shaders.data(),
+            m_Shaders.size(),
+            m_GraphicsPipelineUpdates.data(),
+            m_GraphicsPipelineUpdates.size(),
+        },
+        {
+            m_Geometries.data(),
+            m_Geometries.size(),
+            m_GeometryUpdates.data(),
+            m_GeometryUpdates.size(),
+        });
 }

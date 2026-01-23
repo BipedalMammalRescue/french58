@@ -1,4 +1,5 @@
 #include "EngineCore/Rendering/Resources/shader.h"
+#include "EngineCore/Rendering/Resources/geometry.h"
 #include "SDL3/SDL_stdinc.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"

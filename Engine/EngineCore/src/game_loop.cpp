@@ -194,7 +194,7 @@ const Engine::Core::Runtime::ServiceTable *Engine::Core::Runtime::GameLoop::Game
 Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GameLoop::GameLoopController::
     Initialize()
 {
-    CallbackResult graphicsInitResult = m_GraphicsLayer.InitializeSDL();
+    CallbackResult graphicsInitResult = m_GraphicsLayer.Initialize(&m_Services);
     if (graphicsInitResult.has_value())
         return graphicsInitResult;
 

@@ -19,6 +19,12 @@ struct Transfer
     size_t Length;
 };
 
+struct AllocatedBuffer
+{
+    VkBuffer Buffer;
+    VmaAllocation Allocation;
+};
+
 class TransferManager
 {
 private:
@@ -45,6 +51,16 @@ public:
     // Upload data from a staging buffer to an arbitrary buffer
     bool Upload(Resources::StagingBuffer src, VkBuffer dest, Transfer *transfers,
                 size_t transferCount);
+
+    std::optional<AllocatedBuffer> Create(Resources::StagingBuffer src, Transfer *transfers,
+                                          size_t transferCount, VkBufferUsageFlags bufferUsage,
+                                          VkMemoryPropertyFlags memoryProps);
+
+    // wait for all previously scheduled transfer operations to finish
+    inline void Join()
+    {
+        vkWaitForFences(m_Device, 1, &m_TransferFence, VK_TRUE, UINT64_MAX);
+    }
 };
 
 } // namespace Engine::Core::Rendering

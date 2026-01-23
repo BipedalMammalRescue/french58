@@ -38,7 +38,7 @@ private:
     friend class Engine::Core::Runtime::GraphicsLayer;
     VkPipeline m_Pipeline = VK_NULL_HANDLE;
 
-    bool Initialize(VkDevice device, VkFormat swapchainFormat, Logging::Logger *loggerj,
+    bool Initialize(VkDevice device, VkFormat swapchainFormat, Logging::Logger *logger,
                     ShaderCreationInfo createInfo);
 
     inline void Dispose(VkDevice device)

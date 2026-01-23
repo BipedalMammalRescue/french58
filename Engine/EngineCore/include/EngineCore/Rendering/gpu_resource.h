@@ -33,33 +33,4 @@ GpuImage CreateImage(VkDevice device, VkPhysicalDevice physicalDevice, uint32_t 
                      uint32_t height, VkFormat format, VkImageTiling tiling,
                      VkImageUsageFlags usage, VkMemoryPropertyFlags properties);
 
-// Max number of vertex buffers allowed for a single geometry
-static constexpr uint32_t MaxVertexBufferBindings = 8;
-
-// Max number of total attributes for a single geometry
-static constexpr uint32_t MaxVertexBufferAttributes = 16;
-
-struct GpuGeometry
-{
-    VkBuffer Buffer;
-    VmaAllocation Allocation;
-
-    uint32_t VertexBufferCount;
-    size_t VertexBufferOffsets[MaxVertexBufferBindings];
-
-    uint32_t IndexBufferOffset;
-    uint32_t IndexCount;
-    VkIndexType IndexType;
-};
-
-struct CommandInFlight
-{
-    VkCommandBuffer CommandBuffer;
-    VkSemaphore ImageAvailableSemaphore;
-    VkFence InFlightFence;
-
-    VkDescriptorPool DescriptorPool;
-    VkDescriptorSet DescriptorSet;
-};
-
 } // namespace Engine::Core::Rendering
