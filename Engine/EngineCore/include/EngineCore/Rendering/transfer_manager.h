@@ -42,8 +42,6 @@ private:
 
     VkCommandPool m_TransferCmdPool = VK_NULL_HANDLE;
     VkCommandBuffer m_TransferCmdBuffer = VK_NULL_HANDLE;
-
-    // TODO: single fence, there has to be a way to get a smarter kind of notification
     VkFence m_TransferFence = VK_NULL_HANDLE;
 
 public:
@@ -53,7 +51,6 @@ public:
     VkValueResult<Rendering::Resources::StagingBuffer> CreateStagingBuffer(size_t size);
     void DestroyStagingBuffer(Rendering::Resources::StagingBuffer buffer);
 
-    // TODO: eventually make it asynchronous
     // Upload data from a staging buffer to an arbitrary buffer
     VkResult Upload(Resources::StagingBuffer src, VkBuffer dest, Transfer *transfers,
                     size_t transferCount);

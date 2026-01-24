@@ -40,7 +40,7 @@ Engine::Core::Runtime::CallbackResult TransferManager::Initialize(Logging::Logge
     VkFenceCreateInfo fenceInfo{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = nullptr,
-        .flags = 0,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     CHECK_VULKAN(vkCreateFence(m_Device, &fenceInfo, nullptr, &m_TransferFence),
                  "Failed to create transfer fence.");
@@ -102,6 +102,7 @@ VkResult Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuff
 {
     // wait for the previous operation to be done
     vkWaitForFences(m_Device, 1, &m_TransferFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(m_Device, 1, &m_TransferFence);
 
     VkCommandBufferBeginInfo beginInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
