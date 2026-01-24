@@ -7,8 +7,12 @@ using namespace Engine::Core::Rendering;
 
 VkResult TransientImage::Initialize(uint32_t width, uint32_t height, VkFormat format,
                                     VmaAllocator allocator, VkImageUsageFlags usage,
-                                    Logging::Logger *logger)
+                                    VkDevice device, Logging::Logger *logger)
 {
+    m_Format = format;
+    m_Width = width;
+    m_Height = height;
+
     VkImageCreateInfo createInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = nullptr,
@@ -33,6 +37,28 @@ VkResult TransientImage::Initialize(uint32_t width, uint32_t height, VkFormat fo
         .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     };
 
-    return vmaCreateImage(allocator, &createInfo, &allocationInfo, &m_Image, &m_Allocation,
-                          nullptr);
+    VkResult result =
+        vmaCreateImage(allocator, &createInfo, &allocationInfo, &m_Image, &m_Allocation, nullptr);
+
+    if (result != VK_SUCCESS)
+        return result;
+
+    VkImageViewCreateInfo viewInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .image = m_Image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    return vkCreateImageView(device, &viewInfo, nullptr, &m_View);
 }

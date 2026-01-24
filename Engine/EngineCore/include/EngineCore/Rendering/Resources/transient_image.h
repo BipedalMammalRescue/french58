@@ -22,13 +22,14 @@ private:
 
     VkImage m_Image;
     VmaAllocation m_Allocation;
+    VkImageView m_View;
     VkFormat m_Format;
     uint32_t m_Width;
     uint32_t m_Height;
 
 public:
     VkResult Initialize(uint32_t width, uint32_t height, VkFormat format, VmaAllocator allocator,
-                        VkImageUsageFlags usage, Logging::Logger *logger);
+                        VkImageUsageFlags usage, VkDevice device, Logging::Logger *logger);
 };
 
 } // namespace Engine::Core::Rendering::Resources
