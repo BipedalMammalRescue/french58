@@ -62,3 +62,21 @@ VkResult TransientImage::Initialize(uint32_t width, uint32_t height, VkFormat fo
 
     return vkCreateImageView(device, &viewInfo, nullptr, &m_View);
 }
+
+void Engine::Core::Rendering::Resources::TransientImage::Dispose(VmaAllocator allocator,
+                                                                 VkDevice device)
+{
+    if (m_View != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, m_View, nullptr);
+    }
+
+    if (m_Allocation != VK_NULL_HANDLE)
+    {
+        vmaDestroyImage(allocator, m_Image, m_Allocation);
+    }
+
+    m_Image = VK_NULL_HANDLE;
+    m_Allocation = VK_NULL_HANDLE;
+    m_View = VK_NULL_HANDLE;
+}

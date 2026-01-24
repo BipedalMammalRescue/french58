@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineCore/Rendering/Resources/geometry.h"
+#include "EngineCore/Rendering/Lib/vk_mem_alloc.h"
 #include <vulkan/vulkan_core.h>
 
 namespace Engine::Core::Logging {
@@ -20,9 +20,9 @@ class TransientImage
 private:
     friend class RenderThread;
 
-    VkImage m_Image;
-    VmaAllocation m_Allocation;
-    VkImageView m_View;
+    VkImage m_Image = VK_NULL_HANDLE;
+    VmaAllocation m_Allocation = VK_NULL_HANDLE;
+    VkImageView m_View = VK_NULL_HANDLE;
     VkFormat m_Format;
     uint32_t m_Width;
     uint32_t m_Height;
@@ -30,6 +30,8 @@ private:
 public:
     VkResult Initialize(uint32_t width, uint32_t height, VkFormat format, VmaAllocator allocator,
                         VkImageUsageFlags usage, VkDevice device, Logging::Logger *logger);
+
+    void Dispose(VmaAllocator allocator, VkDevice device);
 };
 
 } // namespace Engine::Core::Rendering::Resources
