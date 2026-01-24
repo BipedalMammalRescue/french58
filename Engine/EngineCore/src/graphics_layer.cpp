@@ -219,20 +219,26 @@ uint32_t GraphicsLayer::CompileShader(void *vertexCode, size_t vertShaderLength,
                                       const Rendering::DepthPrecision *depthPrecision)
 {
     Rendering::Resources::Shader newShader = {};
-    if (!newShader.Initialize(m_Device.m_LogicalDevice, m_Swapchain.m_Format, &m_Logger,
-                              {
-                                  m_RenderResources.GlobalPipelineLayout,
-                                  vertexCode,
-                                  vertShaderLength,
-                                  fragmentCode,
-                                  fragShaderLength,
-                                  vertexSetting,
-                                  pipelineSetting,
-                                  colorAttachments,
-                                  colorAttachmentCount,
-                                  depthPrecision,
-                              }))
+    VkResult result =
+        newShader.Initialize(m_Device.m_LogicalDevice, m_Swapchain.m_Format, &m_Logger,
+                             {
+                                 m_RenderResources.GlobalPipelineLayout,
+                                 vertexCode,
+                                 vertShaderLength,
+                                 fragmentCode,
+                                 fragShaderLength,
+                                 vertexSetting,
+                                 pipelineSetting,
+                                 colorAttachments,
+                                 colorAttachmentCount,
+                                 depthPrecision,
+                             });
+
+    if (result != VK_SUCCESS)
+    {
+        m_Logger.Error("Failed to compile shader, error: {}", Log(result));
         return UINT32_MAX;
+    }
 
     uint32_t newId = m_Shaders.size();
     m_Shaders.push_back(newShader);

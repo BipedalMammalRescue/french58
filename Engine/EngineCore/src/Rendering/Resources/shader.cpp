@@ -83,9 +83,9 @@ public:
         m_InitResult = vkCreateShaderModule(device, &createInfo, nullptr, &m_Shader);
     }
 
-    inline bool Success() const
+    inline VkResult Success() const
     {
-        return m_InitResult == VK_SUCCESS;
+        return m_InitResult;
     }
 
     inline VkShaderModule Get() const
@@ -102,14 +102,14 @@ public:
     }
 };
 
-bool Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat,
-                                   Logging::Logger *logger, ShaderCreationInfo createInfo)
+VkResult Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat,
+                                       Logging::Logger *logger, ShaderCreationInfo createInfo)
 {
     if (createInfo.VertexSetting->BindingCount > MaxVertexBufferBindings)
     {
         logger->Error("Shader contains {} bindings, where only {} is allowed.",
                       createInfo.VertexSetting->BindingCount, MaxVertexBufferBindings);
-        return false;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     uint32_t totalAttributeCount = 0;
@@ -124,7 +124,7 @@ bool Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat,
     {
         logger->Error("Shader contains {} total attributes, where only {} is allowed.",
                       totalAttributeCount, MaxVertexBufferAttributes);
-        return false;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     VkVertexInputBindingDescription bindings[MaxVertexBufferBindings];
@@ -133,11 +133,17 @@ bool Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat,
 
     // create the shader modules
     TemporaryShaderModule vertShader(createInfo.VertexCode, createInfo.VertShaderLength, device);
-    TemporaryShaderModule fragShader(createInfo.FragmentCode, createInfo.FragShaderLength, device);
-    if (!vertShader.Success() || !fragShader.Success())
+    if (vertShader.Success() != VK_SUCCESS)
     {
-        logger->Error("Failed to compile shaders.");
-        return false;
+        logger->Error("Failed to compile vertex shader.");
+        return vertShader.Success();
+    }
+
+    TemporaryShaderModule fragShader(createInfo.FragmentCode, createInfo.FragShaderLength, device);
+    if (fragShader.Success() != VK_SUCCESS)
+    {
+        logger->Error("Failed to compile fragment shaders.");
+        return fragShader.Success();
     }
 
     // create the pipeline
@@ -321,12 +327,5 @@ bool Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat,
     };
 
     VkPipeline newPipe = VK_NULL_HANDLE;
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipe) !=
-        VK_SUCCESS)
-    {
-        logger->Error("vk API failure: {}", "vkCreateGraphicsPipelines");
-        return false;
-    }
-
-    return true;
+    return vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipe);
 }
