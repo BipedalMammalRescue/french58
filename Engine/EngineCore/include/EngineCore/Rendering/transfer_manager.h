@@ -25,6 +25,12 @@ struct AllocatedBuffer
     VmaAllocation Allocation;
 };
 
+template <typename TClient> struct VkValueResult
+{
+    VkResult Result;
+    TClient Client;
+};
+
 class TransferManager
 {
 private:
@@ -44,15 +50,15 @@ public:
     Runtime::CallbackResult Initialize(Logging::Logger *logger, VmaAllocator allocator,
                                        VkDevice device, VkQueue queue, uint32_t queueFamilyIndex);
 
-    std::optional<Rendering::Resources::StagingBuffer> CreateStagingBuffer(size_t size);
+    VkValueResult<Rendering::Resources::StagingBuffer> CreateStagingBuffer(size_t size);
     void DestroyStagingBuffer(Rendering::Resources::StagingBuffer buffer);
 
     // TODO: eventually make it asynchronous
     // Upload data from a staging buffer to an arbitrary buffer
-    bool Upload(Resources::StagingBuffer src, VkBuffer dest, Transfer *transfers,
-                size_t transferCount);
+    VkResult Upload(Resources::StagingBuffer src, VkBuffer dest, Transfer *transfers,
+                    size_t transferCount);
 
-    std::optional<AllocatedBuffer> Create(Resources::StagingBuffer src, Transfer *transfers,
+    VkValueResult<AllocatedBuffer> Create(Resources::StagingBuffer src, Transfer *transfers,
                                           size_t transferCount, VkBufferUsageFlags bufferUsage,
                                           VkMemoryPropertyFlags memoryProps);
 

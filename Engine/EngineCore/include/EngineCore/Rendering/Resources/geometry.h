@@ -2,7 +2,6 @@
 
 #include "EngineCore/Rendering/Lib/vk_mem_alloc.h"
 #include "EngineCore/Rendering/transfer_manager.h"
-#include "SDL3/SDL_stdinc.h"
 #include <vulkan/vulkan_core.h>
 
 namespace Engine::Core::Rendering {
@@ -42,8 +41,7 @@ private:
     VkIndexType m_IndexType;
 
 public:
-    bool Initialize(TransferManager *transferManager, GeometryCreateInfo createInfo);
-
+    VkResult Initialize(TransferManager *transferManager, GeometryCreateInfo createInfo);
     void Dispose();
 };
 

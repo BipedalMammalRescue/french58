@@ -90,7 +90,8 @@ public:
                            uint32_t colorAttachmentCount,
                            const Rendering::DepthPrecision *depthPrecision);
 
-    inline std::optional<Rendering::Resources::StagingBuffer> CreateStagingBuffer(size_t size)
+    inline Rendering::VkValueResult<Rendering::Resources::StagingBuffer> CreateStagingBuffer(
+        size_t size)
     {
         return m_TransferManager.CreateStagingBuffer(size);
     }

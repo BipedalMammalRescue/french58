@@ -4,7 +4,6 @@
 #include "EngineCore/Rendering/Resources/staging_buffer.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "common.h"
-#include <optional>
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core::Rendering;
@@ -49,7 +48,7 @@ Engine::Core::Runtime::CallbackResult TransferManager::Initialize(Logging::Logge
     return Runtime::CallbackSuccess();
 }
 
-std::optional<Resources::StagingBuffer> TransferManager::CreateStagingBuffer(size_t size)
+VkValueResult<Resources::StagingBuffer> TransferManager::CreateStagingBuffer(size_t size)
 {
     VkBufferCreateInfo bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -70,28 +69,24 @@ std::optional<Resources::StagingBuffer> TransferManager::CreateStagingBuffer(siz
     VkResult allocationResult = vmaCreateBuffer(m_Allocator, &bufferInfo, &allocationInfo,
                                                 &newBuffer, &newAllocation, nullptr);
     if (allocationResult != VK_SUCCESS)
-    {
-        m_Logger->Error("Failed to create staging buffer, error code: {}", Log(allocationResult));
-        return {};
-    }
+        return {.Result = allocationResult};
 
     // map memory
     void *mappedMemory = nullptr;
     VkResult mapResult = vmaMapMemory(m_Allocator, newAllocation, &mappedMemory);
     if (mapResult != VK_SUCCESS)
     {
-        m_Logger->Error("Failed to map staging buffer, error code: {}", Log(mapResult));
         vmaDestroyBuffer(m_Allocator, newBuffer, newAllocation);
-        return {};
+        return {.Result = mapResult};
     }
 
     // return
-    Resources::StagingBuffer result;
-    result.m_Size = size;
-    result.m_Buffer = newBuffer;
-    result.m_Allocation = newAllocation;
-    result.m_MappedMemory = mappedMemory;
-    return result;
+    Resources::StagingBuffer newStagingBuffer;
+    newStagingBuffer.m_Size = size;
+    newStagingBuffer.m_Buffer = newBuffer;
+    newStagingBuffer.m_Allocation = newAllocation;
+    newStagingBuffer.m_MappedMemory = mappedMemory;
+    return {.Result = VK_SUCCESS, .Client = newStagingBuffer};
 }
 
 void Engine::Core::Rendering::TransferManager::DestroyStagingBuffer(
@@ -101,8 +96,9 @@ void Engine::Core::Rendering::TransferManager::DestroyStagingBuffer(
     vmaDestroyBuffer(m_Allocator, buffer.m_Buffer, buffer.m_Allocation);
 }
 
-bool Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuffer src, VkBuffer dst,
-                                                      Transfer *transfers, size_t transferCount)
+VkResult Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuffer src,
+                                                          VkBuffer dst, Transfer *transfers,
+                                                          size_t transferCount)
 {
     // wait for the previous operation to be done
     vkWaitForFences(m_Device, 1, &m_TransferFence, VK_TRUE, UINT64_MAX);
@@ -114,11 +110,7 @@ bool Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuffer s
     };
     VkResult beginCommandResult = vkBeginCommandBuffer(m_TransferCmdBuffer, &beginInfo);
     if (beginCommandResult != VK_SUCCESS)
-    {
-        m_Logger->Error("Failed to begin transfer command buffer, error: {}.",
-                        Log(beginCommandResult));
-        return false;
-    }
+        return beginCommandResult;
 
     for (size_t i = 0; i < transferCount; i++)
     {
@@ -137,17 +129,10 @@ bool Engine::Core::Rendering::TransferManager::Upload(Resources::StagingBuffer s
         .commandBufferCount = 1,
         .pCommandBuffers = &m_TransferCmdBuffer,
     };
-    VkResult submitResult = vkQueueSubmit(m_Queue, 1, &submitInfo, m_TransferFence);
-    if (submitResult != VK_SUCCESS)
-    {
-        m_Logger->Error("Failed to submit transfer command buffer, error: {}", Log(submitResult));
-        return false;
-    }
-
-    return true;
+    return vkQueueSubmit(m_Queue, 1, &submitInfo, m_TransferFence);
 }
 
-std::optional<AllocatedBuffer> Engine::Core::Rendering::TransferManager::Create(
+VkValueResult<AllocatedBuffer> Engine::Core::Rendering::TransferManager::Create(
     Resources::StagingBuffer src, Transfer *transfers, size_t transferCount,
     VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags memoryProps)
 {
@@ -167,22 +152,20 @@ std::optional<AllocatedBuffer> Engine::Core::Rendering::TransferManager::Create(
     VmaAllocationCreateInfo allocationInfo{.usage = VMA_MEMORY_USAGE_AUTO,
                                            .requiredFlags = memoryProps};
 
-    AllocatedBuffer result{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    AllocatedBuffer newBuffer{VK_NULL_HANDLE, VK_NULL_HANDLE};
 
     VkResult allocationResult = vmaCreateBuffer(m_Allocator, &bufferInfo, &allocationInfo,
-                                                &result.Buffer, &result.Allocation, nullptr);
+                                                &newBuffer.Buffer, &newBuffer.Allocation, nullptr);
     if (allocationResult != VK_SUCCESS)
+        return {.Result = allocationResult};
+
+    VkResult uploadResult = Upload(src, newBuffer.Buffer, transfers, transferCount);
+    if (uploadResult != VK_SUCCESS)
     {
-        m_Logger->Error("Failed to create and allocate buffer, error: {}", Log(allocationResult));
-        return {};
+        vkDestroyBuffer(m_Device, newBuffer.Buffer, nullptr);
+        vmaFreeMemory(m_Allocator, newBuffer.Allocation);
+        return {.Result = uploadResult};
     }
 
-    if (!Upload(src, result.Buffer, transfers, transferCount))
-    {
-        vkDestroyBuffer(m_Device, result.Buffer, nullptr);
-        vmaFreeMemory(m_Allocator, result.Allocation);
-        return {};
-    }
-
-    return result;
+    return {.Result = VK_SUCCESS, .Client = newBuffer};
 }
