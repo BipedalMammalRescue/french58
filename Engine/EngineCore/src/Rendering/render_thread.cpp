@@ -4,7 +4,6 @@
 #include "EngineCore/Rendering/Resources/geometry.h"
 #include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/Resources/swapchain.h"
-#include "EngineCore/Rendering/gpu_resource.h"
 #include "EngineCore/Rendering/render_context.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"

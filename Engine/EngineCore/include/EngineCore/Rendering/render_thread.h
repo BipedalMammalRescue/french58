@@ -53,12 +53,13 @@ private:
     Logging::Logger *m_Logger;
 
 private:
+    // TODO: why are these injected at construction time?
     // injected
     Resources::Device *m_Device = nullptr;
     // injected
     Resources::Swapchain *m_Swapchain = nullptr;
 
-    // initialized
+    // injected dring initialization
     VkPipelineLayout m_PipelineLayoutShared = VK_NULL_HANDLE;
 
     // created

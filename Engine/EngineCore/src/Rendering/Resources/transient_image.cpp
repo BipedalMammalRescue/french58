@@ -1,0 +1,38 @@
+#include "EngineCore/Rendering/Resources/transient_image.h"
+#include "EngineCore/Logging/logger.h"
+#include <vulkan/vulkan_core.h>
+
+using namespace Engine::Core::Rendering::Resources;
+using namespace Engine::Core::Rendering;
+
+VkResult TransientImage::Initialize(uint32_t width, uint32_t height, VkFormat format,
+                                    VmaAllocator allocator, VkImageUsageFlags usage,
+                                    Logging::Logger *logger)
+{
+    VkImageCreateInfo createInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = {width, height, 1},
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VmaAllocationCreateInfo allocationInfo{
+        .flags = 0,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+        .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    };
+
+    return vmaCreateImage(allocator, &createInfo, &allocationInfo, &m_Image, &m_Allocation,
+                          nullptr);
+}
