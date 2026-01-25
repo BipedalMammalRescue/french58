@@ -4,7 +4,9 @@
 #include "EngineCore/Rendering/Resources/geometry.h"
 #include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/Resources/swapchain.h"
+#include "EngineCore/Rendering/Resources/transient_image.h"
 #include "EngineCore/Rendering/render_context.h"
+#include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
@@ -41,21 +43,8 @@ static int ThreadRoutine(void *state)
 class RenderThreadController : public IRenderThreadController
 {
 private:
-    RenderThread *Owner;
-    VkDevice Device;
-    VkPhysicalDevice PhysicalDevice;
-    uint32_t GraphicsQueueIndex;
-    Logging::Logger *Logger;
-
-    const int *FrameParity;
-
-    VkDescriptorPool UniformDescriptorPool;
-
 public:
-    RenderThreadController(RenderThread *owner, VkDevice device, VkPhysicalDevice physicalDevice,
-                           uint32_t graphicsQueueIndex, Logging::Logger *logger, int *frameParity)
-        : Owner(owner), Device(device), PhysicalDevice(physicalDevice), Logger(logger),
-          FrameParity(frameParity)
+    RenderThreadController()
     {
     }
 };
@@ -175,11 +164,53 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     // note that the mt frame parity would be different from the rt one most of the time
     int rtFrameParity = 0;
 
+    // create a new allocator
+    VmaAllocator allocator;
+    VmaAllocatorCreateInfo allocatorInfo{
+        .flags = 0,
+        .physicalDevice = m_Device->m_PhysicalDevice,
+        .device = m_Device->m_LogicalDevice,
+        .vulkanApiVersion = m_Device->m_Version,
+    };
+    CHECK_VULKAN_RT(vmaCreateAllocator(&allocatorInfo, &allocator),
+                    "Failed to create render-thread VMA allocator.");
+
+    // initialize render targets
+    std::vector<RenderTarget> renderTargets;
+
+    // initialize the basic set of resources
+    Resources::TransientImage opaqueImage;
+    CHECK_VULKAN_RT(
+        opaqueImage.Initialize(m_Swapchain->m_Dimensions.width, m_Swapchain->m_Dimensions.height,
+                               m_Swapchain->m_Format, allocator,
+                               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                               m_Device->m_LogicalDevice, m_Logger),
+        "Failed to create opaque image on critical path.");
+
+    Resources::TransientImage depthImage;
+    CHECK_VULKAN_RT(depthImage.Initialize(m_Swapchain->m_Dimensions.width,
+                                          m_Swapchain->m_Dimensions.height, VK_FORMAT_D32_SFLOAT,
+                                          allocator, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                                          m_Device->m_LogicalDevice, m_Logger),
+                    "Failed to create depth image on critical path.");
+
+    RenderTarget opaqueTarget = {
+        .Setting = {},
+        .Image = opaqueImage.m_Image,
+        .View = opaqueImage.m_View,
+    };
+
+    RenderTarget opaqueDepth = {
+        .Setting = {}, .Image = depthImage.m_Image, .View = depthImage.m_View};
+
+    renderTargets.push_back(opaqueTarget);
+    renderTargets.push_back(opaqueDepth);
+
+    size_t builtinTargetCount = renderTargets.size();
+
     // create the controller
     // TODO: this interface needs some redo
-    RenderThreadController controller(this, m_Device->m_LogicalDevice, m_Device->m_PhysicalDevice,
-                                      m_Device->m_GraphicsQueueSelection.queueIndex, m_Logger,
-                                      &rtFrameParity);
+    RenderThreadController controller;
 
     while (true)
     {

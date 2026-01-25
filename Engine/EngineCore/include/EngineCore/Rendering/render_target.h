@@ -122,7 +122,7 @@ private:
 struct RenderTarget
 {
     Rendering::RenderTargetSetting Setting;
-    Rendering::GpuImage Image;
+    VkImage Image;
     VkImageView View;
 };
 

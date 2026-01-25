@@ -6,6 +6,7 @@
 #include "EngineCore/Rendering/Resources/shader.h"
 #include "EngineCore/Rendering/Resources/swapchain.h"
 #include "EngineCore/Rendering/render_context.h"
+#include "EngineCore/Rendering/render_target.h"
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Rendering/rt_resource_manager.h"
 #include "EngineCore/Runtime/crash_dump.h"

@@ -18,7 +18,7 @@ namespace Engine::Core::Rendering::Resources {
 class TransientImage
 {
 private:
-    friend class RenderThread;
+    friend class Engine::Core::Rendering::RenderThread;
 
     VkImage m_Image = VK_NULL_HANDLE;
     VmaAllocation m_Allocation = VK_NULL_HANDLE;
