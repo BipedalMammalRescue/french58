@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/Resources/device.h"
 #include "EngineCore/Rendering/Resources/geometry.h"
 #include "EngineCore/Rendering/Resources/shader.h"
@@ -80,6 +79,8 @@ private:
     // used by main thread
     int m_MtFrameParity = 0;
 
+    bool m_ShouldStop = false;
+
     // double buffered resources
     RtResourceManager<Resources::Shader> m_GraphicsPipelines;
     RtResourceManager<Resources::Geometry> m_Geometries;
@@ -112,7 +113,8 @@ public:
 
     // Initiate a new frame on the render thread.
     Runtime::CallbackResult MtUpdate(UpdatedResources<Resources::Shader> shaderUpdates,
-                                     UpdatedResources<Resources::Geometry> geometryUpdates);
+                                     UpdatedResources<Resources::Geometry> geometryUpdates,
+                                     bool shouldStop);
 
     // Callable from the main thread, check if the thread is finished.
     bool MtTryJoin() const

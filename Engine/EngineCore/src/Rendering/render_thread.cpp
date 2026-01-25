@@ -1,5 +1,4 @@
 #include "EngineCore/Rendering/render_thread.h"
-#include "EngineCore/Logging/logger.h"
 #include "EngineCore/Rendering/Resources/device.h"
 #include "EngineCore/Rendering/Resources/geometry.h"
 #include "EngineCore/Rendering/Resources/shader.h"
@@ -44,9 +43,6 @@ class RenderThreadController : public IRenderThreadController
 {
 private:
 public:
-    RenderThreadController()
-    {
-    }
 };
 
 RenderThread::RenderThread(Resources::Device *device, Resources::Swapchain *swapchain)
@@ -219,6 +215,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     {
         SDL_WaitSemaphore(m_ReadySemaphore);
 
+        // check if the game has requested stop
+        if (m_ShouldStop)
+            return 0;
+
         // update all renderer plugin states
         IRenderStateUpdateReader *reader = &m_EventStreams[rtFrameParity];
         for (Runtime::InstancedRendererPlugin instance : m_Plugins)
@@ -364,10 +364,11 @@ size_t RenderThread::EventStream::Read(void *buffer, size_t desiredLength)
 
 Runtime::CallbackResult RenderThread::MtUpdate(
     UpdatedResources<Resources::Shader> shaderUpdates,
-    UpdatedResources<Resources::Geometry> geometryUpdates)
+    UpdatedResources<Resources::Geometry> geometryUpdates, bool shouldStop)
 {
     // wait for previous render thread work to be done
     SDL_WaitSemaphore(m_DoneSemaphore);
+    m_ShouldStop = shouldStop;
 
     // rebuild plugin table (this is in here because I plan to implement module state reloading at
     // some point)
