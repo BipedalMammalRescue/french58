@@ -301,5 +301,6 @@ Engine::Core::Runtime::CallbackResult Engine::Core::Runtime::GraphicsLayer::Begi
             m_Geometries.size(),
             m_GeometryUpdates.data(),
             m_GeometryUpdates.size(),
-        });
+        },
+        false);
 }

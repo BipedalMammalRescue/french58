@@ -4,6 +4,7 @@
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/ext/vector_float4.hpp"
+#include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 using namespace Engine::Core::Rendering;
@@ -109,7 +110,7 @@ VkResult Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat
     {
         logger->Error("Shader contains {} bindings, where only {} is allowed.",
                       createInfo.VertexSetting->BindingCount, MaxVertexBufferBindings);
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_UNKNOWN;
     }
 
     uint32_t totalAttributeCount = 0;
@@ -124,7 +125,7 @@ VkResult Resources::Shader::Initialize(VkDevice device, VkFormat swapchainFormat
     {
         logger->Error("Shader contains {} total attributes, where only {} is allowed.",
                       totalAttributeCount, MaxVertexBufferAttributes);
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_UNKNOWN;
     }
 
     VkVertexInputBindingDescription bindings[MaxVertexBufferBindings];

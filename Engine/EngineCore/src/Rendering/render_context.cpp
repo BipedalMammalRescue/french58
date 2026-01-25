@@ -108,7 +108,7 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
             .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .image = m_RenderTargets[colorTargets[i].m_Identifier].Image.Image,
+            .image = m_RenderTargets[colorTargets[i].m_Identifier].Image,
             .subresourceRange =
                 {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -150,7 +150,7 @@ Engine::Core::Rendering::RenderPassExecutionContext Engine::Core::Rendering::
             .newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = m_RenderTargets[depthTarget->m_Identifier].Image.Image,
+            .image = m_RenderTargets[depthTarget->m_Identifier].Image,
             .subresourceRange =
                 {
                     .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
