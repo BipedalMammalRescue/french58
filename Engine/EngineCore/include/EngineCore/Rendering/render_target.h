@@ -8,6 +8,10 @@ namespace Engine::Core::Runtime {
 class GraphicsLayer;
 }
 
+namespace Engine::Core::Rendering::Internal {
+class RenderThreadController;
+}
+
 namespace Engine::Core::Rendering {
 
 enum class ColorFormat
@@ -88,6 +92,7 @@ class ColorAttachmentTarget
 private:
     friend class Runtime::GraphicsLayer;
     friend class RenderPassConfigurator;
+    friend class Internal::RenderThreadController;
 
     uint32_t m_Id = UINT32_MAX;
 };
@@ -97,6 +102,7 @@ class DepthAttachmentTarget
 private:
     friend class Runtime::GraphicsLayer;
     friend class RenderPassConfigurator;
+    friend class Internal::RenderThreadController;
 
     uint32_t m_Id = UINT32_MAX;
 };
@@ -106,6 +112,7 @@ class OutputColorTarget
 private:
     friend class RenderPassConfigurator;
     friend class RenderStageExecutionContext;
+    friend class Internal::RenderThreadController;
 
     uint32_t m_Identifier;
 };
@@ -115,6 +122,7 @@ class OutputDepthTarget
 private:
     friend class RenderPassConfigurator;
     friend class RenderStageExecutionContext;
+    friend class Internal::RenderThreadController;
 
     uint32_t m_Identifier;
 };

@@ -28,6 +28,7 @@ add_library(EngineCore STATIC
     src/Rendering/Lib/vk_mem_alloc.cpp
     src/Rendering/transfer_manager.cpp
     src/Rendering/Resources/transient_image.cpp
+    src/Rendering/Internal/render_thread_controller.cpp
 )
 
 find_package(Vulkan)

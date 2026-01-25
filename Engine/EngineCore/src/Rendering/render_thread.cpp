@@ -9,6 +9,7 @@
 #include "EngineCore/Rendering/render_thread_controller.h"
 #include "EngineCore/Runtime/crash_dump.h"
 #include "EngineCore/Runtime/module_manager.h"
+#include "Internal/render_thread_controller.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_mutex.h"
 #include "SDL3/SDL_thread.h"
@@ -38,12 +39,6 @@ static int ThreadRoutine(void *state)
 {
     return static_cast<RenderThread *>(state)->RtThreadRoutine();
 }
-
-class RenderThreadController : public IRenderThreadController
-{
-private:
-public:
-};
 
 RenderThread::RenderThread(Resources::Device *device, Resources::Swapchain *swapchain)
     : m_Device(device), m_Swapchain(swapchain)
@@ -171,9 +166,7 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     CHECK_VULKAN_RT(vmaCreateAllocator(&allocatorInfo, &allocator),
                     "Failed to create render-thread VMA allocator.");
 
-    // initialize render targets
-    std::vector<RenderTarget> renderTargets;
-
+    // NOTE: might be worth putting this into a dedicated class?
     // initialize the basic set of resources
     Resources::TransientImage opaqueImage;
     CHECK_VULKAN_RT(
@@ -190,26 +183,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                                           m_Device->m_LogicalDevice, m_Logger),
                     "Failed to create depth image on critical path.");
 
-    RenderTarget opaqueTarget = {
-        .Setting = {},
-        .Image = opaqueImage.m_Image,
-        .View = opaqueImage.m_View,
-    };
-
-    RenderTarget opaqueDepth = {
-        .Setting = {},
-        .Image = depthImage.m_Image,
-        .View = depthImage.m_View,
-    };
-
-    renderTargets.push_back(opaqueTarget);
-    renderTargets.push_back(opaqueDepth);
-
-    size_t builtinTargetCount = renderTargets.size();
-
     // create the controller
-    // TODO: this interface needs some redo
-    RenderThreadController controller;
+    Internal::RenderThreadController controller(
+        (RenderTarget){{}, opaqueImage.m_Image, opaqueImage.m_View},
+        (RenderTarget){{}, depthImage.m_Image, depthImage.m_View});
 
     while (true)
     {
@@ -381,7 +358,7 @@ Runtime::CallbackResult RenderThread::MtUpdate(
         m_Plugins.push_back(plugin);
     }
 
-    // synchronize resources
+    // synchronize resources created on the main thread
     // shaders
     for (uint32_t *updatedId = shaderUpdates.Updates;
          updatedId < shaderUpdates.Updates + shaderUpdates.UpdateCount; updatedId++)
@@ -398,8 +375,6 @@ Runtime::CallbackResult RenderThread::MtUpdate(
             *updatedId, geometryUpdates.Source[*updatedId], m_MtFrameParity,
             [](Resources::Geometry a, Resources::Geometry b) { return a.m_Buffer == b.m_Buffer; });
     }
-
-    // TODO: synchronize other resources
 
     // write updates to back buffer
     IRenderStateUpdateWriter *writer = &m_EventStreams[m_MtFrameParity];
@@ -427,120 +402,3 @@ Runtime::CallbackResult RenderThread::MtUpdate(
     m_MtFrameParity = (m_MtFrameParity + 1) % 2;
     return Runtime::CallbackSuccess();
 }
-
-// RenderTarget GraphicsLayer::CreateRenderTarget(Rendering::RenderTargetUsage usage,
-//                                                Rendering::RenderTargetSetting settings)
-// {
-//     VkFormat format;
-//     uint32_t width;
-//     uint32_t height;
-
-//     // TODO: when do I need to change the tiling setting?
-//     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-//     VkImageUsageFlags gpuUsage;
-//     VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-//     switch (usage)
-//     {
-//     case RenderTargetUsage::ColorTarget: {
-//         switch (settings.Image.ColorTarget.ColorFormat)
-//         {
-//         case ColorFormat::UseSwapchain:
-//             format = m_Swapchain.m_Format;
-//             break;
-//         }
-
-//         if (settings.Image.ColorTarget.ScaleToSwapchain)
-//         {
-//             width = static_cast<uint32_t>(
-//                 round(settings.Image.ColorTarget.Dimensions.Relative.WidthScale *
-//                       m_Swapchain.m_Dimensions.width));
-//             height = static_cast<uint32_t>(
-//                 round(settings.Image.ColorTarget.Dimensions.Relative.HeightScale *
-//                       m_Swapchain.m_Dimensions.height));
-//         }
-//         else
-//         {
-//             width = settings.Image.ColorTarget.Dimensions.Absolute.Width;
-//             height = settings.Image.ColorTarget.Dimensions.Absolute.Height;
-//         }
-
-//         gpuUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-//     }
-//     break;
-//     case RenderTargetUsage::DepthBuffer: {
-//         switch (settings.Image.DepthBuffer.Precision)
-//         {
-//         case Engine::Core::Rendering::DepthPrecision::D32:
-//             format = VK_FORMAT_D32_SFLOAT;
-//             break;
-//         }
-
-//         if (settings.Image.DepthBuffer.ScaleToSwapchain)
-//         {
-//             width = static_cast<uint32_t>(
-//                 round(settings.Image.DepthBuffer.Dimensions.Relative.WidthScale *
-//                       m_Swapchain.m_Dimensions.width));
-//             height = static_cast<uint32_t>(
-//                 round(settings.Image.DepthBuffer.Dimensions.Relative.HeightScale *
-//                       m_Swapchain.m_Dimensions.height));
-//         }
-//         else
-//         {
-//             width = settings.Image.DepthBuffer.Dimensions.Absolute.Width;
-//             height = settings.Image.DepthBuffer.Dimensions.Absolute.Height;
-//         }
-//     }
-//     break;
-//     }
-
-//     if (settings.Sampler > Rendering::SamplerType::None)
-//     {
-//         gpuUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-//     }
-
-//     GpuImage image = CreateImage(m_Device.m_LogicalDevice, m_Device.m_PhysicalDevice, width,
-//     height,
-//                                  format, tiling, gpuUsage, properties);
-
-//     return {
-//         .Setting = settings,
-//         .Image = image,
-//         .View = VK_NULL_HANDLE,
-//     };
-// }
-
-// // set up the critical path rendering targets (THESE ARE NOT BACKED BY MEMORY JUST YET)
-// {
-//     m_OpaqueColor.m_Id = 0;
-//     m_RenderTargets[0] =
-//         CreateRenderTarget(RenderTargetUsage::ColorTarget,
-//                            (RenderTargetSetting){
-//                                .Image =
-//                                    {
-//                                        .ColorTarget =
-//                                            {
-//                                                .ScaleToSwapchain = true,
-//                                                .Dimensions = {.Relative = {1.0f, 1.0f}},
-//                                                .ColorFormat = ColorFormat::UseSwapchain,
-//                                            },
-//                                    },
-//                                .Sampler = Rendering::SamplerType::None,
-//                            });
-
-//     m_OpaqueDepth.m_Id = 1;
-//     m_RenderTargets[1] =
-//         CreateRenderTarget(Rendering::RenderTargetUsage::DepthBuffer,
-//                            (RenderTargetSetting){
-//                                .Image =
-//                                    {
-//                                        .ColorTarget =
-//                                            {
-//                                                .ScaleToSwapchain = true,
-//                                                .Dimensions = {.Relative = {1.0f, 1.0f}},
-//                                                .ColorFormat = ColorFormat::UseSwapchain,
-//                                            },
-//                                    },
-//                                .Sampler = Rendering::SamplerType::None,
-//                            });
-// }
