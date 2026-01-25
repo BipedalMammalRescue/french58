@@ -201,7 +201,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
     };
 
     RenderTarget opaqueDepth = {
-        .Setting = {}, .Image = depthImage.m_Image, .View = depthImage.m_View};
+        .Setting = {},
+        .Image = depthImage.m_Image,
+        .View = depthImage.m_View,
+    };
 
     renderTargets.push_back(opaqueTarget);
     renderTargets.push_back(opaqueDepth);
