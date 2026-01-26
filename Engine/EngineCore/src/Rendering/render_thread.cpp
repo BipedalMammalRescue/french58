@@ -184,9 +184,10 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                     "Failed to create depth image on critical path.");
 
     // create the controller
-    Internal::RenderThreadController controller(
-        (RenderTarget){{}, opaqueImage.m_Image, opaqueImage.m_View},
-        (RenderTarget){{}, depthImage.m_Image, depthImage.m_View});
+    Internal::RenderThreadController controller;
+
+    // create the contexts
+    RenderSetupContext setupContext;
 
     while (true)
     {
@@ -261,6 +262,13 @@ int Engine::Core::Rendering::RenderThread::RtThreadRoutine()
                              nullptr, 1, &colorImageBarrier);
 
         // TODO: frame graph set up
+        setupContext.Reset();
+        for (Runtime::InstancedRendererPlugin instance : m_Plugins)
+        {
+            CHECK_CALLBACK_RT(instance.Definition.RtRenderSetup(&controller, instance.PluginState,
+                                                                &setupContext));
+        }
+
         // TODO: frame graph execution
 
         // finish up the frame, submit, and present
